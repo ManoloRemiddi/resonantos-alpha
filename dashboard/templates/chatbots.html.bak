@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+
+{% block title %}Chatbots - ResonantOS Dashboard{% endblock %}
+{% block page_title %}Chatbots{% endblock %}
+
+{% block content %}
+<!-- Stats -->
+<div class="metrics-grid" style="margin-bottom:20px">
+    <div class="metric-card">
+        <div class="metric-header">
+            <span class="metric-title">Total Chatbots</span>
+        </div>
+        <div class="metric-value">
+            <span class="big-number" id="totalBots">-</span>
+        </div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-header">
+            <span class="metric-title">Active</span>
+        </div>
+        <div class="metric-value">
+            <span class="big-number" id="activeBots">-</span>
+        </div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-header">
+            <span class="metric-title">Total Conversations</span>
+        </div>
+        <div class="metric-value">
+            <span class="big-number" id="totalConvos">-</span>
+        </div>
+    </div>
+</div>
+
+<!-- Chatbot Cards -->
+<div class="chatbots-grid" id="chatbotsGrid">
+    <div class="loading-state">Loading chatbots...</div>
+</div>
+
+<!-- Create Button -->
+<div style="margin-top:16px">
+    <button class="btn-create" onclick="createChatbot()">+ New Chatbot</button>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal" id="editModal">
+    <div class="modal-content modal-wide">
+        <div class="modal-header">
+            <h2 class="modal-title" id="editModalTitle">Edit Chatbot</h2>
+            <button class="modal-close" onclick="closeEdit()">&times;</button>
+        </div>
+        <div class="modal-body" id="editModalBody"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.chatbots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+
+.chatbot-card {
+    background: var(--bg-secondary); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px; transition: all 0.2s;
+}
+.chatbot-card:hover { border-color: var(--border-light); }
+
+.cb-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.cb-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.cb-name { font-size: 16px; font-weight: 600; flex: 1; }
+.cb-status { font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+.cb-status.active { background: rgba(74,222,128,0.15); color: var(--success); }
+.cb-status.inactive { background: rgba(248,113,113,0.15); color: var(--error); }
+
+.cb-details { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; font-size: 12px; }
+.cb-detail-label { color: var(--text-muted); }
+.cb-detail-value { color: var(--text-secondary); }
+
+.cb-prompt { font-size: 12px; color: var(--text-muted); background: var(--bg-tertiary); padding: 8px 12px; border-radius: 6px; max-height: 60px; overflow: hidden; margin-bottom: 12px; }
+
+.cb-actions { display: flex; gap: 8px; }
+.cb-btn {
+    padding: 6px 14px; border-radius: 6px; font-size: 12px;
+    cursor: pointer; border: 1px solid var(--border);
+    background: var(--bg-tertiary); color: var(--text-secondary);
+    transition: all 0.2s;
+}
+.cb-btn:hover { border-color: var(--border-light); color: var(--text-primary); }
+.cb-btn.danger:hover { border-color: var(--error); color: var(--error); }
+
+.btn-create {
+    padding: 10px 20px; background: var(--success); color: #000;
+    border: none; border-radius: var(--radius); font-size: 14px;
+    font-weight: 600; cursor: pointer; transition: filter 0.2s;
+}
+.btn-create:hover { filter: brightness(1.1); }
+
+/* Modal */
+.modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; }
+.modal.active { display: flex; }
+.modal-content { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; max-width: 700px; width: 95%; max-height: 85vh; overflow-y: auto; }
+.modal-wide { max-width: 700px; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid var(--border); }
+.modal-title { font-size: 18px; font-weight: 600; }
+.modal-close { background: none; border: none; color: var(--text-secondary); font-size: 24px; cursor: pointer; }
+.modal-body { padding: 24px; }
+
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; }
+.form-group input, .form-group textarea, .form-group select {
+    width: 100%; padding: 8px 12px; background: var(--bg-primary);
+    border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text-primary); font-size: 13px;
+}
+.form-group textarea { min-height: 80px; resize: vertical; font-family: inherit; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+.btn-save {
+    padding: 8px 20px; background: var(--success); color: #000;
+    border: none; border-radius: 6px; font-weight: 600; cursor: pointer;
+}
+.btn-cancel {
+    padding: 8px 20px; background: var(--bg-tertiary); color: var(--text-secondary);
+    border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+}
+
+.loading-state { text-align: center; padding: 40px; color: var(--text-muted); }
+
+/* Widget preview */
+.preview-box {
+    background: var(--bg-primary); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px; margin-top: 12px;
+}
+.preview-chat { max-width: 300px; }
+.preview-bubble {
+    padding: 8px 12px; border-radius: 12px; font-size: 13px;
+    margin-bottom: 6px; max-width: 80%;
+}
+.preview-bubble.bot { background: var(--bg-tertiary); color: var(--text-primary); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let chatbots = [];
+
+document.addEventListener('DOMContentLoaded', loadChatbots);
+
+async function loadChatbots() {
+    try {
+        const res = await fetch('/api/chatbots');
+        chatbots = await res.json();
+        renderChatbots();
+        updateStats();
+    } catch(e) {
+        document.getElementById('chatbotsGrid').innerHTML = '<div class="loading-state">Failed to load chatbots</div>';
+    }
+}
+
+function updateStats() {
+    document.getElementById('totalBots').textContent = chatbots.length;
+    document.getElementById('activeBots').textContent = chatbots.filter(b => b.status === 'active').length;
+    const totalConvs = chatbots.reduce((s, b) => s + (b.conversation_count || 0), 0);
+    document.getElementById('totalConvos').textContent = totalConvs;
+}
+
+function renderChatbots() {
+    const grid = document.getElementById('chatbotsGrid');
+    if (!chatbots.length) {
+        grid.innerHTML = '<div class="loading-state">No chatbots yet. Create one!</div>';
+        return;
+    }
+
+    grid.innerHTML = chatbots.map(bot => {
+        const prompt = (bot.system_prompt || '').slice(0, 100);
+        const model = bot.model_id || 'default';
+        const created = bot.created_at ? new Date(bot.created_at).toLocaleDateString() : '-';
+        const color = bot.primary_color || '#4ade80';
+
+        return `
+        <div class="chatbot-card">
+            <div class="cb-header">
+                <div class="cb-icon" style="background:${color}20;color:${color}">💬</div>
+                <span class="cb-name">${escapeHtml(bot.name)}</span>
+                <span class="cb-status ${bot.status}">${bot.status}</span>
+            </div>
+            <div class="cb-details">
+                <div><span class="cb-detail-label">Model:</span> <span class="cb-detail-value">${model}</span></div>
+                <div><span class="cb-detail-label">Convos:</span> <span class="cb-detail-value">${bot.conversation_count || 0}</span></div>
+                <div><span class="cb-detail-label">Theme:</span> <span class="cb-detail-value">${bot.theme || 'dark'}</span></div>
+                <div><span class="cb-detail-label">Created:</span> <span class="cb-detail-value">${created}</span></div>
+            </div>
+            <div class="cb-prompt">${escapeHtml(prompt)}${prompt.length >= 100 ? '...' : ''}</div>
+            <div class="cb-actions">
+                <button class="cb-btn" onclick="editChatbot('${bot.id}')">Edit</button>
+                <button class="cb-btn" onclick="toggleStatus('${bot.id}', '${bot.status}')">${bot.status === 'active' ? 'Disable' : 'Enable'}</button>
+                <button class="cb-btn danger" onclick="deleteChatbot('${bot.id}', '${escapeHtml(bot.name)}')">Delete</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function editChatbot(id) {
+    const bot = chatbots.find(b => b.id === id);
+    if (!bot) return;
+
+    document.getElementById('editModalTitle').textContent = 'Edit: ' + bot.name;
+    document.getElementById('editModalBody').innerHTML = `
+        <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="editName" value="${escapeHtml(bot.name)}">
+        </div>
+        <div class="form-group">
+            <label>System Prompt</label>
+            <textarea id="editPrompt">${escapeHtml(bot.system_prompt || '')}</textarea>
+        </div>
+        <div class="form-group">
+            <label>Greeting</label>
+            <input type="text" id="editGreeting" value="${escapeHtml(bot.greeting || '')}">
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Model</label>
+                <select id="editModel">
+                    <option ${bot.model_id==='claude-haiku'?'selected':''}>claude-haiku</option>
+                    <option ${bot.model_id==='claude-sonnet'?'selected':''}>claude-sonnet</option>
+                    <option ${bot.model_id==='claude-opus'?'selected':''}>claude-opus</option>
+                    <option ${bot.model_id==='gpt-4o'?'selected':''}>gpt-4o</option>
+                    <option ${bot.model_id==='gpt-4o-mini'?'selected':''}>gpt-4o-mini</option>
+                    <option ${bot.model_id==='gemini-pro'?'selected':''}>gemini-pro</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Theme</label>
+                <select id="editTheme">
+                    <option ${bot.theme==='dark'?'selected':''}>dark</option>
+                    <option ${bot.theme==='light'?'selected':''}>light</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Primary Color</label>
+                <input type="color" id="editColor" value="${bot.primary_color || '#4ade80'}">
+            </div>
+            <div class="form-group">
+                <label>Position</label>
+                <select id="editPosition">
+                    <option ${bot.position==='bottom-right'?'selected':''}>bottom-right</option>
+                    <option ${bot.position==='bottom-left'?'selected':''}>bottom-left</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Allowed Domains (comma separated, empty = any)</label>
+            <input type="text" id="editDomains" value="${escapeHtml(bot.allowed_domains || '')}">
+        </div>
+
+        <div class="preview-box">
+            <strong style="font-size:12px;color:var(--text-muted)">Preview</strong>
+            <div class="preview-chat">
+                <div class="preview-bubble bot">${escapeHtml(bot.greeting || 'Hi!')}</div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button class="btn-cancel" onclick="closeEdit()">Cancel</button>
+            <button class="btn-save" onclick="saveChatbot('${bot.id}')">Save</button>
+        </div>
+    `;
+    document.getElementById('editModal').classList.add('active');
+}
+
+async function saveChatbot(id) {
+    const data = {
+        name: document.getElementById('editName').value,
+        system_prompt: document.getElementById('editPrompt').value,
+        greeting: document.getElementById('editGreeting').value,
+        model_id: document.getElementById('editModel').value,
+        theme: document.getElementById('editTheme').value,
+        primary_color: document.getElementById('editColor').value,
+        position: document.getElementById('editPosition').value,
+        allowed_domains: document.getElementById('editDomains').value,
+    };
+    await fetch('/api/chatbots/' + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    closeEdit();
+    loadChatbots();
+}
+
+async function createChatbot() {
+    const name = prompt('Chatbot name:');
+    if (!name) return;
+    await fetch('/api/chatbots', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name }) });
+    loadChatbots();
+}
+
+async function toggleStatus(id, current) {
+    const newStatus = current === 'active' ? 'inactive' : 'active';
+    await fetch('/api/chatbots/' + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status: newStatus }) });
+    loadChatbots();
+}
+
+async function deleteChatbot(id, name) {
+    if (!confirm('Delete chatbot "' + name + '" and all its data?')) return;
+    await fetch('/api/chatbots/' + id, { method: 'DELETE' });
+    loadChatbots();
+}
+
+function closeEdit() { document.getElementById('editModal').classList.remove('active'); }
+document.getElementById('editModal').addEventListener('click', function(e) { if (e.target === this) closeEdit(); });
+
+function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+</script>
+{% endblock %}

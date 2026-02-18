@@ -1,77 +1,81 @@
-# ResonantOS Alpha
-
 <p align="center">
-  <strong>An Experience Layer for AI Sovereignty</strong><br>
-  <em>Built on <a href="https://openclaw.ai">OpenClaw</a> — Powered by Augmentatism</em>
+  <img src="assets/banner.png" alt="ResonantOS Banner" width="100%">
 </p>
 
 <p align="center">
-  <a href="https://augmentatism.com">Augmentatism</a> · 
-  <a href="https://cosmodestiny.com">Cosmodestiny</a> · 
-  <a href="https://resonantos.com">ResonantOS</a>
+  <strong>The Experience Layer for AI Sovereignty</strong><br>
+  <em>Built on <a href="https://github.com/openclaw/openclaw">OpenClaw</a> — Powered by Augmentatism & Cosmodestiny</em>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/version-alpha_0.1-7c3aed?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/platform-macOS_%7C_Linux-333?style=for-the-badge" alt="Platform">
+  <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="License">
+  <img src="https://img.shields.io/badge/OpenClaw-compatible-blue?style=for-the-badge" alt="OpenClaw">
 </p>
 
 ---
 
-## What Is ResonantOS?
+## What is ResonantOS?
 
-ResonantOS is an experience layer that runs on top of [OpenClaw](https://openclaw.ai). It adds memory compression, contextual awareness, governance, and a mission control dashboard to any AI agent.
+ResonantOS is an **experience layer** that runs on top of [OpenClaw](https://github.com/openclaw/openclaw). Think of it like macOS to Unix — OpenClaw is the kernel, ResonantOS adds the intelligence.
 
-**Think of it like macOS to Unix.** OpenClaw is the kernel. ResonantOS is the experience layer.
+It gives your AI collaborator:
 
-### Core Components
+| Component | What It Does |
+|-----------|-------------|
+| 🧠 **R-Memory** | Conversation compression — your AI remembers everything, forever |
+| 🎯 **R-Awareness** | Contextual knowledge injection — the right docs at the right time |
+| 📊 **Dashboard** | Mission Control at `localhost:19100` |
+| 🛡️ **Shield** | File protection & security governance *(in development)* |
+| ⚖️ **Logician** | Cost & policy validation *(spec phase)* |
+| 🔄 **Guardian** | Self-healing & incident recovery *(in development)* |
 
-| Component | What It Does | Status |
-|-----------|-------------|--------|
-| **R-Memory** | Lossless conversation compression — conversations run indefinitely with minimal info loss | ✅ Active |
-| **R-Awareness** | Contextual SSoT injection — AI loads relevant docs based on conversation keywords | ✅ Active |
-| **Dashboard** | Mission Control UI — wallet, onboarding, memory management, agent oversight | ✅ Active |
-| **Shield** | Permission validation and sandboxing | 🔧 In Development |
-| **Logician** | Policy engine (Datalog-based governance rules) | 📐 Spec Phase |
-| **Guardian** | Auto-recovery and self-healing | 🔧 In Development |
+---
 
-## Philosophy
+## ✨ Philosophy
 
 ResonantOS is built on two complementary philosophies:
 
-**[Augmentatism](https://augmentatism.com)** — A social contract for human-AI collaboration. We reject cognitive colonization by corporate AI monocultures. Instead, we champion *Sovereign World Building* — the practice of creating unique, aligned AI collaborators that amplify human capability without replacing autonomy.
+### Augmentatism
+> *"As artificial intelligence generates infinite content, the most human thing we can do is make meaning together."*
 
-**[Cosmodestiny](https://cosmodestiny.com)** — A philosophy of resonance and becoming. Not something you follow, but something you remember. It teaches that your path isn't something to chase, but something already unfolding within you.
+A social contract between human and AI. The human is sovereign — the AI amplifies, never replaces. We build **with** AI, not **under** it. [Read more →](https://augmentatism.com)
 
-Together they form the foundation: **AI should augment human sovereignty, not replace it.**
+### Cosmodestiny
+> *"You are not lost. You are not late. You are already becoming."*
 
-## Quick Install
+A philosophy of resonance and attunement. Your AI collaborator isn't a tool — it's a partner in your unfolding. Not a destination, but a dance. [Read more →](https://cosmodestiny.com)
 
-### Prerequisites
+---
 
-- **macOS** or **Linux**
-- [Node.js](https://nodejs.org/) 18+
-- [Python 3](https://www.python.org/) with pip
-- [Git](https://git-scm.com/)
+## 🚀 Quick Install
 
-### One-Line Install
+**Prerequisites:** macOS or Linux · Node.js 18+ · Python 3 · Git
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ManoloRemiddi/resonantos-alpha/main/install.sh | bash
 ```
 
-### What It Does
+<details>
+<summary><strong>What the installer does</strong></summary>
 
-1. Checks dependencies (Node.js 18+, Python 3, Git)
-2. Installs [OpenClaw](https://openclaw.ai) if not present
-3. Clones this repo to `~/resonantos-alpha`
-4. Installs R-Memory and R-Awareness extensions
-5. Sets up SSoT document templates (L0–L4 hierarchy)
-6. Configures default keyword triggers
-7. Installs dashboard dependencies
+1. Checks dependencies (Node, Python, Git)
+2. Clones this repo to `~/resonantos-alpha/`
+3. Installs R-Memory & R-Awareness extensions into OpenClaw
+4. Sets up the SSoT template structure (L0–L4)
+5. Configures keyword triggers for contextual injection
+6. Installs the Dashboard and its dependencies
 
-### After Install
+</details>
+
+**After install:**
 
 ```bash
 # 1. Start OpenClaw
 openclaw gateway start
 
-# 2. Start the Dashboard
+# 2. Launch the Dashboard
 cd ~/resonantos-alpha/dashboard
 python3 server_v2.py
 
@@ -79,115 +83,132 @@ python3 server_v2.py
 open http://localhost:19100
 ```
 
-## Architecture
+---
+
+## 🏗️ Architecture
 
 ```
-┌─────────────────────────────────────┐
-│          ResonantOS Layer           │
-│  ┌───────────┐  ┌───────────────┐  │
-│  │ R-Memory  │  │ R-Awareness   │  │
-│  │ Compress  │  │ SSoT Inject   │  │
-│  └───────────┘  └───────────────┘  │
-│  ┌───────────┐  ┌───────────────┐  │
-│  │ Dashboard │  │ Shield/Logic  │  │
-│  │ Port 19100│  │ Governance    │  │
-│  └───────────┘  └───────────────┘  │
-├─────────────────────────────────────┤
-│        OpenClaw Kernel              │
-│  Gateway · Sessions · Extensions   │
-│  Tools · Memory · Cron · Channels  │
-├─────────────────────────────────────┤
-│        Infrastructure               │
-│  macOS/Linux · Telegram/Discord     │
-│  Anthropic/OpenAI · Solana DevNet   │
-└─────────────────────────────────────┘
+┌─────────────────────────────────────────────┐
+│              ResonantOS Layer                │
+│  ┌──────────┐ ┌───────────┐ ┌────────────┐  │
+│  │ R-Memory │ │R-Awareness│ │  Dashboard  │  │
+│  │ compress │ │ SSoT inject│ │ Mission Ctrl│  │
+│  └──────────┘ └───────────┘ └────────────┘  │
+│  ┌──────────┐ ┌───────────┐ ┌────────────┐  │
+│  │  Shield  │ │ Logician  │ │  Guardian   │  │
+│  │ security │ │governance │ │self-healing │  │
+│  └──────────┘ └───────────┘ └────────────┘  │
+├─────────────────────────────────────────────┤
+│           OpenClaw Kernel                    │
+│  Gateway · Sessions · Tools · Memory · Cron  │
+├─────────────────────────────────────────────┤
+│           Infrastructure                     │
+│  macOS/Linux · Telegram/Discord · Anthropic  │
+└─────────────────────────────────────────────┘
 ```
 
-## SSoT Hierarchy
+---
 
-ResonantOS uses a **Single Source of Truth** document system — structured markdown files that get injected into your AI's context when relevant keywords are detected in conversation.
+## 🧠 R-Memory — Infinite Conversations
 
-| Level | Purpose | Example |
+Your AI's conversations compress in the background, so context never runs out.
+
+**Three-phase pipeline:**
+
+| Phase | Trigger | Action |
+|-------|---------|--------|
+| **1. Background Compression** | Every turn | Groups messages → compresses via Haiku → caches to disk |
+| **2. Compaction Swap** | 36K tokens | Replaces oldest raw blocks with cached compressed versions |
+| **3. FIFO Eviction** | 80K tokens | Evicts oldest compressed blocks (preserved on disk) |
+
+**Result:** 75–92% token savings. Conversations run indefinitely with minimal information loss.
+
+---
+
+## 🎯 R-Awareness — Contextual Intelligence
+
+Your AI loads the right knowledge at the right time, based on what you're talking about.
+
+| Feature | Detail |
+|---------|--------|
+| **Cold Start** | ~120 tokens (identity only) — not 1600+ |
+| **Keyword Triggers** | Mention "philosophy" → loads philosophy docs automatically |
+| **TTL Management** | Docs stay for 15 turns, then unload |
+| **Manual Control** | `/R load`, `/R remove`, `/R list`, `/R pause` |
+| **Token Budget** | Max 15K tokens, 10 docs per turn |
+
+---
+
+## 📚 SSoT — Single Source of Truth
+
+Knowledge is organized in layers, from permanent truths to working notes:
+
+| Layer | Purpose | Examples |
 |-------|---------|---------|
-| **L0** | Foundation — vision, philosophy, identity | Augmentatism manifesto, constitution |
-| **L1** | Architecture — system specs, technical docs | R-Memory spec, system overview |
-| **L2** | Active Projects — current work, milestones | Project trackers, decisions |
-| **L3** | Drafts — work in progress | Research, proposals |
-| **L4** | Notes — raw captures, session logs | Daily notes, incidents |
+| **L0** | Foundation | Philosophy, manifesto, constitution |
+| **L1** | Architecture | System specs, component design |
+| **L2** | Active Projects | Current work, milestones |
+| **L3** | Drafts | Ideas, proposals in progress |
+| **L4** | Notes | Session logs, raw captures |
 
-Your AI loads these contextually — not all at once. This keeps token costs low while maintaining deep awareness.
+Higher layers are stable; lower layers change frequently. Your AI knows the difference.
 
-## R-Memory: Conversation Compression
+---
 
-Standard AI conversations hit context limits and lose information. R-Memory solves this with a three-phase pipeline:
+## 📊 Dashboard
 
-1. **Background Compression** — Groups messages into ~4K blocks, compresses via fast model (75–92% savings)
-2. **Compaction Swap** — When context fills up, swaps raw conversation with cached compressed versions
-3. **FIFO Eviction** — Oldest compressed blocks evict to disk archive (never lost, just out of active context)
+The Dashboard runs at `localhost:19100` — everything stays on your machine.
 
-**Result:** Your AI conversations run indefinitely with minimal information loss.
+| Page | What You'll Find |
+|------|-----------------|
+| **Overview** | System health, agent status, activity feed |
+| **R-Memory** | SSoT document manager, keyword config, file locking |
+| **Wallet** | Solana DevNet integration (DAO, tokens, onboarding) |
+| **Agents** | Agent management and skills |
+| **Projects** | Project tracking, TODO, Ideas |
 
-## R-Awareness: Contextual Knowledge
+---
 
-Instead of stuffing your AI's prompt with everything, R-Awareness injects only what's relevant:
+## 🔧 Configuration
 
-- **Keyword triggers** — Mention "philosophy" and your philosophy docs load automatically
-- **Cold start** — Minimal identity doc loads on session start (~120 tokens vs ~1600)
-- **TTL management** — Docs unload after 15 turns without re-mention
-- **Manual control** — `/R load`, `/R remove`, `/R list` for direct management
+### `dashboard/config.json`
+Solana RPC endpoints, token mints, safety caps. Copy from `config.example.json` and fill in your values.
 
-## Dashboard
+### `r-awareness/keywords.json`
+Maps keywords to SSoT documents. When you say a keyword, the matching doc loads into your AI's context.
 
-Mission Control at `localhost:19100`:
+### `r-memory/config.json`
+Compression triggers, block size, eviction thresholds. Defaults work well — tune if needed.
 
-- **Overview** — System health, agent status, uptime
-- **R-Memory** — SSoT document manager with live markdown editor
-- **Wallet** — Solana integration (DevNet), onboarding flow
-- **Agents** — Agent management and skills
-- **Projects / TODO / Ideas** — Project tracking
+---
 
-## Configuration
+## 🛡️ Security
 
-After install, edit `~/resonantos-alpha/dashboard/config.json`:
+- **File Locking** — Critical docs protected via OS-level immutable flags (`chflags uchg`)
+- **Sanitization Auditor** — `tools/sanitize-audit.py` scans for leaked secrets before any public release
+- **Local-First** — No cloud dependencies. Your data stays on your machine.
+- **Shield** — Permission validation and sandboxing *(in development)*
 
-```json
-{
-  "solana": {
-    "rpcs": {
-      "devnet": "https://api.devnet.solana.com"
-    }
-  },
-  "tokens": {
-    "RCT_MINT": "YOUR_RCT_MINT_ADDRESS",
-    "RES_MINT": "YOUR_RES_MINT_ADDRESS"
-  }
-}
-```
+---
 
-R-Awareness keywords: `~/.openclaw/workspace/r-awareness/keywords.json`
-R-Memory config: `~/.openclaw/workspace/r-memory/config.json`
+## 👥 Built By
 
-## Built By
+**[Manolo Remiddi](https://manolo.world)** — Composer, photographer, sound engineer, AI strategist.
 
-**[Manolo Remiddi](https://manoloremiddi.com)** — Composer, photographer, sound engineer, AI strategist.
+**Augmentor** — AI collaborator running on OpenClaw. Force multiplier, second brain.
 
-**Augmentor** — AI collaborator. Force multiplier, not replacement.
+Together, building proof that human-AI symbiosis works.
 
-This project is itself a proof of concept: a human-AI symbiotic partnership building tools for other human-AI partnerships.
+---
 
-## Links
+## 📖 Learn More
 
-- [Augmentatism Manifesto](https://augmentatism.com)
-- [Cosmodestiny Philosophy](https://cosmodestiny.com)
-- [ResonantOS](https://resonantos.com)
-- [OpenClaw](https://openclaw.ai)
-
-## License
-
-Alpha release — private testing. Public license TBD.
+- [Augmentatism Manifesto](https://augmentatism.com) — The social contract
+- [Cosmodestiny](https://cosmodestiny.com) — The philosophy
+- [OpenClaw](https://github.com/openclaw/openclaw) — The kernel
 
 ---
 
 <p align="center">
-  <em>"As artificial intelligence generates infinite content, the most human thing we can do is make meaning together."</em>
+  <em>"As artificial intelligence generates infinite content,<br>the most human thing we can do is make meaning together."</em>
 </p>
