@@ -4,7 +4,7 @@
 
 <p align="center">
   <strong>The Experience Layer for AI Sovereignty</strong><br>
-  <em>Built on <a href="https://github.com/openclaw/openclaw">OpenClaw</a> — Powered by Augmentatism & Cosmodestiny</em>
+  <em>Built on <a href="https://github.com/openclaw/openclaw">OpenClaw</a> — Powered by Augmentatism</em>
 </p>
 
 <p align="center">
@@ -50,17 +50,10 @@ It gives your AI collaborator:
 
 ## ✨ Philosophy
 
-ResonantOS is built on two complementary philosophies:
-
 ### Augmentatism
 > *"As artificial intelligence generates infinite content, the most human thing we can do is make meaning together."*
 
 A social contract between human and AI. The human is sovereign — the AI amplifies, never replaces. We build **with** AI, not **under** it. [Read more →](https://augmentatism.com)
-
-### Cosmodestiny
-> *"You are not lost. You are not late. You are already becoming."*
-
-A philosophy of resonance and attunement. Your AI collaborator isn't a tool — it's a partner in your unfolding. Not a destination, but a dance. [Read more →](https://cosmodestiny.com)
 
 ---
 
@@ -204,8 +197,7 @@ Together, building proof that human-AI symbiosis works.
 
 ## 📖 Learn More
 
-- [Augmentatism Manifesto](https://augmentatism.com) — The social contract
-- [Cosmodestiny](https://cosmodestiny.com) — The philosophy
+- [Augmentatism Manifesto](https://augmentatism.com) — The philosophy
 - [OpenClaw](https://github.com/openclaw/openclaw) — The kernel
 
 ---

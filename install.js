@@ -121,7 +121,6 @@ writeJsonIfMissing(
     system: ["L1/SSOT-L1-IDENTITY-STUB.ai.md"],
     openclaw: ["L1/SSOT-L1-IDENTITY-STUB.ai.md"],
     philosophy: ["L0/PHILOSOPHY.md"],
-    cosmodestiny: ["L0/PHILOSOPHY.md"],
     augmentatism: ["L0/PHILOSOPHY.md"],
     constitution: ["L0/CONSTITUTION.md"],
     architecture: ["L1/SYSTEM-ARCHITECTURE.md"],
