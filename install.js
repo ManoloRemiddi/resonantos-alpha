@@ -147,7 +147,7 @@ writeJsonIfMissing(
   path.join(OPENCLAW_WORKSPACE, "r-memory", "config.json"),
   {
     compressTrigger: 36000,
-    evictTrigger: 80000,
+    evictTrigger: 50000,
     blockSize: 4000,
     minCompressChars: 200,
     compressionModel: "anthropic/claude-haiku-4-5",
