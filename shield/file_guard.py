@@ -1,15 +1,32 @@
 #!/usr/bin/env python3
 """
 Shield File Guard — filesystem-level protection for core system files.
-Uses macOS `chflags uchg/nouchg` to prevent/allow modifications.
-Password required for unlock (sudo).
+
+Cross-platform:
+  - macOS: uses chflags uchg/nouchg (immutable flag)
+  - Linux: uses chattr +i/-i (immutable attribute, requires root)
+  - Fallback: chmod a-w / chmod u+w (any POSIX system)
+
+Paths are auto-detected relative to the install location.
 """
 
 import json
 import os
+import platform
 import subprocess
 import sys
 from pathlib import Path
+
+# ---------------------------------------------------------------------------
+# Path detection — works regardless of install directory name
+# ---------------------------------------------------------------------------
+_SCRIPT_DIR = Path(__file__).resolve().parent          # .../shield/
+_PROJECT_ROOT = _SCRIPT_DIR.parent                      # .../resonantos-alpha/ (or whatever)
+_HOME = Path.home()
+
+def _project_rel(p: str) -> str:
+    """Convert a project-relative path to absolute using detected root."""
+    return str(_PROJECT_ROOT / p)
 
 # Core files/dirs that make the agent run
 GUARD_MANIFEST = {
@@ -19,13 +36,13 @@ GUARD_MANIFEST = {
             "~/.openclaw/agents/main/agent/auth-profiles.json",
         ],
         "category": "core",
-        "include_data": True,  # override exclude for .json
+        "include_data": True,
     },
     "agent_extensions": {
         "label": "Agent Extensions (backups, old versions)",
         "paths": ["~/.openclaw/agents/main/agent/extensions/"],
         "category": "core",
-        "exclude_names": ["r-awareness.js", "r-memory.js"],  # Active extensions — must stay writable
+        "exclude_names": ["r-awareness.js", "r-memory.js"],
     },
     "identity": {
         "label": "Identity Files",
@@ -40,48 +57,65 @@ GUARD_MANIFEST = {
     },
     "dashboard": {
         "label": "Dashboard",
-        "paths": [
-            "~/resonantos-augmentor/dashboard/server_v2.py",
-            "~/resonantos-augmentor/dashboard/templates/",
-            "~/resonantos-augmentor/dashboard/static/",
-        ],
+        "paths": [],  # populated at module load from _PROJECT_ROOT
         "category": "core",
     },
     "shield": {
         "label": "Shield",
-        "paths": ["~/resonantos-augmentor/shield/"],
+        "paths": [],
         "category": "core",
     },
     "ssot_l0": {
         "label": "SSOT L0 — Foundation",
-        "paths": ["~/resonantos-augmentor/ssot/L0/"],
+        "paths": [],
         "category": "ssot",
     },
     "ssot_l1": {
         "label": "SSOT L1 — Architecture",
-        "paths": ["~/resonantos-augmentor/ssot/L1/"],
+        "paths": [],
         "category": "ssot",
     },
     "github_push": {
         "label": "GitHub Push Access",
-        "paths": [],  # No filesystem paths — uses git hook mechanism
+        "paths": [],
         "category": "core",
-        "hook_guard": True,  # Special: manages pre-push hook instead of chflags
-        "repos": [
-            "~/resonantos-augmentor",
-        ],
+        "hook_guard": True,
+        "repos": [],
     },
 }
+
+# Populate project-relative paths at load time
+GUARD_MANIFEST["dashboard"]["paths"] = [
+    _project_rel("dashboard/server_v2.py"),
+    _project_rel("dashboard/templates/"),
+    _project_rel("dashboard/static/"),
+]
+GUARD_MANIFEST["shield"]["paths"] = [_project_rel("shield/")]
+GUARD_MANIFEST["ssot_l0"]["paths"] = [_project_rel("ssot/L0/")] if (_PROJECT_ROOT / "ssot" / "L0").is_dir() else []
+GUARD_MANIFEST["ssot_l1"]["paths"] = [_project_rel("ssot/L1/")] if (_PROJECT_ROOT / "ssot" / "L1").is_dir() else []
+GUARD_MANIFEST["github_push"]["repos"] = [str(_PROJECT_ROOT)]
+
+# Also check for ssot-template (alpha layout)
+if not GUARD_MANIFEST["ssot_l0"]["paths"] and (_PROJECT_ROOT / "ssot-template" / "L0").is_dir():
+    GUARD_MANIFEST["ssot_l0"]["paths"] = [_project_rel("ssot-template/L0/")]
+if not GUARD_MANIFEST["ssot_l1"]["paths"] and (_PROJECT_ROOT / "ssot-template" / "L1").is_dir():
+    GUARD_MANIFEST["ssot_l1"]["paths"] = [_project_rel("ssot-template/L1/")]
+
 
 # These patterns inside guarded dirs should NOT be locked (working data)
 EXCLUDE_PATTERNS = [
     "*.log",
-    "*.json",  # history/cache data files
+    "*.json",
     "__pycache__",
     ".git",
     "alerts/",
     "r-memory.log",
 ]
+
+# ---------------------------------------------------------------------------
+# Platform detection
+# ---------------------------------------------------------------------------
+_PLATFORM = platform.system()  # "Darwin", "Linux", "Windows"
 
 
 def expand_path(p: str) -> Path:
@@ -101,8 +135,8 @@ def should_exclude(filepath: Path) -> bool:
     return False
 
 
-def collect_files(paths: list[str], include_data: bool = False,
-                   exclude_names: list[str] | None = None) -> list[Path]:
+def collect_files(paths: list, include_data: bool = False,
+                   exclude_names: list = None) -> list:
     """Collect all files from paths (expanding dirs recursively)."""
     result = []
     _excl = set(exclude_names or [])
@@ -119,15 +153,56 @@ def collect_files(paths: list[str], include_data: bool = False,
 
 
 def is_locked(filepath: Path) -> bool:
-    """Check if file has uchg flag set."""
+    """Check if file has immutable flag set (cross-platform)."""
     try:
-        result = subprocess.run(
-            ["ls", "-lO", str(filepath)],
-            capture_output=True, text=True, timeout=5
-        )
-        return "uchg" in result.stdout
+        if _PLATFORM == "Darwin":
+            result = subprocess.run(
+                ["ls", "-lO", str(filepath)],
+                capture_output=True, text=True, timeout=5
+            )
+            return "uchg" in result.stdout
+        elif _PLATFORM == "Linux":
+            result = subprocess.run(
+                ["lsattr", str(filepath)],
+                capture_output=True, text=True, timeout=5
+            )
+            # lsattr output: "----i--------e-- filename"
+            if result.returncode == 0 and result.stdout:
+                attrs = result.stdout.split()[0] if result.stdout.strip() else ""
+                return "i" in attrs
+            # lsattr not available — fall back to write permission check
+            return not os.access(str(filepath), os.W_OK)
+        else:
+            return not os.access(str(filepath), os.W_OK)
     except Exception:
         return False
+
+
+def _lock_file_platform(filepath: str) -> None:
+    """Lock a single file using platform-appropriate method."""
+    if _PLATFORM == "Darwin":
+        subprocess.run(["chflags", "uchg", filepath], check=True, timeout=5)
+    elif _PLATFORM == "Linux":
+        try:
+            subprocess.run(["sudo", "chattr", "+i", filepath], check=True, timeout=5)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            # chattr unavailable or no sudo — fall back to chmod
+            subprocess.run(["chmod", "a-w", filepath], check=True, timeout=5)
+    else:
+        subprocess.run(["chmod", "a-w", filepath], check=True, timeout=5)
+
+
+def _unlock_file_platform(filepath: str) -> None:
+    """Unlock a single file using platform-appropriate method."""
+    if _PLATFORM == "Darwin":
+        subprocess.run(["chflags", "nouchg", filepath], check=True, timeout=5)
+    elif _PLATFORM == "Linux":
+        try:
+            subprocess.run(["sudo", "chattr", "-i", filepath], check=True, timeout=5)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            subprocess.run(["chmod", "u+w", filepath], check=True, timeout=5)
+    else:
+        subprocess.run(["chmod", "u+w", filepath], check=True, timeout=5)
 
 
 def get_status() -> dict:
@@ -135,7 +210,6 @@ def get_status() -> dict:
     status = {}
     for group_id, group in GUARD_MANIFEST.items():
         if group.get("hook_guard"):
-            # Hook-based guard (e.g., git pre-push)
             repos = group.get("repos", [])
             file_status = []
             for r in repos:
@@ -143,7 +217,7 @@ def get_status() -> dict:
                 locked = is_hook_locked(rp)
                 file_status.append({
                     "path": str(rp),
-                    "short": str(rp).replace(str(Path.home()), "~"),
+                    "short": str(rp).replace(str(_HOME), "~"),
                     "locked": locked,
                     "size": 0,
                 })
@@ -158,6 +232,7 @@ def get_status() -> dict:
                 "files": file_status,
             }
             continue
+
         files = collect_files(group["paths"], include_data=group.get("include_data", False),
                               exclude_names=group.get("exclude_names"))
         file_status = []
@@ -165,7 +240,7 @@ def get_status() -> dict:
             locked = is_locked(f)
             file_status.append({
                 "path": str(f),
-                "short": str(f).replace(str(Path.home()), "~"),
+                "short": str(f).replace(str(_HOME), "~"),
                 "locked": locked,
                 "size": f.stat().st_size if f.exists() else 0,
             })
@@ -183,7 +258,7 @@ def get_status() -> dict:
 
 
 def lock_group(group_id: str) -> dict:
-    """Lock all files in a group using chflags uchg (or hook for hook_guard)."""
+    """Lock all files in a group."""
     if group_id not in GUARD_MANIFEST:
         return {"error": f"Unknown group: {group_id}"}
     group = GUARD_MANIFEST[group_id]
@@ -198,7 +273,7 @@ def lock_group(group_id: str) -> dict:
     results = []
     for f in files:
         try:
-            subprocess.run(["chflags", "uchg", str(f)], check=True, timeout=5)
+            _lock_file_platform(str(f))
             results.append({"path": str(f), "locked": True})
         except subprocess.CalledProcessError as e:
             results.append({"path": str(f), "locked": False, "error": str(e)})
@@ -206,7 +281,7 @@ def lock_group(group_id: str) -> dict:
 
 
 def unlock_group(group_id: str) -> dict:
-    """Unlock all files in a group using chflags nouchg (or hook for hook_guard)."""
+    """Unlock all files in a group."""
     if group_id not in GUARD_MANIFEST:
         return {"error": f"Unknown group: {group_id}"}
     group = GUARD_MANIFEST[group_id]
@@ -221,7 +296,7 @@ def unlock_group(group_id: str) -> dict:
     results = []
     for f in files:
         try:
-            subprocess.run(["chflags", "nouchg", str(f)], check=True, timeout=5)
+            _unlock_file_platform(str(f))
             results.append({"path": str(f), "unlocked": True})
         except subprocess.CalledProcessError as e:
             results.append({"path": str(f), "unlocked": False, "error": str(e)})
@@ -237,12 +312,16 @@ exit 1
 
 def is_hook_locked(repo_path: Path) -> bool:
     hook = repo_path / ".git" / "hooks" / "pre-push"
-    return hook.exists() and "Shield File Guard" in hook.read_text()
+    if not hook.exists():
+        return False
+    try:
+        return "Shield File Guard" in hook.read_text()
+    except Exception:
+        return False
 
 
 def lock_hook(repo_path: Path) -> dict:
     hook = repo_path / ".git" / "hooks" / "pre-push"
-    # Back up existing hook if present and not ours
     if hook.exists() and "Shield File Guard" not in hook.read_text():
         hook.rename(hook.with_suffix(".pre-shield-backup"))
     hook.write_text(PRE_PUSH_HOOK)
@@ -265,7 +344,7 @@ def lock_file(filepath: str) -> dict:
     if not fp.exists():
         return {"error": f"File not found: {filepath}"}
     try:
-        subprocess.run(["chflags", "uchg", str(fp)], check=True, timeout=5)
+        _lock_file_platform(str(fp))
         return {"path": str(fp), "locked": True}
     except subprocess.CalledProcessError as e:
         return {"error": str(e)}
@@ -276,7 +355,7 @@ def unlock_file(filepath: str) -> dict:
     if not fp.exists():
         return {"error": f"File not found: {filepath}"}
     try:
-        subprocess.run(["chflags", "nouchg", str(fp)], check=True, timeout=5)
+        _unlock_file_platform(str(fp))
         return {"path": str(fp), "unlocked": True}
     except subprocess.CalledProcessError as e:
         return {"error": str(e)}
