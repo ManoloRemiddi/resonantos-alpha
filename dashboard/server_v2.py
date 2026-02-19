@@ -261,18 +261,15 @@ class GatewayClient:
                 self.error = str(e)
             time.sleep(3)  # reconnect delay
 
-    def _connect(self):
-        ws = websocket.WebSocket()
-        ws.settimeout(10)
-        ws.connect(GW_WS_URL)
-        self._ws = ws
-
-        # Send connect
+    def _send_connect(self, ws, nonce=None):
         connect_msg = {
             "type": "req", "id": "c0", "method": "connect",
             "params": {
                 "auth": {"token": GW_TOKEN},
                 "minProtocol": 3, "maxProtocol": 3,
+                "role": "operator",
+                "scopes": ["operator.admin"],
+                "caps": [],
                 "client": {
                     "id": "gateway-client",
                     "mode": "backend",
@@ -282,6 +279,32 @@ class GatewayClient:
             }
         }
         ws.send(json.dumps(connect_msg))
+
+    def _connect(self):
+        ws = websocket.WebSocket()
+        ws.settimeout(10)
+        ws.connect(GW_WS_URL)
+        self._ws = ws
+
+        # Wait for challenge event, then send connect with nonce
+        challenge_received = False
+        ws.settimeout(5)
+        try:
+            raw = ws.recv()
+            if raw:
+                msg = json.loads(raw)
+                if msg.get("type") == "event" and msg.get("event") == "connect.challenge":
+                    nonce = msg.get("payload", {}).get("nonce")
+                    self._send_connect(ws, nonce)
+                    challenge_received = True
+                else:
+                    self._handle(msg)
+        except Exception:
+            pass
+
+        if not challenge_received:
+            # Fallback: send connect without nonce (older protocol)
+            self._send_connect(ws)
 
         # Read loop
         ws.settimeout(60)
@@ -509,7 +532,21 @@ def _rmem_parse_log():
     return events
 
 def _rmem_gateway_session():
-    """Get main session data from gateway via WS."""
+    """Get main session data from sessions.json file directly."""
+    sessions_path = Path.home() / ".openclaw" / "agents" / "main" / "sessions" / "sessions.json"
+    try:
+        data = json.loads(sessions_path.read_text())
+        # sessions.json is a dict keyed by session key
+        if isinstance(data, dict) and "agent:main:main" in data:
+            return data["agent:main:main"]
+        # Fallback: list format
+        if isinstance(data, list):
+            for s in data:
+                if s.get("key") == "agent:main:main":
+                    return s
+    except Exception:
+        pass
+    # Fallback: try WS
     try:
         sess_result = gw.request("sessions.list", timeout=5)
         if sess_result.get("ok") and sess_result.get("payload"):
@@ -1094,18 +1131,32 @@ def api_wallet_mint_nft():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-@app.route("/api/wallet/send-tokens", methods=["POST"])
-def api_wallet_send_tokens():
-    """Transfer tokens from sender's Symbiotic PDA to a recipient address."""
+@app.route("/api/wallet/build-transfer-tx", methods=["POST"])
+def api_wallet_build_transfer_tx():
+    """Build a transfer_out transaction for Phantom to sign.
+
+    The PDA transfer requires the on-chain program to authorize via CPI.
+    Human signs the transaction via Phantom, server builds the instruction.
+
+    Body: { sender, recipient, amount, token (RCT|RES), network }
+    Returns: { transaction: base64-encoded serialized tx (message only, for Phantom signing) }
+    """
     try:
-        if not TokenManager:
-            return jsonify({"error": "Token toolkit not available"}), 503
+        import hashlib as _hl
+        import struct as _st
+        import base64
+        from solders.pubkey import Pubkey as _Pubkey
+        from solders.instruction import Instruction as _Ix, AccountMeta as _AM
+        from solders.transaction import Transaction as _Tx
+        from solders.message import Message as _Msg
+        from solana.rpc.api import Client as _Client
+
         data = request.get_json(force=True)
         network = data.get("network", "devnet")
-        sender = data.get("sender")       # human pubkey
-        recipient = data.get("recipient")  # destination wallet
+        sender = data.get("sender", "").strip()
+        recipient = data.get("recipient", "").strip()
         amount = float(data.get("amount", 0))
-        token = data.get("token", "RCT")  # RCT or RES
+        token = data.get("token", "RCT").upper()
 
         if not sender or not recipient or amount <= 0:
             return jsonify({"error": "Missing sender, recipient, or valid amount"}), 400
@@ -1116,17 +1167,103 @@ def api_wallet_send_tokens():
         if not user_data.get("identityNftMinted"):
             return jsonify({"error": "Identity NFT required to send tokens"}), 403
 
-        pda_address = _derive_symbiotic_pda(sender)
-        wallet = SolanaWallet(network=network)
+        # Token config
+        if token == "RCT":
+            mint_str = _RCT_MINT
+            decimals = 9
+            token_prog_str = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"  # Token-2022
+        elif token == "RES":
+            mint_str = _RES_MINT
+            decimals = 6
+            token_prog_str = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"  # SPL Token
+        else:
+            return jsonify({"error": f"Unknown token: {token}"}), 400
 
-        # PDA transfers require a CPI instruction in the Symbiotic Anchor program.
-        # The PDA is owned by the on-chain program — only the program can authorize transfers.
-        return jsonify({"error": f"Transfers from Symbiotic PDA not yet available. Requires a program-level transfer instruction (CPI). Coming soon."}), 501
+        # Validate base58 addresses
+        import re as _re
+        _b58_re = _re.compile(r'^[1-9A-HJ-NP-Za-km-z]{32,44}$')
+        if not _b58_re.match(sender):
+            return jsonify({"error": f"Invalid sender address (not base58)"}), 400
+        if not _b58_re.match(recipient):
+            return jsonify({"error": f"Invalid recipient address (not base58)"}), 400
 
-        return jsonify({"success": True, "signature": result.get("signature", ""), "amount": amount, "token": token})
+        # Derive PDA
+        program_id = _Pubkey.from_string(_SYMBIOTIC_PROGRAM_ID)
+        human = _Pubkey.from_string(sender)
+        recipient_pk = _Pubkey.from_string(recipient)
+        mint = _Pubkey.from_string(mint_str)
+        token_prog = _Pubkey.from_string(token_prog_str)
+
+        pda, bump = _Pubkey.find_program_address(
+            [b"symbiotic", bytes(human), bytes([0])], program_id
+        )
+
+        # Derive ATAs
+        from spl.token.instructions import get_associated_token_address
+        from_ata = get_associated_token_address(pda, mint, token_prog)
+        to_ata = get_associated_token_address(recipient_pk, mint, token_prog)
+
+        # Build transfer_out instruction
+        disc = _hl.sha256(b"global:transfer_out").digest()[:8]
+        raw_amount = int(amount * (10 ** decimals))
+        ix_data = disc + _st.pack("<Q", raw_amount)
+
+        accounts = [
+            _AM(pubkey=pda, is_signer=False, is_writable=False),
+            _AM(pubkey=human, is_signer=True, is_writable=True),
+            _AM(pubkey=from_ata, is_signer=False, is_writable=True),
+            _AM(pubkey=to_ata, is_signer=False, is_writable=True),
+            _AM(pubkey=mint, is_signer=False, is_writable=False),
+            _AM(pubkey=token_prog, is_signer=False, is_writable=False),
+        ]
+
+        ix = _Ix(program_id, ix_data, accounts)
+
+        # Optionally create recipient ATA if it doesn't exist
+        rpcs = {"devnet": "https://api.devnet.solana.com", "testnet": "https://api.testnet.solana.com", "mainnet-beta": "https://api.mainnet-beta.com"}
+        client = _Client(rpcs.get(network, network))
+
+        instructions = []
+
+        # Check if recipient ATA exists
+        ata_info = client.get_account_info(to_ata)
+        if ata_info.value is None:
+            # Create ATA instruction
+            from spl.token.instructions import create_associated_token_account
+            create_ata_ix = create_associated_token_account(
+                payer=human, owner=recipient_pk, mint=mint, token_program_id=token_prog
+            )
+            instructions.append(create_ata_ix)
+
+        instructions.append(ix)
+
+        # Build transaction message
+        blockhash_resp = client.get_latest_blockhash()
+        blockhash = blockhash_resp.value.blockhash
+        msg = _Msg.new_with_blockhash(instructions, human, blockhash)
+        tx = _Tx.new_unsigned(msg)
+
+        # Serialize for Phantom
+        tx_bytes = bytes(tx)
+        tx_b64 = base64.b64encode(tx_bytes).decode("ascii")
+
+        return jsonify({
+            "transaction": tx_b64,
+            "pda": str(pda),
+            "fromAta": str(from_ata),
+            "toAta": str(to_ata),
+            "rawAmount": raw_amount,
+            "decimals": decimals,
+        })
+
     except Exception as e:
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
+@app.route("/api/wallet/send-tokens", methods=["POST"])
+def api_wallet_send_tokens():
+    """Legacy endpoint — redirects to build-transfer-tx."""
+    return api_wallet_build_transfer_tx()
 
 @app.route("/api/wallet/daily-claim", methods=["POST"])
 def api_wallet_daily_claim():
@@ -1701,6 +1838,37 @@ def api_protocol_store_purchase():
                 "error": "Already purchased",
                 "mint": wallet_mints[protocol_id]
             }), 409
+
+        # ── Verify $RES payment: check Symbiotic PDA balance ──
+        protocol_info = PROTOCOL_NFTS[protocol_id]
+        price_res = protocol_info.get("price_res", 0)  # price in $RES
+        if price_res > 0:
+            from solders.pubkey import Pubkey as _Pk
+            from solana.rpc.api import Client as _Cl
+            program_id = _Pk.from_string(_SYMBIOTIC_PROGRAM_ID)
+            human_pk = _Pk.from_string(wallet_address)
+            pda, _ = _Pk.find_program_address(
+                [b"symbiotic", bytes(human_pk), bytes([0])], program_id
+            )
+            res_mint = _Pk.from_string(_RES_MINT)
+            res_prog = _Pk.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
+            from spl.token.instructions import get_associated_token_address
+            pda_ata = get_associated_token_address(pda, res_mint, res_prog)
+            rpcs = {"devnet": "https://api.devnet.solana.com"}
+            cl = _Cl(rpcs.get(network, network))
+            ata_info = cl.get_account_info_json_parsed(pda_ata)
+            pda_balance = 0
+            if ata_info.value:
+                try:
+                    pda_balance = int(ata_info.value.data.parsed["info"]["tokenAmount"]["amount"]) / 1e6
+                except Exception:
+                    pass
+            if pda_balance < price_res:
+                return jsonify({
+                    "error": f"Insufficient $RES balance. Need {price_res}, have {pda_balance:.2f}",
+                    "required": price_res,
+                    "balance": pda_balance,
+                }), 402
 
         # Use Registration Basket as fee payer
         fee_payer = str(_REGISTRATION_BASKET_KEYPAIR)
@@ -2326,7 +2494,9 @@ def api_agents():
         for fname in ["SOUL.md", "AGENTS.md", "USER.md", "IDENTITY.md", "MEMORY.md"]:
             fpath = ws_dir / fname
             if not fpath.exists() and agent_id != "main":
-                fpath = WORKSPACE / fname  # fallback to shared
+                if fname in ("IDENTITY.md", "SOUL.md", "MEMORY.md"):
+                    continue  # agent-specific files should NOT fall back to main
+                fpath = WORKSPACE / fname  # fallback to shared for AGENTS.md, USER.md
             if fpath.exists():
                 try:
                     workspace_files[fname] = fpath.read_text()[:2000]
@@ -2369,8 +2539,10 @@ def api_agents():
         "dao":      {"tier": 1, "role": "DAO Strategy & Governance", "category": "direct"},
         "youtube":  {"tier": 1, "role": "Content Creation", "category": "direct"},
         "website":  {"tier": 1, "role": "Marketing Website", "category": "direct"},
-        "watchdog": {"tier": 1, "role": "System Health Monitor", "category": "support"},
-        "decoder":  {"tier": 1, "role": "Coding Agent", "category": "background"},
+        "watchdog":      {"tier": 1, "role": "System Health Monitor", "category": "support"},
+        "decoder":       {"tier": 1, "role": "Coding Agent", "category": "background"},
+        "acupuncturist": {"tier": 1, "role": "Protocol Enforcement", "category": "support"},
+        "blindspot":     {"tier": 1, "role": "Red Team & Vulnerability Hunter", "category": "support"},
     }
 
     # 1. Active agents from gateway health
@@ -3453,6 +3625,26 @@ def api_shield_guard_unlock():
         return jsonify({"error": "Provide 'group' or 'file'"}), 400
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# ---------------------------------------------------------------------------
+# API: Logician Status
+# ---------------------------------------------------------------------------
+
+@app.route("/api/logician/status")
+def api_logician_status():
+    """Read Logician monitor status file (deterministic, no AI)."""
+    status_file = os.path.join(
+        str(Path.home()), "resonantos-augmentor", "logician", "monitor", "status.json"
+    )
+    try:
+        with open(status_file) as f:
+            data = json.load(f)
+        return jsonify(data)
+    except FileNotFoundError:
+        return jsonify({"status": "unknown", "error": "monitor not running"})
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)})
+
 
 # ---------------------------------------------------------------------------
 # API: System Info (openclaw status)
