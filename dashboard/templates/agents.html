@@ -207,7 +207,7 @@ function renderHierarchy(agents) {
     // Orchestrator
     if (orchestrator) {
         const ag = orchestrator;
-        const model = String(ag.mainModel || '-').split('/').pop();
+        const model = (typeof ag.mainModel === 'string' && ag.mainModel ? ag.mainModel : '-').split('/').pop();
         const hb = ag.heartbeat || {};
         const sess = ag.sessions || {};
         document.getElementById('orchestratorSection').innerHTML = `
@@ -267,7 +267,7 @@ function renderHierarchy(agents) {
 }
 
 function renderAgentCard(ag) {
-    const model = String(ag.mainModel || '-').split('/').pop();
+    const model = (typeof ag.mainModel === 'string' && ag.mainModel ? ag.mainModel : '-').split('/').pop();
     const sess = ag.sessions || {};
     const files = ag.workspaceFiles || {};
     const fileNames = ['SOUL.md', 'IDENTITY.md', 'AGENTS.md', 'USER.md', 'MEMORY.md'];
@@ -328,7 +328,7 @@ async function showAgentDetail(agentId) {
             </div>
             <div class="detail-item">
                 <span class="detail-label">Model</span>
-                <span class="detail-value">${String(ag.mainModel || '-').split('/').pop()}</span>
+                <span class="detail-value">${(typeof ag.mainModel === 'string' && ag.mainModel ? ag.mainModel : '-').split('/').pop()}</span>
             </div>
             <div class="detail-item">
                 <span class="detail-label">Status</span>
