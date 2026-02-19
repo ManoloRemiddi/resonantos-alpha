@@ -889,7 +889,7 @@
                         <input type="number" id="sendAmount" placeholder="Amount" min="0" step="0.01" style="flex:3; min-width:0; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:6px; padding:8px 10px; color:inherit; font-size:13px;">
                         <select id="sendToken" style="flex:1; min-width:70px; max-width:90px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:6px; padding:8px 10px; color:inherit; font-size:13px;">
                             <option value="RES">$RES</option>
-                            <option value="SOL">SOL</option>
+                            <option value="RCT">$RCT</option>
                         </select>
                     </div>
                     <button onclick="sendTokens()" class="btn-primary" style="padding:8px 16px; border-radius:6px; font-size:13px; cursor:pointer;">Send</button>
@@ -932,6 +932,19 @@
                     <span class="rex-level">L0</span>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Daily Claim Card -->
+    <div class="wallet-section full-width daily-claim-card">
+        <h3 style="margin: 0 0 12px; font-size: 16px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Daily Claim
+        </h3>
+        <p style="font-size:13px; color:var(--text-muted); margin:0 0 12px;">Claim <strong>1 $RCT</strong> + <strong>500 $RES</strong> every 24 hours. Tokens go to your Symbiotic Wallet.</p>
+        <button id="dailyClaimBtn" class="claim-btn" onclick="dailyClaim()">Claim Rewards</button>
+        <div id="claimCooldown" style="display:none; margin-top:8px; font-size:12px; color:var(--text-muted);">
+            Next claim in: <span id="cooldownTimer">--:--:--</span>
         </div>
     </div>
 </div>
@@ -1165,8 +1178,15 @@ async function sendTokens() {
         showToast('Connect your Phantom wallet first', 'error');
         return;
     }
+    const provider = window.solana;
+    if (!provider || !provider.isPhantom) {
+        showToast('Phantom wallet not found', 'error');
+        return;
+    }
     try {
-        const resp = await fetch('/api/wallet/send-tokens', {
+        showToast('Building transaction...', 'info');
+        // Step 1: Build the transaction server-side
+        const resp = await fetch('/api/wallet/build-transfer-tx', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
@@ -1178,17 +1198,51 @@ async function sendTokens() {
             })
         });
         const data = await resp.json();
-        if (resp.ok && data.success) {
-            showToast(`Sent ${amount} $${token} to ${recipient.slice(0,6)}...`, 'success');
-            document.getElementById('sendRecipient').value = '';
-            document.getElementById('sendAmount').value = '';
-            loadUserWallet();
-        } else {
-            showToast(data.error || 'Transfer failed', 'error');
+        if (!resp.ok) {
+            showToast(data.error || 'Failed to build transaction', 'error');
+            return;
         }
+
+        // Step 2: Send to Phantom for signing via signAndSendTransaction
+        const txBytes = Uint8Array.from(atob(data.transaction), c => c.charCodeAt(0));
+
+        showToast('Approve in Phantom...', 'info');
+        const result = await provider.request({
+            method: 'signAndSendTransaction',
+            params: {
+                message: data.transaction,  // base64 encoded
+                options: { skipPreflight: true }
+            }
+        });
+        const signature = result.signature;
+
+        showToast('Confirming...', 'info');
+        const rpcUrl = currentNetwork === 'testnet' ? 'https://api.testnet.solana.com' : 'https://api.devnet.solana.com';
+        for (let i = 0; i < 30; i++) {
+            const statusResp = await fetch(rpcUrl, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    jsonrpc: '2.0', id: 1, method: 'getSignatureStatuses',
+                    params: [[signature]]
+                })
+            });
+            const statusData = await statusResp.json();
+            if (statusData.result?.value?.[0]?.confirmationStatus) break;
+            await new Promise(r => setTimeout(r, 1000));
+        }
+
+        showToast(`Sent ${amount} $${token} to ${recipient.slice(0,6)}... ✓`, 'success');
+        document.getElementById('sendRecipient').value = '';
+        document.getElementById('sendAmount').value = '';
+        loadUserWallet();
     } catch (e) {
         console.error('Send error:', e);
-        showToast('Network error — try again', 'error');
+        if (e.message && e.message.includes('User rejected')) {
+            showToast('Transaction rejected by user', 'error');
+        } else {
+            showToast(e.message || 'Transfer failed — try again', 'error');
+        }
     }
 }
 
@@ -1641,6 +1695,49 @@ async function createSymbioticWallet() {
             { serialize: () => txBytes },
             { skipPreflight: true }
         );
+        
+        // Wait for on-chain confirmation before declaring success
+        showToast('Transaction sent — waiting for confirmation...', 'info');
+        const rpcUrl = currentNetwork === 'mainnet-beta'
+            ? 'https://api.mainnet-beta.solana.com'
+            : 'https://api.devnet.solana.com';
+        let confirmed = false;
+        for (let i = 0; i < 30; i++) {
+            await new Promise(r => setTimeout(r, 1500));
+            try {
+                const statusResp = await fetch(rpcUrl, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        jsonrpc: '2.0', id: 1,
+                        method: 'getSignatureStatuses',
+                        params: [[signature], {searchTransactionHistory: true}]
+                    })
+                });
+                const statusData = await statusResp.json();
+                const val = statusData?.result?.value?.[0];
+                if (val && val.confirmationStatus && val.err === null) {
+                    confirmed = true;
+                    break;
+                }
+                if (val && val.err) {
+                    showToast('Transaction failed on-chain: ' + JSON.stringify(val.err), 'error');
+                    return;
+                }
+            } catch (e) { /* retry */ }
+        }
+        if (!confirmed) {
+            showToast('Transaction not confirmed after 45s — check Solana Explorer with signature: ' + signature, 'warning');
+            return;
+        }
+        
+        // Verify PDA actually exists on-chain
+        const verifyResp = await fetch(`/api/symbiotic/pair-info?humanPubkey=${connectedAddress}&network=${currentNetwork}`);
+        const verifyData = await verifyResp.json();
+        if (!verifyData.exists) {
+            showToast('Transaction confirmed but PDA not detected — try refreshing in a few seconds', 'warning');
+            return;
+        }
         
         showToast(`Symbiotic wallet created! PDA: ${data.pda.slice(0,8)}...`, 'success');
         loadOnboardingStatus();
