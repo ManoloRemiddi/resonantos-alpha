@@ -22,8 +22,12 @@ from pathlib import Path
 from flask import Flask, jsonify, render_template, request, send_from_directory
 from flask_cors import CORS
 
+# Derive repo root from this script's location (works for any clone name)
+_DASHBOARD_SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = _DASHBOARD_SCRIPT_DIR.parent  # <repo>/dashboard/../ = <repo>
+
 # Solana wallet integration imports
-sys.path.insert(0, str(Path.home() / "resonantos-augmentor" / "solana-toolkit"))
+sys.path.insert(0, str(REPO_ROOT / "solana-toolkit"))
 try:
     from nft_minter import NFTMinter
     from token_manager import TokenManager
@@ -47,7 +51,9 @@ except ImportError:
 OPENCLAW_HOME = Path.home() / ".openclaw"
 OPENCLAW_CONFIG = OPENCLAW_HOME / "openclaw.json"
 WORKSPACE = OPENCLAW_HOME / "workspace"
-SSOT_ROOT = WORKSPACE / "resonantos-augmentor" / "ssot"
+# SSoT root: prefer ssot/, fall back to ssot-template/ for alpha users
+_ssot_candidate = REPO_ROOT / "ssot"
+SSOT_ROOT = _ssot_candidate if _ssot_candidate.exists() else REPO_ROOT / "ssot-template"
 AGENTS_DIR = OPENCLAW_HOME / "agents"
 EXTENSIONS_DIR = OPENCLAW_HOME / "extensions"
 RMEMORY_DIR = WORKSPACE / "r-memory"
@@ -56,7 +62,7 @@ RMEMORY_CONFIG = RMEMORY_DIR / "config.json"
 R_AWARENESS_LOG = WORKSPACE / "r-awareness" / "r-awareness.log"
 
 # --- Load config.json (with hardcoded fallbacks for backward compatibility) ---
-_DASHBOARD_DIR = Path(__file__).resolve().parent
+_DASHBOARD_DIR = _DASHBOARD_SCRIPT_DIR  # reuse from above
 _CONFIG_FILE = _DASHBOARD_DIR / "config.json"
 _CFG = {}
 if _CONFIG_FILE.exists():
@@ -67,7 +73,7 @@ if _CONFIG_FILE.exists():
 
 # Solana wallet integration
 _SOLANA_KEYPAIR = Path(_CFG.get("solana", {}).get("keypairPath", "~/.config/solana/id.json")).expanduser()
-_DAO_DETAILS = Path.home() / "resonantos-augmentor" / _CFG.get("paths", {}).get("daoDetails", "ssot/L2/DAO_DETAILS.json")
+_DAO_DETAILS = REPO_ROOT / _CFG.get("paths", {}).get("daoDetails", "ssot/L2/DAO_DETAILS.json")
 _REGISTRATION_BASKET_KEYPAIR = Path(_CFG.get("solana", {}).get("daoRegistrationBasketKeypairPath", "~/.config/solana/dao-registration-basket.json")).expanduser()
 _MIN_SOL_FOR_GAS = _CFG.get("solana", {}).get("minSolForGas", 0.01)
 
@@ -103,9 +109,9 @@ _RCT_DAILY_FLOOR = _rct_caps_cfg.get("dailyFloor", 300)
 _RCT_DAILY_MAX = _rct_caps_cfg.get("dailyMax", 100_000)
 _RCT_DECIMALS = _rct_caps_cfg.get("decimals", 9)
 _paths_cfg = _CFG.get("paths", {})
-_RCT_CAPS_FILE = Path.home() / "resonantos-augmentor" / _paths_cfg.get("rctCapsFile", "data/rct_caps.json")
-_ONBOARDING_FILE = Path.home() / "resonantos-augmentor" / _paths_cfg.get("onboardingFile", "data/onboarding.json")
-_DAILY_CLAIMS_FILE = Path.home() / "resonantos-augmentor" / "data" / "daily_claims.json"
+_RCT_CAPS_FILE = REPO_ROOT / _paths_cfg.get("rctCapsFile", "data/rct_caps.json")
+_ONBOARDING_FILE = REPO_ROOT / _paths_cfg.get("onboardingFile", "data/onboarding.json")
+_DAILY_CLAIMS_FILE = REPO_ROOT / "data" / "daily_claims.json"
 
 # Level thresholds for reputation
 _LEVEL_THRESHOLDS = [0, 10, 50, 150, 400, 1000, 2500, 6000, 15000, 40000]
@@ -656,7 +662,8 @@ def license_page():
 # ============================================================================
 
 DOCS_WORKSPACE = WORKSPACE  # ~/.openclaw/workspace
-REPO_DIR = Path.home() / "resonantos-augmentor"  # actual repo location
+REPO_DIR = REPO_ROOT  # derived from script location — works regardless of clone name
+REPO_NAME = REPO_ROOT.name  # e.g. "resonantos-alpha" or "resonantos-augmentor"
 
 WORKSPACE_SYSTEM_FILES = {
     "AGENTS.md", "SOUL.md", "USER.md", "TOOLS.md", "IDENTITY.md",
@@ -698,30 +705,30 @@ def _docs_build_tree():
     # 1. Repo docs/
     docs_dir = REPO_DIR / "docs"
     if docs_dir.exists():
-        items = _docs_build_folder_tree(docs_dir, "resonantos-augmentor/docs")
+        items = _docs_build_folder_tree(docs_dir, f"{REPO_NAME}/docs")
         if items:
-            tree.append({"name": "docs", "type": "folder", "path": "resonantos-augmentor/docs", "icon": "📖", "children": items, "fileCount": sum(i.get("fileCount", 0) if i["type"] == "folder" else 1 for i in items)})
+            tree.append({"name": "docs", "type": "folder", "path": f"{REPO_NAME}/docs", "icon": "📖", "children": items, "fileCount": sum(i.get("fileCount", 0) if i["type"] == "folder" else 1 for i in items)})
 
     # 2. SSoT
     ssot_dir = REPO_DIR / "ssot"
     if ssot_dir.exists():
-        items = _docs_build_folder_tree(ssot_dir, "resonantos-augmentor/ssot")
+        items = _docs_build_folder_tree(ssot_dir, f"{REPO_NAME}/ssot")
         if items:
-            tree.append({"name": "ssot", "type": "folder", "path": "resonantos-augmentor/ssot", "icon": "🗂️", "children": items, "fileCount": sum(i.get("fileCount", 0) if i["type"] == "folder" else 1 for i in items)})
+            tree.append({"name": "ssot", "type": "folder", "path": f"{REPO_NAME}/ssot", "icon": "🗂️", "children": items, "fileCount": sum(i.get("fileCount", 0) if i["type"] == "folder" else 1 for i in items)})
 
     # 3. Dashboard source
     dash_dir = REPO_DIR / "dashboard"
     if dash_dir.exists():
-        items = _docs_build_folder_tree(dash_dir, "resonantos-augmentor/dashboard")
+        items = _docs_build_folder_tree(dash_dir, f"{REPO_NAME}/dashboard")
         if items:
-            tree.append({"name": "dashboard", "type": "folder", "path": "resonantos-augmentor/dashboard", "icon": "📊", "children": items, "fileCount": sum(i.get("fileCount", 0) if i["type"] == "folder" else 1 for i in items)})
+            tree.append({"name": "dashboard", "type": "folder", "path": f"{REPO_NAME}/dashboard", "icon": "📊", "children": items, "fileCount": sum(i.get("fileCount", 0) if i["type"] == "folder" else 1 for i in items)})
 
     # 4. Reference
     ref_dir = REPO_DIR / "reference"
     if ref_dir.exists():
-        items = _docs_build_folder_tree(ref_dir, "resonantos-augmentor/reference")
+        items = _docs_build_folder_tree(ref_dir, f"{REPO_NAME}/reference")
         if items:
-            tree.append({"name": "reference", "type": "folder", "path": "resonantos-augmentor/reference", "icon": "📚", "children": items, "fileCount": sum(i.get("fileCount", 0) if i["type"] == "folder" else 1 for i in items)})
+            tree.append({"name": "reference", "type": "folder", "path": f"{REPO_NAME}/reference", "icon": "📚", "children": items, "fileCount": sum(i.get("fileCount", 0) if i["type"] == "folder" else 1 for i in items)})
 
     # 5. Workspace root .md files (excluding system files)
     root_docs = []
@@ -757,9 +764,9 @@ def api_docs_file():
     path = request.args.get("path", "")
     if path.startswith("/"):
         filepath = Path(path)
-    elif path.startswith("resonantos-augmentor/"):
+    elif path.startswith(f"{REPO_NAME}/"):
         # Resolve against actual repo location
-        sub = path[len("resonantos-augmentor/"):]
+        sub = path[len(f"{REPO_NAME}/"):]
         filepath = REPO_DIR / sub
     else:
         filepath = DOCS_WORKSPACE / path
@@ -795,8 +802,8 @@ def api_docs_open_editor():
         return jsonify({"error": "No path"}), 400
     if path.startswith("/"):
         filepath = Path(path)
-    elif path.startswith("resonantos-augmentor/"):
-        filepath = REPO_DIR / path[len("resonantos-augmentor/"):]
+    elif path.startswith(f"{REPO_NAME}/"):
+        filepath = REPO_DIR / path[len(f"{REPO_NAME}/"):]
     else:
         filepath = DOCS_WORKSPACE / path
     try:
@@ -848,11 +855,11 @@ def api_docs_search():
         except Exception:
             pass
 
-    # Search all browsable sources (REPO_DIR is ~/resonantos-augmentor, not inside workspace)
+    # Search all browsable sources (REPO_DIR is the repo root, not inside workspace)
     search_roots = [
-        (REPO_DIR / "docs", "resonantos-augmentor/docs"),
-        (REPO_DIR / "ssot", "resonantos-augmentor/ssot"),
-        (REPO_DIR / "reference", "resonantos-augmentor/reference"),
+        (REPO_DIR / "docs", f"{REPO_NAME}/docs"),
+        (REPO_DIR / "ssot", f"{REPO_NAME}/ssot"),
+        (REPO_DIR / "reference", f"{REPO_NAME}/reference"),
         (DOCS_WORKSPACE / "memory", "memory"),
     ]
     for root, prefix in search_roots:
@@ -922,9 +929,9 @@ def api_docs_search_semantic():
         return snip, best_i + 1
 
     search_roots = [
-        ("resonantos-augmentor/docs", REPO_DIR / "docs"),
-        ("resonantos-augmentor/ssot", REPO_DIR / "ssot"),
-        ("resonantos-augmentor/reference", REPO_DIR / "reference"),
+        (f"{REPO_NAME}/docs", REPO_DIR / "docs"),
+        (f"{REPO_NAME}/ssot", REPO_DIR / "ssot"),
+        (f"{REPO_NAME}/reference", REPO_DIR / "reference"),
         ("memory", DOCS_WORKSPACE / "memory"),
     ]
     for prefix, root in search_roots:
@@ -3964,9 +3971,7 @@ def api_shield_guard_unlock():
 @app.route("/api/logician/status")
 def api_logician_status():
     """Read Logician monitor status file (deterministic, no AI)."""
-    status_file = os.path.join(
-        str(Path.home()), "resonantos-augmentor", "logician", "monitor", "status.json"
-    )
+    status_file = str(REPO_ROOT / "logician" / "monitor" / "status.json")
     try:
         with open(status_file) as f:
             data = json.load(f)
