@@ -242,7 +242,10 @@ def _record_rct_mint(recipient, amount_human):
 # Gateway WebSocket Client (background thread)
 # ---------------------------------------------------------------------------
 
-import websocket  # pip install websocket-client
+try:
+    import websocket  # pip install websocket-client
+except ImportError:
+    websocket = None
 
 class GatewayClient:
     """Persistent WS connection to OpenClaw gateway. Caches latest state."""
@@ -299,6 +302,10 @@ class GatewayClient:
         ws.send(json.dumps(connect_msg))
 
     def _connect(self):
+        if websocket is None:
+            self.error = "websocket-client not installed (pip install websocket-client)"
+            import time; time.sleep(30)
+            return
         ws = websocket.WebSocket()
         ws.settimeout(10)
         ws.connect(GW_WS_URL)
@@ -2657,15 +2664,23 @@ def api_agents():
     def _resolve_model(agent_id):
         try:
             cfg = json.loads(OPENCLAW_CONFIG.read_text())
-            # Check agent-specific model in the list
+            # 1. Check agent-specific model in agents.list
             for entry in cfg.get("agents", {}).get("list", []):
                 if entry.get("id") == agent_id and entry.get("model"):
-                    return entry["model"]
-            # Fall back to defaults
-            model = cfg.get("agents", {}).get("defaults", {}).get("model")
-            return model or "unknown"
+                    m = entry["model"]
+                    # model can be string or {"primary": "..."} (OpenClaw docs format)
+                    return m.get("primary", str(m)) if isinstance(m, dict) else m
+            # 2. Check agents.defaults.model
+            default_model = cfg.get("agents", {}).get("defaults", {}).get("model")
+            if default_model:
+                return default_model
+            # 3. Check top-level model
+            top_model = cfg.get("model")
+            if top_model:
+                return top_model if isinstance(top_model, str) else top_model.get("primary", str(top_model))
+            return "default"
         except Exception:
-            return "unknown"
+            return "default"
 
     # Helper: parse identity for emoji/name
     def _parse_identity(workspace_files):
@@ -2804,6 +2819,24 @@ def api_agents():
             "emoji": emoji,
             "displayName": name or agent_id,
             **(AGENT_META.get(agent_id, {"tier": 1, "role": "Agent", "category": "other"})),
+        })
+
+    # 4. Guaranteed fallback: always include "main" agent
+    # Single-agent users may not have agents.list or workspace-* dirs
+    if "main" not in seen_ids:
+        workspace_files = _read_workspace("main")
+        emoji, name = _parse_identity(workspace_files)
+        agents.append({
+            "agentId": "main",
+            "isDefault": True,
+            "status": "configured",
+            "mainModel": _resolve_model("main"),
+            "heartbeat": {},
+            "sessions": {"count": 0},
+            "workspaceFiles": workspace_files,
+            "emoji": emoji,
+            "displayName": name or "Main Agent",
+            **(AGENT_META.get("main", {"tier": 0, "role": "Orchestrator & Strategist", "category": "core"})),
         })
 
     # Sort: tier 0 first, then alphabetical

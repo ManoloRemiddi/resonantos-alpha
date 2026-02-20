@@ -159,9 +159,9 @@ writeJsonIfMissing(
 // 7. Dashboard dependencies
 log("Installing dashboard dependencies...");
 try {
-  run(`${pip} install -q flask flask-cors psutil`, { cwd: path.join(INSTALL_DIR, "dashboard") });
+  run(`${pip} install -q flask flask-cors psutil websocket-client`, { cwd: path.join(INSTALL_DIR, "dashboard") });
 } catch {
-  run(`${pip} install flask flask-cors psutil`, { cwd: path.join(INSTALL_DIR, "dashboard") });
+  run(`${pip} install flask flask-cors psutil websocket-client`, { cwd: path.join(INSTALL_DIR, "dashboard") });
 }
 ok("Dashboard ready");
 
