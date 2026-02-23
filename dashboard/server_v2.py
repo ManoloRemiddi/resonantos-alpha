@@ -22,8 +22,17 @@ from pathlib import Path
 from flask import Flask, jsonify, render_template, request, send_from_directory
 from flask_cors import CORS
 
-# Solana wallet integration imports
-sys.path.insert(0, str(Path.home() / "resonantos-augmentor" / "solana-toolkit"))
+# Solana wallet integration imports — resolve toolkit path dynamically
+_dashboard_dir = Path(__file__).resolve().parent
+_toolkit_candidates = [
+    _dashboard_dir.parent / "solana-toolkit",  # sibling dir (standard layout: resonantos-alpha/solana-toolkit)
+    Path.home() / "resonantos-augmentor" / "solana-toolkit",  # dev/augmentor fallback
+    Path.home() / "resonantos-alpha" / "solana-toolkit",  # alpha explicit fallback
+]
+for _toolkit_path in _toolkit_candidates:
+    if _toolkit_path.exists():
+        sys.path.insert(0, str(_toolkit_path))
+        break
 try:
     from nft_minter import NFTMinter
     from token_manager import TokenManager
