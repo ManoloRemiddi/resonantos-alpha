@@ -1,0 +1,117 @@
+import json
+from pathlib import Path
+from typing import List, Dict, Any
+
+from solana.rpc.api import Client
+from solders.keypair import Keypair
+from solders.pubkey import Pubkey
+
+
+class SolanaWallet:
+    """A Solana wallet wrapper for keypair management and basic RPC operations."""
+    
+    def __init__(self, keypair_path: str = "~/.config/solana/id.json", network: str = "devnet"):
+        """
+        Initialize the Solana wallet by loading a keypair and setting up the RPC client.
+        
+        Args:
+            keypair_path: Path to the JSON keypair file. Defaults to ~/.config/solana/id.json.
+            network: Network to connect to ('devnet', 'testnet', 'mainnet-beta'). Defaults to 'devnet'.
+        
+        Raises:
+            FileNotFoundError: If the keypair file does not exist.
+            ValueError: If the keypair file contains invalid data.
+        """
+        expanded_path = Path(keypair_path).expanduser()
+        
+        if not expanded_path.exists():
+            raise FileNotFoundError(f"Keypair file not found: {expanded_path}")
+        
+        try:
+            with open(expanded_path, 'r') as f:
+                secret_key = json.load(f)
+            
+            keypair_bytes = bytes(secret_key)
+            self.keypair = Keypair.from_bytes(keypair_bytes)
+        except (json.JSONDecodeError, ValueError, TypeError) as e:
+            raise ValueError(f"Invalid keypair file format: {e}")
+        
+        if network == "devnet":
+            rpc_url = "https://api.devnet.solana.com"
+        elif network == "testnet":
+            rpc_url = "https://api.testnet.solana.com"
+        elif network == "mainnet-beta":
+            rpc_url = "https://api.mainnet-beta.solana.com"
+        else:
+            rpc_url = network
+        
+        self.client = Client(rpc_url)
+        self.network = network
+        self.pubkey = self.keypair.pubkey()
+    
+    def get_balance(self) -> float:
+        """
+        Get the SOL balance of the wallet.
+        
+        Returns:
+            float: The balance in SOL (9 decimal places).
+        
+        Raises:
+            Exception: If the RPC request fails or returns no value.
+        """
+        response = self.client.get_balance(self.pubkey)
+        
+        if response.value is None:
+            raise Exception("Failed to retrieve balance from RPC")
+        
+        return float(response.value) / 1e9
+    
+    def airdrop(self, amount_sol: float) -> str:
+        """
+        Request an airdrop of SOL (devnet/testnet only).
+        
+        Args:
+            amount_sol: Amount of SOL to request.
+        
+        Returns:
+            str: The transaction signature as a base58-encoded string.
+        
+        Raises:
+            Exception: If the airdrop request fails.
+        """
+        lamports = int(amount_sol * 1e9)
+        response = self.client.request_airdrop(self.pubkey, lamports)
+        
+        if response.value is None:
+            raise Exception(f"Airdrop request failed: {response}")
+        
+        return str(response.value)
+    
+    def get_recent_transactions(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        Get recent transaction signatures for the wallet address.
+        
+        Args:
+            limit: Maximum number of transactions to return. Defaults to 10.
+        
+        Returns:
+            List[Dict]: List of transaction info dicts with signature, slot, err, block_time.
+        
+        Raises:
+            Exception: If the RPC request fails.
+        """
+        response = self.client.get_signatures_for_address(self.pubkey, limit=limit)
+        
+        if response.value is None:
+            raise Exception("Failed to retrieve transactions from RPC")
+        
+        transactions = []
+        for tx in response.value:
+            transactions.append({
+                "signature": str(tx.signature),
+                "slot": tx.slot,
+                "err": tx.err,
+                "block_time": tx.block_time
+            })
+        
+        return transactions
