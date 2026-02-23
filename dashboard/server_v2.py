@@ -60,6 +60,10 @@ RMEMORY_DIR = WORKSPACE / "r-memory"
 RMEMORY_LOG = RMEMORY_DIR / "r-memory.log"
 RMEMORY_CONFIG = RMEMORY_DIR / "config.json"
 R_AWARENESS_LOG = WORKSPACE / "r-awareness" / "r-awareness.log"
+LOGICIAN_ROOT = REPO_ROOT / "logician"
+LOGICIAN_RULES_DIR = LOGICIAN_ROOT / "rules"
+LOGICIAN_CONFIG_DIR = LOGICIAN_ROOT / "config"
+LOGICIAN_ENABLED_RULES_FILE = LOGICIAN_CONFIG_DIR / "enabled_rules.json"
 
 # --- Load config.json (with hardcoded fallbacks for backward compatibility) ---
 _DASHBOARD_DIR = _DASHBOARD_SCRIPT_DIR  # reuse from above
@@ -589,19 +593,25 @@ def _rmem_parse_log():
 
 def _rmem_gateway_session():
     """Get main session data from sessions.json file directly."""
-    sessions_path = Path.home() / ".openclaw" / "agents" / "main" / "sessions" / "sessions.json"
-    try:
-        data = json.loads(sessions_path.read_text())
-        # sessions.json is a dict keyed by session key
-        if isinstance(data, dict) and "agent:main:main" in data:
-            return data["agent:main:main"]
-        # Fallback: list format
-        if isinstance(data, list):
-            for s in data:
-                if s.get("key") == "agent:main:main":
-                    return s
-    except Exception:
-        pass
+    session_paths = [
+        Path.home() / ".openclaw" / "agents" / "main" / "sessions" / "sessions.json",
+        Path.home() / ".openclaw" / "memory" / "agents" / "main" / "sessions" / "sessions.json",
+    ]
+    for sessions_path in session_paths:
+        if not sessions_path.exists():
+            continue
+        try:
+            data = json.loads(sessions_path.read_text())
+            # sessions.json is a dict keyed by session key
+            if isinstance(data, dict) and "agent:main:main" in data:
+                return data["agent:main:main"]
+            # Fallback: list format
+            if isinstance(data, list):
+                for s in data:
+                    if s.get("key") == "agent:main:main":
+                        return s
+        except Exception:
+            pass
     # Fallback: try WS
     try:
         sess_result = gw.request("sessions.list", timeout=5)
@@ -2643,17 +2653,32 @@ def api_agents():
     # Helper: read workspace files for an agent
     def _read_workspace(agent_id):
         workspace_files = {}
-        # Check per-agent workspace first, then shared
-        ws_dir = OPENCLAW_HOME / f"workspace-{agent_id}"
+        # Check per-agent workspace first, then shared.
+        # Some setups store agent files under workspace/agents/<id> or
+        # workspace/memory/agents/<id> instead of workspace-<id>.
         if agent_id == "main":
-            ws_dir = WORKSPACE
+            candidate_dirs = [WORKSPACE]
+        else:
+            candidate_dirs = [
+                OPENCLAW_HOME / f"workspace-{agent_id}",
+                WORKSPACE / "agents" / agent_id,
+                WORKSPACE / "memory" / "agents" / agent_id,
+                OPENCLAW_HOME / "memory" / "agents" / agent_id,
+            ]
         for fname in ["SOUL.md", "AGENTS.md", "USER.md", "IDENTITY.md", "MEMORY.md"]:
-            fpath = ws_dir / fname
-            if not fpath.exists() and agent_id != "main":
+            fpath = None
+            for ws_dir in candidate_dirs:
+                candidate = ws_dir / fname
+                if candidate.exists():
+                    fpath = candidate
+                    break
+            if fpath is None and agent_id != "main":
                 if fname in ("IDENTITY.md", "SOUL.md", "MEMORY.md"):
                     continue  # agent-specific files should NOT fall back to main
-                fpath = WORKSPACE / fname  # fallback to shared for AGENTS.md, USER.md
-            if fpath.exists():
+                shared = WORKSPACE / fname  # fallback to shared for AGENTS.md, USER.md
+                if shared.exists():
+                    fpath = shared
+            if fpath and fpath.exists():
                 try:
                     workspace_files[fname] = fpath.read_text()[:2000]
                 except Exception:
@@ -2729,7 +2754,7 @@ def api_agents():
         "mainModel": effective["compression"],
         "heartbeat": {},
         "sessions": {"count": 0},
-        "workspaceFiles": {},
+        "workspaceFiles": _read_workspace("memory"),
         "emoji": "🧠",
         "displayName": "R-Memory",
         "tier": 0.5,
@@ -3944,15 +3969,23 @@ def api_shield_status():
         fg = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(fg)
         guard_status = fg.get_status()
+        total_groups = len(guard_status)
         total_files = sum(g["total"] for g in guard_status.values())
         locked_files = sum(g["locked_count"] for g in guard_status.values())
+        mode = "protected" if locked_files > 0 else "unlocked"
         return jsonify({
             "active": locked_files > 0,
             "available": True,
-            "mode": "protected",
+            "mode": mode,
             "file_guard": {
                 "total_files": total_files,
                 "locked_files": locked_files,
+                "summary": {
+                    "total_groups": total_groups,
+                    "total_files": total_files,
+                    "locked_files": locked_files,
+                    "unlocked_files": max(0, total_files - locked_files),
+                },
                 "groups": guard_status,
             },
         })
@@ -4045,6 +4078,149 @@ def api_shield_guard_unlock():
 # ---------------------------------------------------------------------------
 # API: Logician Status
 # ---------------------------------------------------------------------------
+
+def _safe_logician_filename(filename):
+    name = Path(filename).name
+    if name != filename:
+        return None
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+", name):
+        return None
+    return name
+
+
+def _logician_rules_state():
+    state = {"enabled": {}, "locked": []}
+    if not LOGICIAN_ENABLED_RULES_FILE.exists():
+        return state
+    try:
+        data = json.loads(LOGICIAN_ENABLED_RULES_FILE.read_text())
+        if isinstance(data.get("enabled"), dict):
+            state["enabled"] = data["enabled"]
+        if isinstance(data.get("locked"), list):
+            state["locked"] = data["locked"]
+    except Exception:
+        pass
+    return state
+
+
+def _save_logician_rules_state(state):
+    LOGICIAN_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "enabled": state.get("enabled", {}),
+        "locked": state.get("locked", []),
+        "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+    }
+    LOGICIAN_ENABLED_RULES_FILE.write_text(json.dumps(payload, indent=2))
+
+
+def _logician_rule_summary(text):
+    description = ""
+    rules_count = 0
+    facts_count = 0
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.startswith("%"):
+            if not description:
+                desc = line.lstrip("%").strip()
+                if desc and not set(desc).issubset(set("=-_ ")):
+                    description = desc
+            continue
+        if ":-" in line:
+            rules_count += 1
+        elif line.endswith("."):
+            facts_count += 1
+    if not description:
+        description = "Logician rules"
+    return description, rules_count, facts_count
+
+
+@app.route("/api/logician/rules")
+def api_logician_rules():
+    """List available Logician rule files and enabled/locked state."""
+    if not LOGICIAN_RULES_DIR.exists():
+        return jsonify({"rules": [], "status": "unavailable"})
+
+    state = _logician_rules_state()
+    enabled_map = state.get("enabled", {})
+    locked = set(state.get("locked", []))
+    rules = []
+
+    for fpath in sorted(LOGICIAN_RULES_DIR.glob("*")):
+        if not fpath.is_file() or fpath.suffix.lower() not in {".mg", ".mangle"}:
+            continue
+        try:
+            content = fpath.read_text()
+            description, rules_count, facts_count = _logician_rule_summary(content)
+        except Exception:
+            content = ""
+            description, rules_count, facts_count = ("Unreadable rule file", 0, 0)
+        rules.append({
+            "filename": fpath.name,
+            "description": description,
+            "rules": rules_count,
+            "facts": facts_count,
+            "enabled": bool(enabled_map.get(fpath.name, True)),
+            "locked": fpath.name in locked,
+        })
+
+    return jsonify({"rules": rules, "status": "ok"})
+
+
+@app.route("/api/logician/rules/<filename>")
+def api_logician_rule_content(filename):
+    """Read one Logician rule file."""
+    safe_name = _safe_logician_filename(filename)
+    if not safe_name:
+        return jsonify({"error": "invalid filename"}), 400
+    if not LOGICIAN_RULES_DIR.exists():
+        return jsonify({"error": "rules directory not found"}), 404
+
+    fpath = LOGICIAN_RULES_DIR / safe_name
+    if not fpath.exists() or not fpath.is_file():
+        return jsonify({"error": "rule not found"}), 404
+    if fpath.suffix.lower() not in {".mg", ".mangle"}:
+        return jsonify({"error": "unsupported rule file type"}), 400
+
+    try:
+        content = fpath.read_text()
+        return jsonify({"filename": safe_name, "content": content})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/logician/rules/<filename>/toggle", methods=["POST"])
+def api_logician_rule_toggle(filename):
+    """Enable/disable one Logician rule in enabled_rules.json."""
+    safe_name = _safe_logician_filename(filename)
+    if not safe_name:
+        return jsonify({"error": "invalid filename"}), 400
+    if not LOGICIAN_RULES_DIR.exists():
+        return jsonify({"error": "rules directory not found"}), 404
+
+    fpath = LOGICIAN_RULES_DIR / safe_name
+    if not fpath.exists() or not fpath.is_file():
+        return jsonify({"error": "rule not found"}), 404
+    if fpath.suffix.lower() not in {".mg", ".mangle"}:
+        return jsonify({"error": "unsupported rule file type"}), 400
+
+    data = request.get_json(silent=True) or {}
+    if "enabled" not in data:
+        return jsonify({"error": "enabled required"}), 400
+    enabled = bool(data.get("enabled"))
+
+    state = _logician_rules_state()
+    locked = set(state.get("locked", []))
+    if safe_name in locked:
+        return jsonify({"error": "rule is locked"}), 403
+
+    enabled_map = state.get("enabled", {})
+    enabled_map[safe_name] = enabled
+    state["enabled"] = enabled_map
+    _save_logician_rules_state(state)
+    return jsonify({"ok": True, "filename": safe_name, "enabled": enabled})
+
 
 @app.route("/api/logician/status")
 def api_logician_status():

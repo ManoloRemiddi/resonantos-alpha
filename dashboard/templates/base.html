@@ -263,8 +263,12 @@
                 
                 if (data.active) {
                     setState('active', data.mode || 'active', `Symbiotic Shield: ${data.mode.toUpperCase()} mode\nAlerts: ${data.stats?.total_alerts || 0}`);
-                } else if (data.available) {
+                } else if (data.available && data.error) {
                     setState('off', 'error', `Shield error: ${data.error || 'Unknown'}`);
+                } else if (data.available) {
+                    const locked = data.file_guard?.locked_files || 0;
+                    const total = data.file_guard?.total_files || 0;
+                    setState('off', data.mode || 'ready', `Shield available (${locked}/${total} files locked)`);
                 } else {
                     setState('off', 'off', 'Shield not available');
                 }

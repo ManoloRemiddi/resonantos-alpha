@@ -12,6 +12,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_SSOT_ROOT = _REPO_ROOT / "ssot"
+if not _SSOT_ROOT.exists():
+    _SSOT_ROOT = _REPO_ROOT / "ssot-template"
+
 # Core files/dirs that make the agent run
 GUARD_MANIFEST = {
     "agent_config": {
@@ -42,25 +47,25 @@ GUARD_MANIFEST = {
     "dashboard": {
         "label": "Dashboard",
         "paths": [
-            "~/resonantos-augmentor/dashboard/server_v2.py",
-            "~/resonantos-augmentor/dashboard/templates/",
-            "~/resonantos-augmentor/dashboard/static/",
+            str(_REPO_ROOT / "dashboard" / "server_v2.py"),
+            str(_REPO_ROOT / "dashboard" / "templates"),
+            str(_REPO_ROOT / "dashboard" / "static"),
         ],
         "category": "core",
     },
     "shield": {
         "label": "Shield",
-        "paths": ["~/resonantos-augmentor/shield/"],
+        "paths": [str(_REPO_ROOT / "shield")],
         "category": "core",
     },
     "ssot_l0": {
         "label": "SSOT L0 — Foundation",
-        "paths": ["~/resonantos-augmentor/ssot/L0/"],
+        "paths": [str(_SSOT_ROOT / "L0")],
         "category": "ssot",
     },
     "ssot_l1": {
         "label": "SSOT L1 — Architecture",
-        "paths": ["~/resonantos-augmentor/ssot/L1/"],
+        "paths": [str(_SSOT_ROOT / "L1")],
         "category": "ssot",
     },
     "github_push": {
@@ -69,7 +74,7 @@ GUARD_MANIFEST = {
         "category": "core",
         "hook_guard": True,  # Special: manages pre-push hook instead of chflags
         "repos": [
-            "~/resonantos-augmentor",
+            str(_REPO_ROOT),
         ],
     },
 }
@@ -102,8 +107,7 @@ def should_exclude(filepath: Path) -> bool:
     return False
 
 
-def collect_files(paths: list[str], include_data: bool = False,
-                   exclude_names: list[str] | None = None) -> list[Path]:
+def collect_files(paths, include_data=False, exclude_names=None):
     """Collect all files from paths (expanding dirs recursively)."""
     result = []
     _excl = set(exclude_names or [])

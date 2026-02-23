@@ -104,6 +104,7 @@
                         <span class="label">Locked</span>
                     </div>
                 </div>
+                <div id="logicianStatusText" style="font-size:12px; color:var(--text-muted); margin-right:12px;">Logician: checking...</div>
                 <button class="btn-secondary" onclick="loadRules()">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
                     Refresh
@@ -388,6 +389,7 @@ let expandedRules = new Set();
 
 document.addEventListener('DOMContentLoaded', function() {
     loadSettings();
+    loadLogicianStatus();
     loadRules();
 });
 
@@ -546,6 +548,28 @@ function showToast(message, type = 'info') {
 // ============================================
 // Rules Management (embedded from /rules)
 // ============================================
+
+async function loadLogicianStatus() {
+    const el = document.getElementById('logicianStatusText');
+    if (!el) return;
+    try {
+        const response = await fetch('/api/logician/status');
+        const data = await response.json();
+        if (data.status === 'healthy') {
+            el.textContent = 'Logician: healthy';
+            el.style.color = 'var(--success)';
+        } else if (data.status === 'unknown') {
+            el.textContent = 'Logician: monitor not running';
+            el.style.color = 'var(--warning)';
+        } else {
+            el.textContent = 'Logician: ' + (data.status || 'error');
+            el.style.color = 'var(--error)';
+        }
+    } catch (error) {
+        el.textContent = 'Logician: unreachable';
+        el.style.color = 'var(--error)';
+    }
+}
 
 async function loadRules() {
     const container = document.getElementById('rulesList');

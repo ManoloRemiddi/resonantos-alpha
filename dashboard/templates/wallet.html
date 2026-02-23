@@ -1341,6 +1341,7 @@ let phantomProvider = null;
 let connectedAddress = null;
 let nftCarouselIndex = 0;
 let nftCarouselTimer = null;
+let _phantomConnecting = false;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
@@ -1428,11 +1429,11 @@ function confirmMainnet() {
 
 // Phantom Wallet Integration
 function getPhantomProvider() {
-    if (window.phantom?.solana) {
+    if (window.phantom?.solana?.isPhantom) {
         return window.phantom.solana;
     }
     
-    if (window.solana) {
+    if (window.solana?.isPhantom) {
         return window.solana;
     }
     
@@ -1440,30 +1441,71 @@ function getPhantomProvider() {
 }
 
 function detectPhantom() {
-    const provider = getPhantomProvider();
-    if (!provider) {
+    try {
+        const provider = getPhantomProvider();
+        if (!provider) {
+            setTimeout(detectPhantom, 500);
+            return;
+        }
+
+        phantomProvider = provider;
+
+        if (!provider._resonantListenersBound) {
+            provider._resonantListenersBound = true;
+            provider.on('disconnect', () => {
+                connectedAddress = null;
+                updatePhantomUI(false);
+                renderOnboarding({});
+            });
+            provider.on('accountChanged', (pubKey) => {
+                if (pubKey) {
+                    connectedAddress = pubKey.toString();
+                    updatePhantomUI(true);
+                    loadUserWallet();
+                    loadOnboardingStatus();
+                } else {
+                    connectedAddress = null;
+                    updatePhantomUI(false);
+                    renderOnboarding({});
+                }
+            });
+        }
+
+        provider.connect({ onlyIfTrusted: true })
+            .then((resp) => {
+                connectedAddress = resp.publicKey.toString();
+                updatePhantomUI(true);
+                loadUserWallet();
+                loadOnboardingStatus();
+            })
+            .catch(() => {
+                if (provider.isConnected) {
+                    connectedAddress = provider.publicKey?.toString() || null;
+                    if (connectedAddress) {
+                        updatePhantomUI(true);
+                        loadUserWallet();
+                        loadOnboardingStatus();
+                    }
+                }
+            });
+    } catch (error) {
+        console.error('Failed to detect Phantom provider:', error);
         setTimeout(detectPhantom, 500);
-        return;
-    }
-    
-    phantomProvider = provider;
-    
-    if (provider.isConnected) {
-        connectedAddress = provider.publicKey?.toString();
-        updatePhantomUI(true);
-        loadUserWallet();
-        loadOnboardingStatus();
     }
 }
 
 async function connectPhantom() {
-    if (!phantomProvider) {
+    const provider = getPhantomProvider();
+    if (!provider) {
         window.open('https://phantom.app/', '_blank');
         return;
     }
+    phantomProvider = provider;
+    if (_phantomConnecting) return;
+    _phantomConnecting = true;
     
     try {
-        const response = await phantomProvider.connect();
+        const response = await provider.connect();
         connectedAddress = response.publicKey.toString();
         updatePhantomUI(true);
         loadUserWallet();
@@ -1472,6 +1514,8 @@ async function connectPhantom() {
     } catch (error) {
         console.error('Failed to connect Phantom:', error);
         showToast('Failed to connect Phantom wallet', 'error');
+    } finally {
+        _phantomConnecting = false;
     }
 }
 
