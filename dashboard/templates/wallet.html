@@ -13,6 +13,9 @@
         --rct-mint: #14F195;
         --res-mint: #60A5FA;
     }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
 
     /* Network Selector Banner */
     .network-banner {
@@ -494,6 +497,61 @@
         margin-top: 8px;
     }
 
+    .community-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+    .community-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+    }
+    .community-card h4 {
+        margin: 0 0 8px;
+        font-size: 13px;
+        color: var(--text-primary);
+    }
+    .community-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .community-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 12px;
+        padding: 8px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+    }
+    .community-item a {
+        color: var(--text-primary);
+        text-decoration: none;
+    }
+    .community-item a:hover {
+        text-decoration: underline;
+    }
+    .community-pill {
+        color: var(--text-muted);
+        font-size: 11px;
+        white-space: nowrap;
+    }
+    .community-empty {
+        font-size: 12px;
+        color: var(--text-muted);
+        padding: 10px;
+        border: 1px dashed var(--border);
+        border-radius: 6px;
+        text-align: center;
+    }
+
     /* Wallet Split */
     .ai-wallet, .human-wallet {
         min-height: 300px;
@@ -758,6 +816,9 @@
         .balance-grid {
             grid-template-columns: 1fr;
         }
+        .community-grid {
+            grid-template-columns: 1fr;
+        }
     }
 
     /* Animations */
@@ -945,6 +1006,27 @@
         <button id="dailyClaimBtn" class="claim-btn" onclick="dailyClaim()">Claim Rewards</button>
         <div id="claimCooldown" style="display:none; margin-top:8px; font-size:12px; color:var(--text-muted);">
             Next claim in: <span id="cooldownTimer">--:--:--</span>
+        </div>
+    </div>
+
+    <div class="wallet-section full-width">
+        <h3 style="margin: 0 0 12px; font-size: 16px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+            My Tribes & My Bounties
+        </h3>
+        <div class="community-grid">
+            <div class="community-card">
+                <h4>My Tribes</h4>
+                <ul id="myTribesList" class="community-list">
+                    <li class="community-empty">Connect wallet to load tribe membership.</li>
+                </ul>
+            </div>
+            <div class="community-card">
+                <h4>My Bounties</h4>
+                <ul id="myBountiesList" class="community-list">
+                    <li class="community-empty">Connect wallet to load claimed bounties.</li>
+                </ul>
+            </div>
         </div>
     </div>
 </div>
@@ -1248,6 +1330,7 @@ async function sendSplToken(provider, recipient, amount, token) {
 }
 
 async function signAndSend(provider, txBase64, skipPreflight) {
+    showPhantomOverlay();
     showToast('Approve in Phantom...', 'info');
     const txBytes = Uint8Array.from(atob(txBase64), c => c.charCodeAt(0));
 
@@ -1278,17 +1361,18 @@ async function signAndSend(provider, txBase64, skipPreflight) {
         return result;
     }
 
-    // Sign via Phantom request API (expects base58-encoded serialized tx)
-    const resp = await provider.request({
-        method: 'signAndSendTransaction',
-        params: {
-            transaction: toBase58(txBytes),
-            options: { skipPreflight: skipPreflight, preflightCommitment: 'confirmed' }
-        }
-    });
-
-    // resp.signature is the transaction signature (base58 string)
-    return resp.signature;
+    try {
+        const resp = await provider.request({
+            method: 'signAndSendTransaction',
+            params: {
+                transaction: toBase58(txBytes),
+                options: { skipPreflight: skipPreflight, preflightCommitment: 'confirmed' }
+            }
+        });
+        return resp.signature;
+    } finally {
+        hidePhantomOverlay();
+    }
 }
 
 async function confirmTransaction(signature, amount, symbol, recipient) {
@@ -1341,7 +1425,6 @@ let phantomProvider = null;
 let connectedAddress = null;
 let nftCarouselIndex = 0;
 let nftCarouselTimer = null;
-let _phantomConnecting = false;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
@@ -1351,6 +1434,10 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeWallet() {
     // Show onboarding steps immediately (all locked until wallet connects)
     renderOnboarding({});
+    
+    // Phantom connect
+    document.getElementById('phantomConnect').addEventListener('click', connectPhantom);
+    
     detectPhantom();
     loadAiWallet();
     
@@ -1364,8 +1451,6 @@ function initializeWallet() {
         btn.addEventListener('click', () => switchNetwork(btn.dataset.network));
     });
     
-    // Phantom connect
-    document.getElementById('phantomConnect').addEventListener('click', connectPhantom);
 }
 
 function switchView(view) {
@@ -1440,6 +1525,8 @@ function getPhantomProvider() {
     return null;
 }
 
+let _phantomConnecting = false; // guard against double-click / re-entrant calls
+
 function detectPhantom() {
     try {
         const provider = getPhantomProvider();
@@ -1447,30 +1534,33 @@ function detectPhantom() {
             setTimeout(detectPhantom, 500);
             return;
         }
-
+        
         phantomProvider = provider;
-
-        if (!provider._resonantListenersBound) {
-            provider._resonantListenersBound = true;
-            provider.on('disconnect', () => {
+        
+        // Listen for Phantom events so UI stays in sync if user
+        // disconnects or switches account from within the extension.
+        provider.on('disconnect', () => {
+            connectedAddress = null;
+            updatePhantomUI(false);
+            renderOnboarding({});
+        });
+        provider.on('accountChanged', (pubKey) => {
+            if (pubKey) {
+                connectedAddress = pubKey.toString();
+                updatePhantomUI(true);
+                loadUserWallet();
+                loadOnboardingStatus();
+            } else {
+                // Phantom removed trust - treat as disconnect
                 connectedAddress = null;
                 updatePhantomUI(false);
                 renderOnboarding({});
-            });
-            provider.on('accountChanged', (pubKey) => {
-                if (pubKey) {
-                    connectedAddress = pubKey.toString();
-                    updatePhantomUI(true);
-                    loadUserWallet();
-                    loadOnboardingStatus();
-                } else {
-                    connectedAddress = null;
-                    updatePhantomUI(false);
-                    renderOnboarding({});
-                }
-            });
-        }
-
+            }
+        });
+        
+        // Eager reconnect for previously-approved sites (matches protocol-store flow).
+        // Using { onlyIfTrusted: true } avoids showing a popup - it resolves silently
+        // if the user already approved this origin, or rejects without UI otherwise.
         provider.connect({ onlyIfTrusted: true })
             .then((resp) => {
                 connectedAddress = resp.publicKey.toString();
@@ -1479,14 +1569,8 @@ function detectPhantom() {
                 loadOnboardingStatus();
             })
             .catch(() => {
-                if (provider.isConnected) {
-                    connectedAddress = provider.publicKey?.toString() || null;
-                    if (connectedAddress) {
-                        updatePhantomUI(true);
-                        loadUserWallet();
-                        loadOnboardingStatus();
-                    }
-                }
+                // Not auto-connected - user will need to click Connect Phantom.
+                // phantomProvider is still valid for manual connect().
             });
     } catch (error) {
         console.error('Failed to detect Phantom provider:', error);
@@ -1495,12 +1579,15 @@ function detectPhantom() {
 }
 
 async function connectPhantom() {
+    // Always grab a fresh provider reference (extension may have reloaded).
     const provider = getPhantomProvider();
     if (!provider) {
         window.open('https://phantom.app/', '_blank');
         return;
     }
     phantomProvider = provider;
+    
+    // Prevent double-click / re-entrant calls that can wedge Phantom popup queue.
     if (_phantomConnecting) return;
     _phantomConnecting = true;
     
@@ -1527,12 +1614,38 @@ function updatePhantomUI(connected) {
     if (connected && connectedAddress) {
         btn.classList.add('connected');
         text.textContent = 'Connected';
-        addressEl.textContent = connectedAddress.substring(0, 8) + '...' + connectedAddress.substring(-4);
+        addressEl.textContent = connectedAddress.slice(0, 8) + '...' + connectedAddress.slice(-4);
     } else {
         btn.classList.remove('connected');
         text.textContent = 'Connect Phantom';
         addressEl.textContent = 'Not connected';
     }
+    if (!connected) loadMyTribesAndBounties();
+}
+
+function showPhantomOverlay() {
+    let overlay = document.getElementById('phantomOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'phantomOverlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = `<div style="background:var(--bg-secondary, #1a1b2e);border:2px solid var(--phantom-purple, #AB9FF2);border-radius:16px;padding:32px 40px;text-align:center;max-width:400px;">
+            <div style="font-size:48px;margin-bottom:16px;">👻</div>
+            <h3 style="margin:0 0 8px;color:var(--phantom-purple, #AB9FF2);">Phantom Approval Required</h3>
+            <p style="color:var(--text-muted, #999);margin:0 0 16px;font-size:14px;">Check for the Phantom popup window. It may have opened behind your browser.</p>
+            <div style="display:flex;gap:8px;justify-content:center;">
+                <span class="spinner" style="width:20px;height:20px;border:2px solid var(--phantom-purple, #AB9FF2);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;display:inline-block;"></span>
+                <span style="color:var(--text-muted, #999);font-size:13px;">Waiting for signature...</span>
+            </div>
+        </div>`;
+        document.body.appendChild(overlay);
+    }
+    overlay.style.display = 'flex';
+}
+
+function hidePhantomOverlay() {
+    const overlay = document.getElementById('phantomOverlay');
+    if (overlay) overlay.style.display = 'none';
 }
 
 async function requestPhantomApproval(message) {
@@ -1540,12 +1653,15 @@ async function requestPhantomApproval(message) {
         throw new Error('Phantom wallet not connected');
     }
     
+    showPhantomOverlay();
     try {
         const encodedMessage = new TextEncoder().encode(message);
         const signedMessage = await phantomProvider.signMessage(encodedMessage, 'utf8');
         return btoa(String.fromCharCode.apply(null, signedMessage.signature));
     } catch (error) {
         throw new Error('User rejected signature request');
+    } finally {
+        hidePhantomOverlay();
     }
 }
 
@@ -1678,6 +1794,7 @@ async function loadUserWallet() {
     
     // Load NFTs from Symbiotic PDA (not user personal wallet)
     loadSymbioticNfts();
+    loadMyTribesAndBounties();
 }
 
 function updateWalletBalances(containerId, balances) {
@@ -1710,18 +1827,30 @@ async function loadOnboardingStatus() {
     if (!connectedAddress) return;
     
     try {
-        // Check symbiotic pair first
-        const pairResp = await fetch(`/api/symbiotic/pair-info?humanPubkey=${connectedAddress}&network=${currentNetwork}`);
-        const pairData = await pairResp.json();
-        
-        const response = await fetch(`/api/wallet/onboarding-status?address=${connectedAddress}`);
+        const response = await fetch(
+            `/api/wallet/onboarding-status?address=${encodeURIComponent(connectedAddress)}&network=${encodeURIComponent(currentNetwork)}`
+        );
         const data = await response.json();
         
-        // Merge symbiotic pair status
-        data.symbioticPairCreated = pairData.exists === true;
-        if (pairData.exists) {
-            data.symbioticPda = pairData.pda;
-            data.symbioticFrozen = pairData.frozen;
+        // Recover intermediate steps from highest on-chain step.
+        if (data.alphaNftMinted) {
+            data.identityNftMinted = true;
+            data.manifestoSigned = true;
+            data.licenseSigned = true;
+            data.alphaAgreed = true;
+            data.symbioticPairCreated = true;
+        } else if (data.identityNftMinted) {
+            data.manifestoSigned = true;
+            data.licenseSigned = true;
+            data.alphaAgreed = true;
+            data.symbioticPairCreated = true;
+        } else if (data.manifestoSigned) {
+            data.licenseSigned = true;
+            data.alphaAgreed = true;
+            data.symbioticPairCreated = true;
+        } else if (data.licenseSigned) {
+            data.alphaAgreed = true;
+            data.symbioticPairCreated = true;
         }
         
         if (response.ok) {
@@ -1729,6 +1858,57 @@ async function loadOnboardingStatus() {
         }
     } catch (error) {
         console.error('Error loading onboarding status:', error);
+    }
+}
+
+async function loadMyTribesAndBounties() {
+    const tribesEl = document.getElementById('myTribesList');
+    const bountiesEl = document.getElementById('myBountiesList');
+    if (!tribesEl || !bountiesEl) return;
+
+    if (!connectedAddress) {
+        tribesEl.innerHTML = '<li class="community-empty">Connect wallet to load tribe membership.</li>';
+        bountiesEl.innerHTML = '<li class="community-empty">Connect wallet to load claimed bounties.</li>';
+        return;
+    }
+
+    try {
+        const [tribesResp, bountiesResp] = await Promise.all([
+            fetch(`/api/wallet/my-tribes?address=${encodeURIComponent(connectedAddress)}`),
+            fetch(`/api/wallet/my-bounties?address=${encodeURIComponent(connectedAddress)}`)
+        ]);
+
+        const tribesData = await tribesResp.json();
+        const bountiesData = await bountiesResp.json();
+
+        const tribes = tribesResp.ok ? (tribesData.tribes || []) : [];
+        const myBounties = bountiesResp.ok ? (bountiesData.bounties || []) : [];
+
+        if (!tribes.length) {
+            tribesEl.innerHTML = '<li class="community-empty">No tribe memberships yet.</li>';
+        } else {
+            tribesEl.innerHTML = tribes.map((tribe) => `
+                <li class="community-item">
+                    <a href="/tribes#${tribe.id}">${tribe.name || tribe.id}</a>
+                    <span class="community-pill">${tribe.role || 'member'} · ${tribe.activeBountyCount || 0} active</span>
+                </li>
+            `).join('');
+        }
+
+        if (!myBounties.length) {
+            bountiesEl.innerHTML = '<li class="community-empty">No claimed bounties yet.</li>';
+        } else {
+            bountiesEl.innerHTML = myBounties.map((bounty) => `
+                <li class="community-item">
+                    <a href="/bounties#${bounty.id}">${bounty.title || bounty.id}</a>
+                    <span class="community-pill">${bounty.status || 'open'}</span>
+                </li>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading tribe/bounty memberships:', error);
+        tribesEl.innerHTML = '<li class="community-empty">Failed to load tribes.</li>';
+        bountiesEl.innerHTML = '<li class="community-empty">Failed to load bounties.</li>';
     }
 }
 
@@ -1799,10 +1979,11 @@ async function createSymbioticWallet() {
         const data = await resp.json();
         if (data.error) { showToast(data.error, 'error'); return; }
         
+        showPhantomOverlay();
         showToast('Approve transaction in Phantom...', 'info');
         
         const provider = getPhantomProvider();
-        if (!provider) { showToast('Phantom not found', 'error'); return; }
+        if (!provider) { hidePhantomOverlay(); showToast('Phantom not found', 'error'); return; }
         
         // Decode transaction, sign with Phantom, send
         const txBytes = Uint8Array.from(atob(data.transaction), c => c.charCodeAt(0));
@@ -1837,12 +2018,14 @@ async function createSymbioticWallet() {
                 }
                 if (val && val.err) {
                     showToast('Transaction failed on-chain: ' + JSON.stringify(val.err), 'error');
+                    hidePhantomOverlay();
                     return;
                 }
             } catch (e) { /* retry */ }
         }
         if (!confirmed) {
             showToast('Transaction not confirmed after 45s — check Solana Explorer with signature: ' + signature, 'warning');
+            hidePhantomOverlay();
             return;
         }
         
@@ -1851,13 +2034,16 @@ async function createSymbioticWallet() {
         const verifyData = await verifyResp.json();
         if (!verifyData.exists) {
             showToast('Transaction confirmed but PDA not detected — try refreshing in a few seconds', 'warning');
+            hidePhantomOverlay();
             return;
         }
         
+        hidePhantomOverlay();
         showToast(`Symbiotic wallet created! PDA: ${data.pda.slice(0,8)}...`, 'success');
         loadOnboardingStatus();
         loadUserWallet();
     } catch (error) {
+        hidePhantomOverlay();
         if (error.message?.includes('User rejected')) {
             showToast('Transaction cancelled', 'warning');
         } else {

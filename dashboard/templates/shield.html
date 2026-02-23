@@ -402,15 +402,10 @@ const Shield = {
             banner.classList.remove('active', 'inactive');
             if (d.active) {
                 banner.classList.add('active');
-                const summary = d.file_guard?.summary || {};
-                text.textContent = `Shield active — File Guard monitoring ${summary.total_files || 0} files across ${summary.total_groups || 0} groups`;
-            } else if (d.available) {
-                banner.classList.add('inactive');
-                const summary = d.file_guard?.summary || {};
-                text.textContent = `Shield available — ${summary.locked_files || 0}/${summary.total_files || 0} files locked`;
+                text.textContent = `Shield active — File Guard monitoring ${d.file_guard?.summary?.total_files || 0} files across ${d.file_guard?.summary?.total_groups || 0} groups`;
             } else {
                 banner.classList.add('inactive');
-                text.textContent = 'Shield API unavailable';
+                text.textContent = 'Shield available but daemon not running';
             }
         } catch(e) {
             document.getElementById('shieldBanner').classList.add('inactive');

@@ -3,14 +3,37 @@
 {% block title %}Chatbot Manager - ResonantOS Dashboard{% endblock %}
 {% block page_title %}Chatbot Manager{% endblock %}
 
+{% block extra_css %}
+<style>
+.addon-icon-img {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+.addon-icon-img.addon-icon-img-sm {
+    width: 32px;
+    height: 32px;
+}
+.crypto-btn-secondary {
+    opacity: 0.7;
+    font-size: 0.85em;
+}
+.crypto-btn-secondary:hover {
+    opacity: 1;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <!-- Tabs -->
 <div class="tab-container">
     <div class="tabs">
-        <button class="tab active" onclick="switchTab('chatbots')">My Chatbots</button>
-        <button class="tab" onclick="switchTab('conversations')">Conversations</button>
-        <button class="tab" onclick="switchTab('addons')">Addons</button>
-        <button class="tab" onclick="switchTab('analytics')">Analytics</button>
+        <button class="tab active" data-tab="chatbots" onclick="switchTab('chatbots')">My Chatbots</button>
+        <button class="tab" data-tab="conversations" onclick="switchTab('conversations')">Conversations</button>
+        <button class="tab" data-tab="addons" onclick="switchTab('addons')">Addons</button>
+        <button class="tab" data-tab="analytics" onclick="switchTab('analytics')">Analytics</button>
     </div>
 </div>
 
@@ -179,7 +202,7 @@
                     <span class="payment-badge sol">SOL</span>
                     <span class="payment-badge usdt">USDT</span>
                     <span class="payment-badge usdc">USDC</span>
-                    <span class="payment-badge token coming">$RES</span>
+                    <span class="payment-badge token active">$RES</span>
                 </div>
             </div>
         </div>
@@ -413,6 +436,11 @@
 <!-- Widget Generator Tab (Settings) -->
 <div class="tab-panel" id="widgetPanel">
     <div class="widget-builder">
+        <!-- Back Button & Breadcrumbs -->
+        <div class="edit-nav-bar" id="editNavBar" style="display:none; align-items:center; gap:12px; margin-bottom:12px;">
+            <button class="btn-secondary" onclick="backToChatbotList()" style="padding:6px 14px; font-size:0.95em;">← Back</button>
+            <span class="breadcrumbs" id="editBreadcrumbs" style="color:#aaa; font-size:0.95em;">My Chatbots → <span id="breadcrumbBotName">...</span> → <span id="breadcrumbTab">Settings</span></span>
+        </div>
         <!-- Builder Tabs -->
         <div class="builder-tabs">
             <button class="builder-tab active" onclick="switchBuilderTab('settings')">⚙️ Settings</button>
@@ -834,10 +862,13 @@ Your role:
                 </div>
                 
                 <div class="deploy-actions">
-                    <button class="btn-primary" id="generateWidgetBtn" onclick="generateWidget()">🚀 Generate Widget</button>
                     <button class="btn-secondary" onclick="downloadPackage()">📦 Download Package</button>
                 </div>
             </div>
+        </div>
+        <!-- Persistent Save Footer (visible on all sub-tabs) -->
+        <div class="builder-save-footer" style="position:sticky; bottom:0; background:linear-gradient(transparent, #1a1a2e 20%); padding:18px 0 8px 0; display:flex; justify-content:flex-end; gap:10px; z-index:10;">
+            <button class="btn-primary" id="generateWidgetBtn" onclick="generateWidget()" style="font-size:1.05em; padding:10px 28px;">💾 Save &amp; Update</button>
         </div>
     </div>
 </div>
@@ -862,8 +893,10 @@ function switchTab(tab) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     
-    event.target.classList.add('active');
-    document.getElementById(tab + 'Panel').classList.add('active');
+    const tabButton = document.querySelector(`.tab[data-tab="${tab}"]`);
+    if (tabButton) tabButton.classList.add('active');
+    const panel = document.getElementById(tab + 'Panel');
+    if (panel) panel.classList.add('active');
     
     // Load conversations when switching to that tab
     if (tab === 'conversations') {
@@ -939,26 +972,27 @@ async function loadConversations(offset = 0) {
     
     try {
         const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        
-        convTotal = data.total;
+        const conversations = Array.isArray(data) ? data : (data.conversations || []);
+        convTotal = typeof data.total === 'number' ? data.total : conversations.length;
         
         // Update stats
-        document.getElementById('totalConversations').textContent = data.total.toLocaleString();
+        document.getElementById('totalConversations').textContent = convTotal.toLocaleString();
         
         // Calculate total messages from conversations
         let totalMsgs = 0;
-        data.conversations.forEach(c => totalMsgs += c.message_count || 0);
+        conversations.forEach(c => totalMsgs += c.message_count || 0);
         document.getElementById('totalMessages').textContent = totalMsgs.toLocaleString();
         
         // Count today's conversations
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const todayTs = today.getTime();
-        const todayCount = data.conversations.filter(c => c.started_at >= todayTs).length;
+        const todayCount = conversations.filter(c => c.started_at >= todayTs).length;
         document.getElementById('todayConversations').textContent = todayCount;
         
-        renderConversations(data.conversations);
+        renderConversations(conversations);
         updateConvPagination();
         
     } catch (error) {
@@ -1117,8 +1151,20 @@ function switchBuilderTab(tab) {
     document.querySelectorAll('.builder-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.builder-panel').forEach(p => p.classList.remove('active'));
     
-    event.target.classList.add('active');
+    // Find the correct tab button by matching tab name
+    const tabNames = ['settings', 'appearance', 'knowledge', 'deploy'];
+    const idx = tabNames.indexOf(tab);
+    const btns = document.querySelectorAll('.builder-tab');
+    if (idx >= 0 && btns[idx]) btns[idx].classList.add('active');
+    
     document.getElementById(tab + 'Panel').classList.add('active');
+    
+    // Update breadcrumb tab name
+    const breadcrumbTab = document.getElementById('breadcrumbTab');
+    if (breadcrumbTab) {
+        const labels = {settings: 'Settings', appearance: 'Appearance', knowledge: 'Knowledge', deploy: 'Deploy'};
+        breadcrumbTab.textContent = labels[tab] || tab;
+    }
 }
 
 async function loadChatbots() {
@@ -1292,13 +1338,19 @@ function createNewChatbot() {
         '<p class="kb-no-files">Save the chatbot first to upload knowledge files.</p>';
     
     updatePreview();
-    switchToWidgetTab();
+    switchToWidgetTab('New Chatbot');
 }
 
-function switchToWidgetTab() {
+function switchToWidgetTab(botName) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     document.getElementById('widgetPanel').classList.add('active');
+    
+    // Show back button and breadcrumbs
+    const navBar = document.getElementById('editNavBar');
+    if (navBar) navBar.style.display = 'flex';
+    const breadcrumbName = document.getElementById('breadcrumbBotName');
+    if (breadcrumbName) breadcrumbName.textContent = botName || 'New Chatbot';
     
     // Open Settings builder tab by default
     switchBuilderTab('settings');
@@ -1366,9 +1418,10 @@ async function loadKnowledgeFiles() {
     
     try {
         const res = await fetch(`/api/chatbots/${currentWidgetId}/knowledge`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         
-        knowledgeFiles = data.files || [];
+        knowledgeFiles = Array.isArray(data) ? data : (data.files || []);
         renderKnowledgeFiles();
     } catch (error) {
         console.error('Error loading knowledge files:', error);
@@ -1953,6 +2006,12 @@ function editChatbot(id) {
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
             document.getElementById('widgetPanel').classList.add('active');
             
+            // Show back button and breadcrumbs
+            const navBar = document.getElementById('editNavBar');
+            if (navBar) navBar.style.display = 'flex';
+            const breadcrumbName = document.getElementById('breadcrumbBotName');
+            if (breadcrumbName) breadcrumbName.textContent = bot.name || 'Untitled';
+            
             // Open Settings builder tab by default when editing
             switchBuilderTab('settings');
             
@@ -1962,6 +2021,13 @@ function editChatbot(id) {
             showToast('Error loading chatbot', 'error');
             console.error(err);
         });
+}
+
+function backToChatbotList() {
+    const navBar = document.getElementById('editNavBar');
+    if (navBar) navBar.style.display = 'none';
+    currentWidgetId = null;
+    window.switchTab('chatbots');
 }
 
 function viewAnalytics(id) {
@@ -2029,8 +2095,8 @@ async function loadSystemKeys() {
         if (!data.hasSystemKeys || data.providers.length === 0) {
             listEl.innerHTML = `
                 <div class="no-system-keys">
-                    <span class="warning-icon">⚠️</span>
-                    <p>No system API keys configured.</p>
+                    <span class="info-icon">ℹ️</span>
+                    <p>System keys unavailable.</p>
                     <p class="hint">Configure API keys in your clawdbot.json or use a custom key.</p>
                 </div>
             `;
@@ -2055,9 +2121,13 @@ async function loadSystemKeys() {
         
     } catch (error) {
         console.error('Error loading system keys:', error);
-        statusEl.innerHTML = `
-            <span class="error-icon">⚠️</span>
-            <span>Could not load system keys</span>
+        statusEl.style.display = 'none';
+        listEl.style.display = 'block';
+        listEl.innerHTML = `
+            <div class="system-keys-available" style="opacity:0.7;">
+                <span class="info-icon" style="font-size:1.1em;">ℹ️</span>
+                <span>System keys unavailable. You can use a custom API key instead.</span>
+            </div>
         `;
     }
 }
@@ -3012,9 +3082,9 @@ const CHATBOT_ADDONS = [
         id: 'remove-watermark-profile',
         name: 'Remove Watermark + Profile Pic',
         description: 'Remove the ResonantOS watermark from your chatbot widget and add a custom profile picture.',
-        icon: '🖼️',
+        icon: '/static/img/addons/addon-remove-watermark.webp',
         price: 2,
-        currency: 'USD',
+        currency: 'RES',
         period: 'month',
         popular: true,
         purchased: false
@@ -3023,9 +3093,9 @@ const CHATBOT_ADDONS = [
         id: 'custom-watermark',
         name: 'Add Custom Watermark',
         description: 'Replace the default watermark with your own brand logo or text.',
-        icon: '✏️',
+        icon: '/static/img/addons/addon-custom-watermark.webp',
         price: 2,
-        currency: 'USD',
+        currency: 'RES',
         period: 'month',
         popular: false,
         purchased: false
@@ -3034,9 +3104,9 @@ const CHATBOT_ADDONS = [
         id: 'extra-chatbots-3',
         name: '3 Extra Chatbots',
         description: 'Create up to 3 additional chatbots for different websites or use cases.',
-        icon: '🤖',
+        icon: '/static/img/addons/addon-extra-3.webp',
         price: 1,
-        currency: 'USD',
+        currency: 'RES',
         period: 'month',
         popular: false,
         purchased: false
@@ -3045,9 +3115,9 @@ const CHATBOT_ADDONS = [
         id: 'extra-chatbots-10',
         name: '10 Extra Chatbots',
         description: 'Create up to 10 additional chatbots. Perfect for agencies and multi-site owners.',
-        icon: '🤖🤖',
+        icon: '/static/img/addons/addon-extra-10.webp',
         price: 3,
-        currency: 'USD',
+        currency: 'RES',
         period: 'month',
         popular: false,
         purchased: false
@@ -3056,9 +3126,9 @@ const CHATBOT_ADDONS = [
         id: 'unlimited-bundle',
         name: 'Unlimited Bundle',
         description: 'Unlimited chatbots + Remove watermark + Custom profile pic + Custom watermark. Everything included!',
-        icon: '👑',
+        icon: '/static/img/addons/addon-unlimited.webp',
         price: 20,
-        currency: 'USD',
+        currency: 'RES',
         period: 'month',
         popular: true,
         bundle: true,
@@ -3066,11 +3136,11 @@ const CHATBOT_ADDONS = [
     }
 ];
 
-// Token coming soon
+// Resonant Token
 const RESONANT_TOKEN = {
     symbol: '$RES',
     name: 'Resonant Token',
-    status: 'coming_soon'
+    status: 'active'
 };
 
 let addons = [...CHATBOT_ADDONS];
@@ -3087,26 +3157,26 @@ function renderAddons() {
     grid.innerHTML = addons.filter(a => !a.purchased).map(addon => `
         <div class="addon-card ${addon.popular ? 'popular' : ''} ${addon.bundle ? 'bundle' : ''}" data-id="${addon.id}">
             ${addon.popular ? '<div class="popular-badge">Popular</div>' : ''}
-            <div class="addon-icon">${addon.icon}</div>
+            <div class="addon-icon"><img src="${addon.icon}" alt="${addon.name}" class="addon-icon-img"></div>
             <div class="addon-info">
                 <h3>${addon.name}</h3>
                 <p>${addon.description}</p>
             </div>
             <div class="addon-pricing">
-                <span class="addon-price">$${addon.price}</span>
+                <span class="addon-price">${addon.price} $RES</span>
                 <span class="addon-period">/${addon.period}</span>
             </div>
             <div class="addon-actions">
-                <button class="btn-addon btn-purchase" onclick="purchaseAddon('${addon.id}')">
-                    Subscribe
+                <button class="btn-addon btn-purchase" onclick="payWithCrypto('${addon.id}', 'RES')">
+                    Pay with $RES
                 </button>
             </div>
             <div class="payment-options">
-                <span class="pay-with">Pay with:</span>
+                <span class="pay-with">Or pay with:</span>
                 <div class="crypto-options">
-                    <button class="crypto-btn" onclick="payWithCrypto('${addon.id}', 'SOL')">SOL</button>
-                    <button class="crypto-btn" onclick="payWithCrypto('${addon.id}', 'USDT')">USDT</button>
-                    <button class="crypto-btn" onclick="payWithCrypto('${addon.id}', 'USDC')">USDC</button>
+                    <button class="crypto-btn crypto-btn-secondary" onclick="payWithCrypto('${addon.id}', 'SOL')">SOL</button>
+                    <button class="crypto-btn crypto-btn-secondary" onclick="payWithCrypto('${addon.id}', 'USDT')">USDT</button>
+                    <button class="crypto-btn crypto-btn-secondary" onclick="payWithCrypto('${addon.id}', 'USDC')">USDC</button>
                 </div>
             </div>
         </div>
@@ -3126,7 +3196,7 @@ function renderActiveAddons() {
     
     list.innerHTML = active.map(addon => `
         <div class="active-addon-item">
-            <span class="addon-icon">${addon.icon}</span>
+            <span class="addon-icon"><img src="${addon.icon}" alt="${addon.name}" class="addon-icon-img addon-icon-img-sm"></span>
             <span class="addon-name">${addon.name}</span>
             <span class="addon-status">Active</span>
             <button class="btn-manage" onclick="manageAddon('${addon.id}')">Manage</button>
@@ -3137,13 +3207,17 @@ function renderActiveAddons() {
 function purchaseAddon(id) {
     const addon = addons.find(a => a.id === id);
     if (addon) {
-        showToast(`Connect wallet to subscribe to ${addon.name} for $${addon.price}/${addon.period}`, 'info');
+        showToast(`Connect your Symbiotic Wallet to purchase ${addon.name} for ${addon.price} $RES/${addon.period}`, 'info');
     }
 }
 
 function payWithCrypto(id, currency) {
     const addon = addons.find(a => a.id === id);
     if (addon) {
+        if (currency === 'RES') {
+            showToast('Symbiotic Wallet integration coming soon. Join the alpha to get early access!', 'info');
+            return;
+        }
         // Calculate crypto equivalent (placeholder - would use real price feed)
         let cryptoAmount;
         if (currency === 'SOL') {

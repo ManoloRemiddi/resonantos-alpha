@@ -31,6 +31,10 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
             Advanced
         </a>
+        <a href="#updates" class="settings-nav-item" onclick="showSection('updates')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Updates
+        </a>
     </nav>
     
     <!-- Settings Content -->
@@ -104,7 +108,6 @@
                         <span class="label">Locked</span>
                     </div>
                 </div>
-                <div id="logicianStatusText" style="font-size:12px; color:var(--text-muted); margin-right:12px;">Logician: checking...</div>
                 <button class="btn-secondary" onclick="loadRules()">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
                     Refresh
@@ -340,6 +343,50 @@
                 </div>
             </div>
         </section>
+
+        <!-- Updates Section -->
+        <section class="settings-section" id="updatesSection">
+            <h2 class="section-title">Software Updates</h2>
+            <p class="section-description">Check for and apply updates to the ResonantOS Dashboard from the remote repository.</p>
+
+            <div class="settings-card">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Current Version</h3>
+                        <p>Branch: <code id="updateBranch">—</code> · Commit: <code id="updateLocalCommit">—</code></p>
+                    </div>
+                    <div class="setting-control">
+                        <button class="btn-secondary" id="checkUpdateBtn" onclick="checkForUpdates()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                            Check for Updates
+                        </button>
+                    </div>
+                </div>
+
+                <div id="updateStatus" style="display:none;">
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <h3 id="updateStatusTitle">Checking...</h3>
+                            <p id="updateStatusDetail"></p>
+                        </div>
+                        <div class="setting-control">
+                            <button class="btn-primary" id="applyUpdateBtn" onclick="applyUpdate()" style="display:none;">
+                                Apply Update
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="updateResult" style="display:none;">
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <h3 id="updateResultTitle"></h3>
+                            <pre id="updateResultOutput" style="margin-top:8px; padding:10px; background:rgba(0,0,0,0.2); border-radius:6px; font-size:12px; overflow-x:auto; white-space:pre-wrap; max-height:200px; overflow-y:auto;"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
     </div>
 </div>
 
@@ -389,7 +436,6 @@ let expandedRules = new Set();
 
 document.addEventListener('DOMContentLoaded', function() {
     loadSettings();
-    loadLogicianStatus();
     loadRules();
 });
 
@@ -549,28 +595,6 @@ function showToast(message, type = 'info') {
 // Rules Management (embedded from /rules)
 // ============================================
 
-async function loadLogicianStatus() {
-    const el = document.getElementById('logicianStatusText');
-    if (!el) return;
-    try {
-        const response = await fetch('/api/logician/status');
-        const data = await response.json();
-        if (data.status === 'healthy') {
-            el.textContent = 'Logician: healthy';
-            el.style.color = 'var(--success)';
-        } else if (data.status === 'unknown') {
-            el.textContent = 'Logician: monitor not running';
-            el.style.color = 'var(--warning)';
-        } else {
-            el.textContent = 'Logician: ' + (data.status || 'error');
-            el.style.color = 'var(--error)';
-        }
-    } catch (error) {
-        el.textContent = 'Logician: unreachable';
-        el.style.color = 'var(--error)';
-    }
-}
-
 async function loadRules() {
     const container = document.getElementById('rulesList');
     if (!container) return;
@@ -664,6 +688,94 @@ async function loadRuleContent(filename, codeEl) {
         codeEl.textContent = data.content;
     } catch (error) {
         codeEl.textContent = 'Failed to load: ' + error.message;
+    }
+}
+
+// ============================================
+// Software Updates
+// ============================================
+
+async function checkForUpdates() {
+    const btn = document.getElementById('checkUpdateBtn');
+    const statusDiv = document.getElementById('updateStatus');
+    const resultDiv = document.getElementById('updateResult');
+    const titleEl = document.getElementById('updateStatusTitle');
+    const detailEl = document.getElementById('updateStatusDetail');
+    const applyBtn = document.getElementById('applyUpdateBtn');
+
+    btn.disabled = true;
+    btn.textContent = 'Checking...';
+    statusDiv.style.display = 'block';
+    resultDiv.style.display = 'none';
+    applyBtn.style.display = 'none';
+    titleEl.textContent = 'Checking for updates...';
+    detailEl.textContent = '';
+
+    try {
+        const res = await fetch('/api/settings/check-update');
+        const data = await res.json();
+
+        if (data.error) {
+            titleEl.textContent = '⚠️ Error checking for updates';
+            detailEl.textContent = data.error;
+            return;
+        }
+
+        document.getElementById('updateBranch').textContent = data.branch || 'main';
+        document.getElementById('updateLocalCommit').textContent = data.local || '—';
+
+        if (data.available) {
+            titleEl.textContent = '🔄 Update Available';
+            detailEl.innerHTML = '<strong>' + data.behind + '</strong> commit' + (data.behind > 1 ? 's' : '') +
+                ' behind. Remote: <code>' + data.remote + '</code>';
+            applyBtn.style.display = 'inline-flex';
+        } else {
+            titleEl.textContent = '✅ Up to date';
+            detailEl.textContent = 'Local and remote are at the same commit (' + data.local + ').';
+        }
+    } catch (err) {
+        titleEl.textContent = '⚠️ Connection error';
+        detailEl.textContent = err.message;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Check for Updates';
+    }
+}
+
+async function applyUpdate() {
+    const applyBtn = document.getElementById('applyUpdateBtn');
+    const resultDiv = document.getElementById('updateResult');
+    const resultTitle = document.getElementById('updateResultTitle');
+    const resultOutput = document.getElementById('updateResultOutput');
+
+    applyBtn.disabled = true;
+    applyBtn.textContent = 'Updating...';
+    resultDiv.style.display = 'block';
+    resultTitle.textContent = 'Applying update...';
+    resultOutput.textContent = '';
+
+    try {
+        const res = await fetch('/api/settings/update', { method: 'POST' });
+        const data = await res.json();
+
+        if (data.success) {
+            resultTitle.textContent = '✅ Update Applied';
+            resultOutput.textContent = data.output || data.message;
+            applyBtn.style.display = 'none';
+            showToast('Update applied! Restart dashboard to load changes.', 'success');
+            // Refresh version info
+            checkForUpdates();
+        } else {
+            resultTitle.textContent = '❌ Update Failed';
+            resultOutput.textContent = data.error || data.message;
+            showToast('Update failed — see details', 'error');
+        }
+    } catch (err) {
+        resultTitle.textContent = '❌ Connection Error';
+        resultOutput.textContent = err.message;
+    } finally {
+        applyBtn.disabled = false;
+        applyBtn.textContent = 'Apply Update';
     }
 }
 

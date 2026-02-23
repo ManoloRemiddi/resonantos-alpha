@@ -4,10 +4,11 @@
 {% block page_title %}Agents{% endblock %}
 
 {% block content %}
-<!-- Orchestrator + Memory (side by side) -->
-<div id="orchestratorRow" style="display:flex; align-items:flex-start; justify-content:center; gap:20px; flex-wrap:wrap;">
-    <div id="orchestratorSection"></div>
-    <div id="memoryAgentSection" style="display:none; align-self:center;"></div>
+<!-- Top Row: Heartbeat | Augmentor | R-Memory -->
+<div id="topRow" class="top-row">
+    <div id="heartbeatSection" class="top-side-panel"></div>
+    <div id="orchestratorSection" class="top-center-panel"></div>
+    <div id="memoryAgentSection" class="top-side-panel"></div>
 </div>
 
 <!-- Connection Lines -->
@@ -37,14 +38,59 @@
 
 {% block extra_css %}
 <style>
+/* Top row layout: 3 panels */
+.top-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+.top-side-panel {
+    flex: 0 1 300px;
+    min-width: 260px;
+    align-self: center;
+}
+.top-center-panel {
+    flex: 0 1 520px;
+    min-width: 340px;
+}
+
+/* Heartbeat card (top-left panel) */
+.heartbeat-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--success);
+    border-radius: var(--radius);
+    padding: 14px 20px;
+    position: relative;
+    transition: all 0.2s;
+}
+.heartbeat-card:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(74,222,128,0.12); }
+.heartbeat-card::after {
+    content: 'HEARTBEAT';
+    position: absolute; top: 6px; right: 10px;
+    font-size: 8px; letter-spacing: 1.2px; color: var(--text-muted); opacity: 0.7;
+}
+.heartbeat-card-header { display: flex; align-items: center; gap: 12px; }
+.heartbeat-icon { font-size: 28px; display: flex; align-items: center; }
+.heartbeat-icon svg { animation: heartPulse 2s ease-in-out infinite; }
+@keyframes heartPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.15); opacity: 0.8; }
+}
+.heartbeat-name { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+.heartbeat-role { font-size: 11px; color: var(--text-secondary); }
+.heartbeat-meta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-secondary); }
+.heartbeat-meta-item { display: flex; flex-direction: column; gap: 1px; }
+.heartbeat-meta-label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.heartbeat-meta-value { font-size: 12px; color: var(--text-primary); }
+
 /* Orchestrator card */
 .orchestrator-card {
     background: var(--bg-secondary);
     border: 2px solid var(--success);
     border-radius: var(--radius);
     padding: 24px 32px;
-    max-width: 520px;
-    margin: 0 auto 8px auto;
     cursor: pointer;
     transition: all 0.2s;
     position: relative;
@@ -80,9 +126,6 @@
     border: 1px solid var(--accent, #60a5fa);
     border-radius: var(--radius);
     padding: 14px 20px;
-    max-width: 340px;
-    margin: 0 auto 8px auto;
-    cursor: pointer;
     transition: all 0.2s;
     position: relative;
 }
@@ -103,6 +146,71 @@
     font-size: 11px; cursor: pointer; margin-top: 8px; width: 100%;
 }
 .memory-model-select:focus { border-color: var(--accent, #60a5fa); outline: none; }
+
+/* System agents section */
+.system-agents-header {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--text-muted); margin-bottom: 12px; padding-left: 4px;
+    display: flex; align-items: center; gap: 8px;
+}
+.system-agents-header::after {
+    content: ''; flex: 1; height: 1px; background: var(--border); margin-left: 8px;
+}
+.system-agents-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 10px;
+}
+.system-agent-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    transition: all 0.2s;
+    position: relative;
+}
+.system-agent-card:hover { border-color: var(--border-light); transform: translateY(-1px); }
+.system-agent-card::before {
+    content: 'SYSTEM';
+    position: absolute; top: 6px; right: 10px;
+    font-size: 8px; letter-spacing: 1.2px; color: var(--text-muted); opacity: 0.5;
+}
+.system-agent-card .sa-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+}
+.system-agent-card .sa-emoji { font-size: 22px; }
+.system-agent-card .sa-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.system-agent-card .sa-role { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+.system-agent-card .sa-meta {
+    display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; padding-top: 10px;
+    border-top: 1px solid var(--border); font-size: 11px; color: var(--text-secondary);
+}
+.system-agent-card .sa-meta-item {
+    display: flex; flex-direction: column; gap: 1px;
+}
+.system-agent-card .sa-meta-label {
+    font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;
+}
+.system-agent-card .sa-meta-value {
+    font-size: 12px; color: var(--text-primary);
+}
+.sa-status-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 500; padding: 2px 8px;
+    border-radius: 10px;
+}
+.sa-status-badge.running { background: rgba(74,222,128,0.12); color: var(--success); }
+.sa-status-badge.disabled { background: rgba(156,163,175,0.12); color: var(--text-muted); }
+.sa-status-badge.stopped { background: rgba(239,68,68,0.12); color: #ef4444; }
+.sa-status-badge.inactive { background: rgba(156,163,175,0.12); color: var(--text-muted); }
+.sa-status-badge.unknown { background: rgba(156,163,175,0.12); color: var(--text-muted); }
+.sa-status-dot {
+    width: 6px; height: 6px; border-radius: 50%; display: inline-block;
+}
+.sa-status-dot.running { background: var(--success); }
+.sa-status-dot.disabled { background: var(--text-muted); }
+.sa-status-dot.stopped { background: #ef4444; }
+.sa-status-dot.inactive { background: var(--text-muted); }
 
 /* Category headers */
 .category-header {
@@ -216,12 +324,54 @@ document.addEventListener('DOMContentLoaded', loadAgents);
 async function loadAgents() {
     try {
         await loadAvailableModels();
-        const res = await fetch('/api/agents');
-        agentsData = await res.json();
+        const [agentsRes, sysRes] = await Promise.all([
+            fetch('/api/agents'),
+            fetch('/api/system-agents')
+        ]);
+        agentsData = await agentsRes.json();
+        const systemAgents = await sysRes.json();
         renderHierarchy(agentsData);
+        renderHeartbeatPanel(systemAgents);
     } catch(e) {
         document.getElementById('orchestratorSection').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)">Failed to load agents</div>';
     }
+}
+
+function renderHeartbeatPanel(agents) {
+    if (!agents || !agents.length) return;
+    const hb = agents.find(a => a.id === 'heartbeat');
+    if (!hb) return;
+    const section = document.getElementById('heartbeatSection');
+    const statusClass = hb.status || 'unknown';
+    const modelShort = hb.model ? hb.model.split('/').pop() : '-';
+    section.innerHTML = `
+        <div class="heartbeat-card">
+            <div class="heartbeat-card-header">
+                <span class="heartbeat-icon" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="#ef4444" stroke="none"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span>
+                <div style="flex:1;">
+                    <div class="heartbeat-name">${hb.name}</div>
+                    <div class="heartbeat-role">${hb.role}</div>
+                </div>
+                <span class="sa-status-badge ${statusClass}">
+                    <span class="sa-status-dot ${statusClass}"></span>
+                    ${hb.status}
+                </span>
+            </div>
+            <div class="heartbeat-meta">
+                <div class="heartbeat-meta-item">
+                    <span class="heartbeat-meta-label">Model</span>
+                    <span class="heartbeat-meta-value">${modelShort}</span>
+                </div>
+                <div class="heartbeat-meta-item">
+                    <span class="heartbeat-meta-label">Interval</span>
+                    <span class="heartbeat-meta-value">${hb.interval || '-'}</span>
+                </div>
+                ${hb.activeWindow ? `<div class="heartbeat-meta-item">
+                    <span class="heartbeat-meta-label">Active</span>
+                    <span class="heartbeat-meta-value">${hb.activeWindow}</span>
+                </div>` : ''}
+            </div>
+        </div>`;
 }
 
 const AGENT_ICONS = {
@@ -302,13 +452,12 @@ function renderHierarchy(agents) {
         }
     }
 
-    // Memory agent (side by side with orchestrator) — shows both sub-agents
+    // Memory agent (right panel in top row)
     if (memoryAgent) {
         const subs = memoryAgent.subAgents || {};
         const comp = subs.compression || {};
         const narr = subs.narrative || {};
 
-        // Build model selector options for compression
         const compCurrentModel = comp.model || memoryAgent.mainModel || 'anthropic/claude-haiku-4-5';
         const compOptions = KNOWN_MODELS.map(m =>
             `<option value="${m.value}" ${m.value === compCurrentModel ? 'selected' : ''}>${m.label}</option>`
@@ -316,7 +465,6 @@ function renderHierarchy(agents) {
         const compInList = KNOWN_MODELS.some(m => m.value === compCurrentModel);
         const compCustomOpt = compInList ? '' : `<option value="${compCurrentModel}" selected>${compCurrentModel}</option>`;
 
-        // Build model selector options for narrative
         const narrCurrentModel = narr.model || 'openai/gpt-4o';
         const narrOptions = KNOWN_MODELS.map(m =>
             `<option value="${m.value}" ${m.value === narrCurrentModel ? 'selected' : ''}>${m.label}</option>`
@@ -324,14 +472,12 @@ function renderHierarchy(agents) {
         const narrInList = KNOWN_MODELS.some(m => m.value === narrCurrentModel);
         const narrCustomOpt = narrInList ? '' : `<option value="${narrCurrentModel}" selected>${narrCurrentModel}</option>`;
 
-        const sec = document.getElementById('memoryAgentSection');
-        sec.style.display = 'block';
-        sec.innerHTML = `
-            <div class="memory-card" style="min-width:320px;">
+        document.getElementById('memoryAgentSection').innerHTML = `
+            <div class="memory-card">
                 <div class="memory-card-header">
                     <span class="memory-icon">${memoryAgent.emoji}</span>
                     <div>
-                        <div class="memory-name" style="font-size:18px;">${memoryAgent.displayName}</div>
+                        <div class="memory-name">${memoryAgent.displayName}</div>
                         <div class="memory-role">${memoryAgent.role}</div>
                     </div>
                     <span class="agent-status-dot ${memoryAgent.status}" style="margin-left:auto;"></span>

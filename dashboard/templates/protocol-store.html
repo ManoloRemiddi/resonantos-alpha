@@ -1,0 +1,916 @@
+{% extends "base.html" %}
+{% block title %}Protocol Store — ResonantOS{% endblock %}
+{% block page_title %}Protocol Store{% endblock %}
+{% block content %}
+<style>
+    .store-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 24px;
+        padding: 16px 20px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+    }
+    .store-header-left h2 {
+        margin: 0 0 4px 0;
+        font-size: 18px;
+        color: var(--text);
+    }
+    .store-header-left p {
+        margin: 0;
+        font-size: 13px;
+        color: var(--text-muted);
+    }
+    .wallet-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--text-muted);
+    }
+    .wallet-status .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--error);
+    }
+    .wallet-status.connected .dot {
+        background: var(--success);
+    }
+    .devnet-badge {
+        background: #10B981;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+
+    /* Protocol Grid */
+    .protocol-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 20px;
+    }
+    .protocol-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px;
+        transition: border-color 0.2s, transform 0.2s;
+        position: relative;
+    }
+    .protocol-card:hover {
+        border-color: var(--border-light);
+        transform: translateY(-2px);
+    }
+    .protocol-card.owned {
+        border-color: #14F195;
+    }
+    .owned-badge {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: #14F195;
+        color: #000;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 700;
+    }
+    .protocol-image {
+        width: 100%;
+        height: 180px;
+        object-fit: cover;
+        border-radius: 8px;
+        margin-bottom: 14px;
+    }
+    .protocol-symbol {
+        font-size: 12px;
+        color: var(--text-muted);
+        font-family: monospace;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+    .protocol-name {
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 10px;
+    }
+    .protocol-desc {
+        font-size: 13px;
+        color: var(--text-secondary);
+        line-height: 1.5;
+        margin-bottom: 16px;
+        min-height: 60px;
+    }
+    .protocol-price {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 15px;
+        font-weight: 700;
+        color: #60A5FA;
+        margin-bottom: 16px;
+    }
+    .protocol-price .label {
+        font-size: 12px;
+        color: var(--text-muted);
+        font-weight: 400;
+    }
+    .protocol-actions {
+        display: flex;
+        gap: 8px;
+    }
+    .btn-purchase {
+        flex: 1;
+        padding: 10px 16px;
+        background: linear-gradient(135deg, #9945FF, #AB9FF2);
+        border: none;
+        color: white;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+        transition: opacity 0.2s;
+    }
+    .btn-purchase:hover { opacity: 0.85; }
+    .btn-purchase:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+    .btn-view {
+        padding: 10px 16px;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .btn-view:hover { background: var(--bg-hover); }
+
+    /* Modal */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.7);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-content {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        width: 90%;
+        max-width: 800px;
+        max-height: 80vh;
+        overflow-y: auto;
+        padding: 32px;
+    }
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    .modal-header h2 {
+        margin: 0;
+        font-size: 20px;
+        color: var(--text);
+    }
+    .modal-close {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        font-size: 24px;
+        cursor: pointer;
+        padding: 4px 8px;
+    }
+    .modal-close:hover { color: var(--text); }
+    .modal-body {
+        font-size: 14px;
+        color: var(--text-secondary);
+        line-height: 1.7;
+        white-space: pre-wrap;
+        font-family: inherit;
+    }
+
+    /* Loading spinner */
+    .spinner {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Tabs */
+    .store-tabs {
+        display: flex;
+        gap: 0;
+        margin-bottom: 24px;
+        border-bottom: 1px solid var(--border);
+    }
+    .store-tab {
+        padding: 10px 20px;
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        transition: color 0.2s, border-color 0.2s;
+    }
+    .store-tab:hover { color: var(--text); }
+    .store-tab.active {
+        color: #AB9FF2;
+        border-bottom-color: #AB9FF2;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Creator badge */
+    .protocol-creator {
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+    }
+    .protocol-creator .addr {
+        color: #AB9FF2;
+        font-family: monospace;
+    }
+    .dao-approved {
+        display: inline-block;
+        background: #14F195;
+        color: #000;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 1px 6px;
+        border-radius: 4px;
+        margin-left: 6px;
+    }
+
+    /* Marketplace listing */
+    .listing-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+        position: relative;
+    }
+    .listing-card:hover {
+        border-color: var(--border-light);
+        transform: translateY(-2px);
+        transition: all 0.2s;
+    }
+    .listing-price {
+        font-size: 18px;
+        font-weight: 700;
+        color: #60A5FA;
+    }
+    .listing-seller {
+        font-size: 11px;
+        color: var(--text-muted);
+        font-family: monospace;
+    }
+    .resale-tag {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: #F59E0B;
+        color: #000;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 700;
+    }
+
+    /* Sell modal */
+    .sell-form {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        max-width: 400px;
+    }
+    .sell-form label {
+        font-size: 13px;
+        color: var(--text-secondary);
+        font-weight: 600;
+    }
+    .sell-form input {
+        padding: 10px 12px;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text);
+        font-size: 14px;
+    }
+    .sell-form input:focus {
+        outline: none;
+        border-color: #AB9FF2;
+    }
+    .btn-sell {
+        padding: 10px 16px;
+        background: #F59E0B;
+        border: none;
+        color: #000;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+    }
+    .btn-sell:hover { opacity: 0.85; }
+    .btn-sell:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-buy {
+        flex: 1;
+        padding: 10px 16px;
+        background: linear-gradient(135deg, #10B981, #14F195);
+        border: none;
+        color: #000;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+    }
+    .btn-buy:hover { opacity: 0.85; }
+    .btn-delist {
+        padding: 10px 16px;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--error);
+        color: var(--error);
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+    }
+    .rct-gate-notice {
+        font-size: 12px;
+        color: var(--text-muted);
+        padding: 8px 12px;
+        background: var(--bg-tertiary);
+        border-radius: 6px;
+        border-left: 3px solid #F59E0B;
+    }
+</style>
+
+<!-- Store Header -->
+<div class="store-header">
+    <div class="store-header-left">
+        <h2>🧠 Protocol Store</h2>
+        <p>Purchase AI protocol NFTs to unlock advanced agent capabilities. Transferable — trade or gift them.</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+        <span class="devnet-badge">DEVNET</span>
+        <div class="wallet-status" id="walletStatus">
+            <span class="dot"></span>
+            <span id="walletLabel">Wallet not connected</span>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs -->
+<div class="store-tabs">
+    <button class="store-tab active" onclick="switchTab('official')">Official Store</button>
+    <button class="store-tab" onclick="switchTab('marketplace')">Marketplace</button>
+    <button class="store-tab" onclick="switchTab('sell')">Sell</button>
+</div>
+
+<!-- Official Store Tab -->
+<div class="tab-panel active" id="tab-official">
+    <div class="protocol-grid" id="protocolGrid">
+        <div style="color:var(--text-muted);padding:40px;text-align:center;">Loading protocols...</div>
+    </div>
+</div>
+
+<!-- Marketplace Tab -->
+<div class="tab-panel" id="tab-marketplace">
+    <div class="protocol-grid" id="marketplaceGrid">
+        <div style="color:var(--text-muted);padding:40px;text-align:center;">Loading marketplace...</div>
+    </div>
+</div>
+
+<!-- Sell Tab -->
+<div class="tab-panel" id="tab-sell">
+    <div id="sellSection">
+        <div style="color:var(--text-muted);padding:40px;text-align:center;">Connect wallet to list protocols for sale.</div>
+    </div>
+</div>
+
+<!-- Protocol Content Modal -->
+<div class="modal-overlay" id="protocolModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Protocol Content</h2>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+    </div>
+</div>
+
+{% endblock %}
+{% block extra_js %}
+<script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+<script>
+    const RCT_SELL_THRESHOLD = 500;  // minimum RCT to list for sale
+    const MARKETPLACE_PROGRAM_ID = '5wpGj4EG6J5uEqozLqUyHzEQbU26yjaL5aUE5FwBiYe5';
+    const RES_MINT = '{{ config.get("tokens", {}).get("RES_MINT", "DiZuWvmQ6DEwsfz7jyFqXCsMfnJiMVahCj3J5MxkdV5N") }}';
+    let walletAddress = null;
+    let protocols = {};
+    let ownedProtocols = {};  // protocol_id → mint_address
+    let marketplaceListings = [];
+    let userRCT = 0;
+
+    // Phantom wallet connection
+    async function connectWallet() {
+        try {
+            const provider = window.solana;
+            if (!provider || !provider.isPhantom) {
+                alert('Phantom wallet not found. Please install it from phantom.app');
+                return;
+            }
+            const resp = await provider.connect();
+            walletAddress = resp.publicKey.toString();
+            document.getElementById('walletStatus').classList.add('connected');
+            document.getElementById('walletLabel').textContent = walletAddress.slice(0, 4) + '...' + walletAddress.slice(-4);
+            await loadOwned();
+            renderCards();
+        } catch (e) {
+            console.error('Wallet connect failed:', e);
+        }
+    }
+
+    // Load protocols
+    async function loadProtocols() {
+        try {
+            const res = await fetch('/api/protocol-store/list');
+            const data = await res.json();
+            protocols = data.protocols || {};
+            renderCards();
+        } catch (e) {
+            console.error('Failed to load protocols:', e);
+        }
+    }
+
+    // Load owned protocols
+    async function loadOwned() {
+        if (!walletAddress) return;
+        try {
+            const res = await fetch(`/api/protocol-store/owned?wallet=${walletAddress}`);
+            const data = await res.json();
+            ownedProtocols = {};
+            (data.owned || []).forEach(o => {
+                ownedProtocols[o.protocol_id] = o.mint;
+            });
+            renderCards();
+        } catch (e) {
+            console.error('Failed to load owned:', e);
+        }
+    }
+
+    // Render protocol cards
+    function renderCards() {
+        const grid = document.getElementById('protocolGrid');
+        const ids = Object.keys(protocols);
+        if (!ids.length) {
+            grid.innerHTML = '<div style="color:var(--text-muted);padding:40px;text-align:center;">No protocols available.</div>';
+            return;
+        }
+        grid.innerHTML = ids.map(id => {
+            const p = protocols[id];
+            const owned = !!ownedProtocols[id];
+            return `
+                <div class="protocol-card ${owned ? 'owned' : ''}">
+                    ${owned ? '<div class="owned-badge">Owned ✓</div>' : ''}
+                    ${p.image ? `<img class="protocol-image" src="${p.image}" alt="${p.name}">` : ''}
+                    <div class="protocol-symbol">${p.symbol}</div>
+                    <div class="protocol-creator">by <span class="addr">${p.creator ? p.creator.slice(0,4)+'...'+p.creator.slice(-4) : 'ResonantOS'}</span> <span class="dao-approved">DAO ✓</span></div>
+                    <div class="protocol-name">${p.name}</div>
+                    <div class="protocol-desc">${p.description}</div>
+                    <div class="protocol-price">
+                        ${p.price_res} $RES <span class="label">one-time</span>
+                    </div>
+                    <div class="protocol-actions">
+                        ${owned
+                            ? `<button class="btn-view" onclick="viewProtocol('${id}')">View Protocol</button>`
+                            : `<button class="btn-purchase" id="btn-${id}" onclick="purchaseProtocol('${id}')" ${!walletAddress ? 'disabled title="Connect wallet first"' : ''}>Purchase</button>`
+                        }
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    // Purchase protocol NFT
+    async function purchaseProtocol(protocolId) {
+        if (!walletAddress) {
+            alert('Please connect your Phantom wallet first.');
+            return;
+        }
+        const btn = document.getElementById(`btn-${protocolId}`);
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Minting...';
+
+        try {
+            const res = await fetch('/api/protocol-store/purchase', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    protocol_id: protocolId,
+                    wallet_address: walletAddress,
+                    network: 'devnet'
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                ownedProtocols[protocolId] = data.mint;
+                renderCards();
+            } else {
+                alert(data.error || 'Purchase failed');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        } catch (e) {
+            alert('Purchase failed: ' + e.message);
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    }
+
+    // View protocol content
+    async function viewProtocol(protocolId) {
+        const mint = ownedProtocols[protocolId];
+        if (!mint || !walletAddress) return;
+
+        document.getElementById('modalTitle').textContent = protocols[protocolId]?.name || 'Protocol';
+        document.getElementById('modalBody').textContent = 'Loading...';
+        document.getElementById('protocolModal').classList.add('active');
+
+        try {
+            const res = await fetch(`/api/protocol-store/content/${protocolId}?wallet=${walletAddress}&mint=${mint}`);
+            const data = await res.json();
+            if (data.content) {
+                document.getElementById('modalBody').textContent = data.content;
+            } else {
+                document.getElementById('modalBody').textContent = data.error || 'Content unavailable.';
+            }
+        } catch (e) {
+            document.getElementById('modalBody').textContent = 'Failed to load content.';
+        }
+    }
+
+    // Tab switching
+    function switchTab(tab) {
+        document.querySelectorAll('.store-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        document.querySelector(`.store-tab[onclick="switchTab('${tab}')"]`).classList.add('active');
+        document.getElementById(`tab-${tab}`).classList.add('active');
+        if (tab === 'marketplace') loadMarketplace();
+        if (tab === 'sell') renderSellTab();
+    }
+
+    // Load marketplace listings
+    async function loadMarketplace() {
+        const grid = document.getElementById('marketplaceGrid');
+        try {
+            const res = await fetch('/api/protocol-store/marketplace');
+            const data = await res.json();
+            marketplaceListings = data.listings || [];
+            renderMarketplace();
+        } catch (e) {
+            grid.innerHTML = '<div style="color:var(--text-muted);padding:40px;text-align:center;">Failed to load marketplace.</div>';
+        }
+    }
+
+    function renderMarketplace() {
+        const grid = document.getElementById('marketplaceGrid');
+        if (!marketplaceListings.length) {
+            grid.innerHTML = '<div style="color:var(--text-muted);padding:40px;text-align:center;">No listings yet. Be the first to sell a protocol!</div>';
+            return;
+        }
+        grid.innerHTML = marketplaceListings.map(l => {
+            const isMine = walletAddress && l.seller === walletAddress;
+            return `
+                <div class="listing-card">
+                    <span class="resale-tag">RESALE</span>
+                    ${l.image ? `<img class="protocol-image" src="${l.image}" alt="${l.protocol_name}">` : ''}
+                    <div class="protocol-symbol">${l.symbol || ''}</div>
+                    <div class="protocol-creator">by <span class="addr">${l.seller.slice(0,4)}...${l.seller.slice(-4)}</span></div>
+                    <div class="protocol-name">${l.protocol_name}</div>
+                    <div class="protocol-desc">${l.description || ''}</div>
+                    <div class="listing-price">${l.price} $RES</div>
+                    <div style="margin-top:12px;display:flex;gap:8px;">
+                        ${isMine
+                            ? `<button class="btn-delist" onclick="delistProtocol('${l.nft_mint}')">Delist</button>`
+                            : `<button class="btn-buy" onclick="buyListing('${l.nft_mint}')" ${!walletAddress ? 'disabled' : ''}>Buy for ${l.price_res / 1000000} $RES</button>`
+                        }
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    // ── On-chain marketplace helpers ──
+    // Anchor discriminators: sha256("global:<name>")[0..8]
+    async function anchorDisc(name) {
+        const enc = new TextEncoder().encode('global:' + name);
+        const hash = await crypto.subtle.digest('SHA-256', enc);
+        return new Uint8Array(hash).slice(0, 8);
+    }
+
+    async function listingPDA(nftMint) {
+        const mintPk = new solanaWeb3.PublicKey(nftMint);
+        return solanaWeb3.PublicKey.findProgramAddressSync(
+            [new TextEncoder().encode('listing'), mintPk.toBytes()],
+            new solanaWeb3.PublicKey(MARKETPLACE_PROGRAM_ID)
+        );
+    }
+
+    async function escrowPDA(nftMint) {
+        const mintPk = new solanaWeb3.PublicKey(nftMint);
+        return solanaWeb3.PublicKey.findProgramAddressSync(
+            [new TextEncoder().encode('escrow'), mintPk.toBytes()],
+            new solanaWeb3.PublicKey(MARKETPLACE_PROGRAM_ID)
+        );
+    }
+
+    function getATA(wallet, mint, tokenProgram) {
+        const walletPk = new solanaWeb3.PublicKey(wallet);
+        const mintPk = new solanaWeb3.PublicKey(mint);
+        const tokenPk = new solanaWeb3.PublicKey(tokenProgram);
+        const ataPk = new solanaWeb3.PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+        const [ata] = solanaWeb3.PublicKey.findProgramAddressSync(
+            [walletPk.toBytes(), tokenPk.toBytes(), mintPk.toBytes()],
+            ataPk
+        );
+        return ata;
+    }
+
+    // Buy from marketplace (on-chain)
+    async function buyListing(nftMint) {
+        if (!walletAddress) { alert('Connect wallet first.'); return; }
+        const listing = marketplaceListings.find(l => l.nft_mint === nftMint);
+        if (!listing) { alert('Listing not found'); return; }
+
+        try {
+            const conn = new solanaWeb3.Connection('https://api.devnet.solana.com', 'confirmed');
+            const programId = new solanaWeb3.PublicKey(MARKETPLACE_PROGRAM_ID);
+            const buyer = new solanaWeb3.PublicKey(walletAddress);
+            const seller = new solanaWeb3.PublicKey(listing.seller);
+            const nftMintPk = new solanaWeb3.PublicKey(nftMint);
+            const resMint = new solanaWeb3.PublicKey(RES_MINT);
+            const token2022 = new solanaWeb3.PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
+            const splToken = new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+
+            const [listingPda] = await listingPDA(nftMint);
+            const [escrowAuth] = await escrowPDA(nftMint);
+            const escrowNftAta = getATA(escrowAuth.toBase58(), nftMint, token2022.toBase58());
+            const buyerNftAta = getATA(walletAddress, nftMint, token2022.toBase58());
+            const buyerResAta = getATA(walletAddress, RES_MINT, splToken.toBase58());
+            const sellerResAta = getATA(listing.seller, RES_MINT, splToken.toBase58());
+
+            const disc = await anchorDisc('buy_protocol');
+            const data = disc; // no args
+
+            const ix = new solanaWeb3.TransactionInstruction({
+                programId,
+                keys: [
+                    { pubkey: buyer, isSigner: true, isWritable: true },
+                    { pubkey: listingPda, isSigner: false, isWritable: true },
+                    { pubkey: seller, isSigner: false, isWritable: true },
+                    { pubkey: nftMintPk, isSigner: false, isWritable: false },
+                    { pubkey: resMint, isSigner: false, isWritable: false },
+                    { pubkey: buyerResAta, isSigner: false, isWritable: true },
+                    { pubkey: sellerResAta, isSigner: false, isWritable: true },
+                    { pubkey: buyerNftAta, isSigner: false, isWritable: true },
+                    { pubkey: escrowAuth, isSigner: false, isWritable: false },
+                    { pubkey: escrowNftAta, isSigner: false, isWritable: true },
+                    { pubkey: token2022, isSigner: false, isWritable: false },
+                    { pubkey: splToken, isSigner: false, isWritable: false },
+                    { pubkey: new solanaWeb3.PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'), isSigner: false, isWritable: false },
+                    { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
+                ],
+                data: Buffer.from(data),
+            });
+
+            const tx = new solanaWeb3.Transaction().add(ix);
+            tx.feePayer = buyer;
+            tx.recentBlockhash = (await conn.getLatestBlockhash()).blockhash;
+
+            const signed = await window.solana.signTransaction(tx);
+            const sig = await conn.sendRawTransaction(signed.serialize());
+            await conn.confirmTransaction(sig, 'confirmed');
+
+            alert('Purchase complete! Tx: ' + sig.slice(0, 16) + '...');
+            await loadMarketplace();
+            await loadOwned();
+            renderCards();
+        } catch (e) {
+            alert('Error: ' + e.message);
+        }
+    }
+
+    // Delist from marketplace (on-chain)
+    async function delistProtocol(nftMint) {
+        if (!confirm('Remove this listing?')) return;
+        try {
+            const conn = new solanaWeb3.Connection('https://api.devnet.solana.com', 'confirmed');
+            const programId = new solanaWeb3.PublicKey(MARKETPLACE_PROGRAM_ID);
+            const sellerPk = new solanaWeb3.PublicKey(walletAddress);
+            const nftMintPk = new solanaWeb3.PublicKey(nftMint);
+            const token2022 = new solanaWeb3.PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
+
+            const [listingPda] = await listingPDA(nftMint);
+            const [escrowAuth] = await escrowPDA(nftMint);
+            const escrowNftAta = getATA(escrowAuth.toBase58(), nftMint, token2022.toBase58());
+            const sellerNftAta = getATA(walletAddress, nftMint, token2022.toBase58());
+
+            const disc = await anchorDisc('delist_protocol');
+
+            const ix = new solanaWeb3.TransactionInstruction({
+                programId,
+                keys: [
+                    { pubkey: sellerPk, isSigner: true, isWritable: true },
+                    { pubkey: listingPda, isSigner: false, isWritable: true },
+                    { pubkey: nftMintPk, isSigner: false, isWritable: false },
+                    { pubkey: sellerNftAta, isSigner: false, isWritable: true },
+                    { pubkey: escrowAuth, isSigner: false, isWritable: false },
+                    { pubkey: escrowNftAta, isSigner: false, isWritable: true },
+                    { pubkey: token2022, isSigner: false, isWritable: false },
+                    { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
+                ],
+                data: Buffer.from(disc),
+            });
+
+            const tx = new solanaWeb3.Transaction().add(ix);
+            tx.feePayer = sellerPk;
+            tx.recentBlockhash = (await conn.getLatestBlockhash()).blockhash;
+
+            const signed = await window.solana.signTransaction(tx);
+            const sig = await conn.sendRawTransaction(signed.serialize());
+            await conn.confirmTransaction(sig, 'confirmed');
+
+            alert('Delisted! Tx: ' + sig.slice(0, 16) + '...');
+            await loadMarketplace();
+            await loadOwned();
+        } catch (e) {
+            alert('Error: ' + e.message);
+        }
+    }
+
+    // Sell tab
+    async function renderSellTab() {
+        const section = document.getElementById('sellSection');
+        if (!walletAddress) {
+            section.innerHTML = '<div style="color:var(--text-muted);padding:40px;text-align:center;">Connect wallet to list protocols for sale.</div>';
+            return;
+        }
+
+        // Check RCT balance
+        try {
+            const res = await fetch(`/api/wallet/reputation?wallet=${walletAddress}&network=devnet`);
+            const data = await res.json();
+            userRCT = data.rct_balance || 0;
+        } catch (_) { userRCT = 0; }
+
+        const ownedIds = Object.keys(ownedProtocols);
+        if (!ownedIds.length) {
+            section.innerHTML = '<div style="color:var(--text-muted);padding:40px;text-align:center;">You don\'t own any protocols to sell.</div>';
+            return;
+        }
+
+        if (userRCT < RCT_SELL_THRESHOLD) {
+            section.innerHTML = `
+                <div class="rct-gate-notice" style="margin-bottom:20px;">
+                    ⚠️ You need at least <strong>${RCT_SELL_THRESHOLD} $RCT</strong> to list protocols for sale. Your balance: <strong>${userRCT} $RCT</strong>
+                </div>
+                <div style="color:var(--text-muted);padding:20px;text-align:center;">Build your reputation through contributions to unlock selling.</div>`;
+            return;
+        }
+
+        section.innerHTML = `
+            <p style="color:var(--text-secondary);font-size:13px;margin-bottom:20px;">List your owned protocols for resale. Set any price in $RES.</p>
+            <div class="protocol-grid">
+                ${ownedIds.map(id => {
+                    const p = protocols[id];
+                    return `
+                        <div class="protocol-card owned">
+                            ${p && p.image ? `<img class="protocol-image" src="${p.image}" alt="${p.name}">` : ''}
+                            <div class="protocol-name">${p ? p.name : id}</div>
+                            <div class="sell-form">
+                                <label>Price ($RES)</label>
+                                <input type="number" id="sell-price-${id}" min="1" placeholder="e.g. 80" />
+                                <button class="btn-sell" onclick="listForSale('${id}')">List for Sale</button>
+                            </div>
+                        </div>`;
+                }).join('')}
+            </div>`;
+    }
+
+    // List for sale (on-chain escrow)
+    async function listForSale(protocolId) {
+        const priceInput = document.getElementById(`sell-price-${protocolId}`);
+        const price = parseInt(priceInput.value);
+        if (!price || price < 1) { alert('Enter a valid price.'); return; }
+
+        const nftMint = ownedProtocols[protocolId];
+        if (!nftMint) { alert('No mint found for this protocol.'); return; }
+
+        try {
+            const conn = new solanaWeb3.Connection('https://api.devnet.solana.com', 'confirmed');
+            const programId = new solanaWeb3.PublicKey(MARKETPLACE_PROGRAM_ID);
+            const sellerPk = new solanaWeb3.PublicKey(walletAddress);
+            const nftMintPk = new solanaWeb3.PublicKey(nftMint);
+            const token2022 = new solanaWeb3.PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
+
+            const [listingPda] = await listingPDA(nftMint);
+            const [escrowAuth] = await escrowPDA(nftMint);
+            const escrowNftAta = getATA(escrowAuth.toBase58(), nftMint, token2022.toBase58());
+            const sellerNftAta = getATA(walletAddress, nftMint, token2022.toBase58());
+
+            const disc = await anchorDisc('list_protocol');
+            // price_res: u64 little-endian
+            const priceResLamports = BigInt(price) * BigInt(1_000_000); // 6 decimals for $RES
+            const priceBuf = new Uint8Array(8);
+            const view = new DataView(priceBuf.buffer);
+            view.setBigUint64(0, priceResLamports, true);
+            const data = new Uint8Array([...disc, ...priceBuf]);
+
+            const ix = new solanaWeb3.TransactionInstruction({
+                programId,
+                keys: [
+                    { pubkey: sellerPk, isSigner: true, isWritable: true },
+                    { pubkey: nftMintPk, isSigner: false, isWritable: false },
+                    { pubkey: sellerNftAta, isSigner: false, isWritable: true },
+                    { pubkey: escrowAuth, isSigner: false, isWritable: false },
+                    { pubkey: escrowNftAta, isSigner: false, isWritable: true },
+                    { pubkey: listingPda, isSigner: false, isWritable: true },
+                    { pubkey: token2022, isSigner: false, isWritable: false },
+                    { pubkey: new solanaWeb3.PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'), isSigner: false, isWritable: false },
+                    { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
+                ],
+                data: Buffer.from(data),
+            });
+
+            const tx = new solanaWeb3.Transaction().add(ix);
+            tx.feePayer = sellerPk;
+            tx.recentBlockhash = (await conn.getLatestBlockhash()).blockhash;
+
+            const signed = await window.solana.signTransaction(tx);
+            const sig = await conn.sendRawTransaction(signed.serialize());
+            await conn.confirmTransaction(sig, 'confirmed');
+
+            alert('Listed for sale! Tx: ' + sig.slice(0, 16) + '...');
+            switchTab('marketplace');
+        } catch (e) {
+            alert('Error: ' + e.message);
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('protocolModal').classList.remove('active');
+    }
+
+    // Close modal on overlay click
+    document.getElementById('protocolModal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+    });
+
+    // ESC to close
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    // Init
+    document.addEventListener('DOMContentLoaded', async () => {
+        await loadProtocols();
+
+        // Auto-connect if Phantom already connected
+        if (window.solana && window.solana.isPhantom) {
+            try {
+                const resp = await window.solana.connect({ onlyIfTrusted: true });
+                walletAddress = resp.publicKey.toString();
+                document.getElementById('walletStatus').classList.add('connected');
+                document.getElementById('walletLabel').textContent = walletAddress.slice(0, 4) + '...' + walletAddress.slice(-4);
+                await loadOwned();
+                renderCards();
+            } catch (_) {
+                // Not auto-connected, show connect prompt
+                document.getElementById('walletLabel').innerHTML = '<a href="#" onclick="connectWallet();return false;" style="color:#AB9FF2;text-decoration:none;">Connect Phantom</a>';
+            }
+        } else {
+            document.getElementById('walletLabel').innerHTML = '<a href="#" onclick="connectWallet();return false;" style="color:#AB9FF2;text-decoration:none;">Connect Phantom</a>';
+        }
+    });
+</script>
+{% endblock %}
