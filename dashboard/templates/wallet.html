@@ -1649,7 +1649,7 @@ async function loadUserWallet() {
         // Get Symbiotic PDA address — all balances live on PDA, not human wallet
         const pairResp = await fetch(`/api/symbiotic/pair-info?humanPubkey=${connectedAddress}&network=${currentNetwork}`);
         const pairData = await pairResp.json();
-        const pdaAddress = pairData.pda || null;
+        const pdaAddress = pairData.exists ? (pairData.pda || null) : null;
         
         if (pdaAddress) {
             // Display PDA address with truncation

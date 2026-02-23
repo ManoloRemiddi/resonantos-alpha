@@ -1392,6 +1392,26 @@ def api_wallet_build_transfer_tx():
             [b"symbiotic", bytes(human), bytes([0])], program_id
         )
 
+        # Verify symbiotic pair exists on-chain and is active
+        pair_info = _solana_rpc(network, "getAccountInfo", [str(pda), {"encoding": "base64"}])
+        pair_val = pair_info.get("result", {}).get("value") if isinstance(pair_info, dict) else None
+        if not pair_val:
+            return jsonify({"error": "Symbiotic wallet not initialized. Create Symbiotic Wallet first."}), 400
+        try:
+            import base64 as _b64
+            raw_pair = _b64.b64decode(pair_val["data"][0])
+            if len(raw_pair) >= 93:
+                d = raw_pair[8:]  # skip discriminator
+                pair_human = str(_Pubkey.from_bytes(d[0:32]))
+                pair_frozen = bool(d[66])
+                if pair_human != sender:
+                    return jsonify({"error": "Unauthorized: connected wallet is not the pair human signer"}), 403
+                if pair_frozen:
+                    return jsonify({"error": "Symbiotic wallet is frozen"}), 403
+        except Exception:
+            # If decode fails, continue and let on-chain program enforce constraints
+            pass
+
         # Derive ATAs
         from spl.token.instructions import get_associated_token_address
         from_ata = get_associated_token_address(pda, mint, token_prog)
