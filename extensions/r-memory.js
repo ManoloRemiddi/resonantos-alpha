@@ -1,18 +1,23 @@
 /**
- * R-Memory V5.0.1-alpha — High-Fidelity Compression Extension for OpenClaw
- * @version 5.0.1-alpha
+ * R-Memory V5.0.1 — High-Fidelity Compression Extension for OpenClaw
+ * @version 5.0.1
  * @date 2026-02-20
  *
  * Changes from V4.8.1:
  * - Fix 1: Narrative tracker quality upgrade: structured prompt (Task/Decisions/Pending/State)
+ * - Fix 1: Narrative model: dedicated gpt-4o via camouflage.backgroundModels["openai-narrative"]
  * - Fix 1: Previous thread state fed into prompt for continuity across updates
  * - Fix 2: No-op swap filter: blocks < minSwapTokens (default 50) skipped in compaction
  * - Fix 3: Background pre-compression disabled (75% cache miss rate due to hash mismatch)
  *   Compression now on-demand at compaction time only, saving wasted API calls
  *
  * Changes from V4.7.0:
- * - Configurable compression and narrative models
- * - Concurrency cap for parallel background calls
+ * - Camouflage integration: routes background LLM calls (compression, narrative)
+ *   to non-Anthropic providers when camouflage.enabled=true
+ *   Config: r-memory/camouflage.json
+ * - Behavioral jitter: adds random delay to background calls
+ * - Concurrency cap: limits parallel background calls per camouflage config
+ * - All camouflage elements toggleable via camouflage.json elements{}
  *
  * Changes from V4.6.3:
  * - Narrative Tracker: writes SESSION_THREAD.md after each AI response via Haiku
@@ -67,8 +72,8 @@ const DEFAULT_CONFIG = {
   blockSize: 4000,
   minCompressChars: 200,
   minSwapTokens: 50,
-  compressionModel: "anthropic/claude-haiku-4-5",
-  narrativeModel: null, // null = use compressionModel; set explicitly to use a different model (e.g. "anthropic/claude-opus-4-6")
+  compressionModel: "openai-codex/gpt-4o-mini",
+  narrativeModel: null, // null = use camouflage routing; set explicitly to bypass (e.g. "anthropic/claude-opus-4-6")
   maxParallelCompressions: 4,
   storageDir: "r-memory",
   archiveDir: "r-memory/archive",
@@ -91,6 +96,25 @@ let deferredCompactionMinBlocks = 0; // Step 3: cancel-loop reduction
 // ============================================================================
 // Camouflage — Traffic Origin Segregation
 // ============================================================================
+const DEFAULT_CAMOUFLAGE = {
+  enabled: false,
+  routeCompressionOffAnthro: true,
+  routeNarrativeOffAnthro: true,
+  preferredBackgroundProvider: "openai",
+  backgroundModels: {
+    openai: "openai/gpt-4o-mini",
+    google: "google/gemini-2.0-flash",
+  },
+  jitterMs: { min: 200, max: 2500 },
+  maxConcurrentBackgroundCalls: 2,
+  logRoutingDecisions: true,
+  elements: {
+    trafficSegregation: true,
+    behavioralJitter: true,
+    concurrencyLimit: true,
+  },
+};
+let camouflage = { ...DEFAULT_CAMOUFLAGE };
 
 // ============================================================================
 // Background Agent Usage Tracking
@@ -130,10 +154,96 @@ function trackUsage(agentType, inputTokens, outputTokens, isError = false) {
   saveUsageStats();
 }
 
+function loadCamouflage() {
+  try {
+    const p = path.join(workspaceDir, config.storageDir, "camouflage.json");
+    if (fs.existsSync(p)) {
+      const raw = JSON.parse(fs.readFileSync(p, "utf-8"));
+      const cleaned = {};
+      for (const [k, v] of Object.entries(raw)) {
+        if (!k.startsWith("//")) cleaned[k] = v;
+      }
+      camouflage = { ...DEFAULT_CAMOUFLAGE, ...cleaned };
+      if (cleaned.elements) camouflage.elements = { ...DEFAULT_CAMOUFLAGE.elements, ...cleaned.elements };
+      if (cleaned.jitterMs) camouflage.jitterMs = { ...DEFAULT_CAMOUFLAGE.jitterMs, ...cleaned.jitterMs };
+      if (cleaned.backgroundModels) camouflage.backgroundModels = { ...DEFAULT_CAMOUFLAGE.backgroundModels, ...cleaned.backgroundModels };
+    }
+    log("INFO", "Camouflage config loaded", {
+      enabled: camouflage.enabled,
+      elements: camouflage.elements,
+      preferredProvider: camouflage.preferredBackgroundProvider,
+    });
+  } catch (e) {
+    log("WARN", "Camouflage config load failed — using defaults", { error: e.message });
+  }
+}
 
 /**
- * Model resolution and API key helpers are defined below.
+ * Resolve background model + API key for camouflage routing.
+ * When camouflage is active, routes away from Anthropic.
+ * Returns { model, apiKey, provider, routed } or null.
  */
+function resolveCamouflageModel(callType) {
+  // callType: "compression" | "narrative"
+  const shouldRoute = camouflage.enabled && camouflage.elements.trafficSegregation && (
+    (callType === "compression" && camouflage.routeCompressionOffAnthro) ||
+    (callType === "narrative" && camouflage.routeNarrativeOffAnthro)
+  );
+
+  if (!shouldRoute) {
+    // Use default compression model (Anthropic Haiku)
+    return { model: config.compressionModel, apiKey: resolvedApiKey, provider: "anthropic", routed: false };
+  }
+
+  // Try preferred provider first
+  const preferred = camouflage.preferredBackgroundProvider;
+  const modelStr = camouflage.backgroundModels[preferred];
+  if (modelStr) {
+    const key = resolveApiKeyForProvider(preferred);
+    if (key) {
+      if (camouflage.logRoutingDecisions) {
+        log("INFO", `CAMOUFLAGE: Routed ${callType} → ${preferred}`, { model: modelStr });
+      }
+      return { model: modelStr, apiKey: key, provider: preferred, routed: true };
+    }
+  }
+
+  // Fallback: any non-Anthropic provider with a key
+  for (const [prov, model] of Object.entries(camouflage.backgroundModels)) {
+    if (prov === "anthropic") continue;
+    const key = resolveApiKeyForProvider(prov);
+    if (key) {
+      if (camouflage.logRoutingDecisions) {
+        log("INFO", `CAMOUFLAGE: Routed ${callType} → ${prov} (fallback)`, { model });
+      }
+      return { model, apiKey: key, provider: prov, routed: true };
+    }
+  }
+
+  // Last resort: use Anthropic (camouflage degraded)
+  log("WARN", `CAMOUFLAGE: No non-Anthropic provider available for ${callType} — falling back to Anthropic`);
+  return { model: config.compressionModel, apiKey: resolvedApiKey, provider: "anthropic", routed: false };
+}
+
+/**
+ * Apply behavioral jitter — random delay before background LLM calls.
+ */
+function applyJitter() {
+  if (!camouflage.enabled || !camouflage.elements.behavioralJitter) return Promise.resolve();
+  const { min, max } = camouflage.jitterMs;
+  const delay = min + Math.floor(Math.random() * (max - min));
+  return new Promise(resolve => setTimeout(resolve, delay));
+}
+
+/**
+ * Get effective max parallel compressions (respects camouflage concurrency cap).
+ */
+function getMaxParallel() {
+  if (camouflage.enabled && camouflage.elements.concurrencyLimit) {
+    return Math.min(config.maxParallelCompressions, camouflage.maxConcurrentBackgroundCalls);
+  }
+  return config.maxParallelCompressions;
+}
 
 // ============================================================================
 // Utilities
@@ -384,7 +494,32 @@ function groupMessagesIntoBlocks(messages) {
 // ============================================================================
 
 function groupEntriesIntoBlocks(branchEntries, startIndex) {
-  // Step 1: Group into turns
+  // Step 0: Detect tool call/result pairs so they are NEVER split across blocks.
+  // OpenClaw internal format: assistant content[].type==="toolCall" + role==="toolResult" messages.
+  // Also handles raw Anthropic (tool_use/tool_result) and OpenAI (tool_calls[]/role==="tool")
+  // formats in case un-normalized messages appear. Splitting pairs causes API errors.
+  function hasToolUse(msg) {
+    if (!msg) return false;
+    // OpenClaw internal format: content[].type === "toolCall"
+    if (Array.isArray(msg.content) && msg.content.some(b => b.type === "toolCall")) return true;
+    // Anthropic API format (in case raw messages leak through): content[].type === "tool_use"
+    if (Array.isArray(msg.content) && msg.content.some(b => b.type === "tool_use")) return true;
+    // OpenAI API format (in case raw messages leak through): assistant message with tool_calls[]
+    if (Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) return true;
+    return false;
+  }
+  function hasToolResult(msg) {
+    if (!msg) return false;
+    // OpenClaw internal format: role === "toolResult"
+    if (msg.role === "toolResult") return true;
+    // Anthropic API format (in case raw messages leak through): content[].type === "tool_result"
+    if (Array.isArray(msg.content) && msg.content.some(b => b.type === "tool_result")) return true;
+    // OpenAI API format (in case raw messages leak through): role === "tool" with tool_call_id
+    if (msg.role === "tool" && msg.tool_call_id) return true;
+    return false;
+  }
+
+  // Step 1: Group into turns, but keep tool_use + tool_result together
   const turns = [];
   let currentEntries = [];
 
@@ -395,15 +530,22 @@ function groupEntriesIntoBlocks(branchEntries, startIndex) {
     if (msg.role === "compactionSummary" || msg.role === "branchSummary") continue;
 
     if (msg.role === "user" && currentEntries.length > 0) {
-      turns.push(currentEntries);
-      currentEntries = [{ index: i, id: entry.id, message: msg }];
+      // Check: is this user message a tool_result paired with a preceding tool_use?
+      const prevMsg = currentEntries.length > 0 ? currentEntries[currentEntries.length - 1].message : null;
+      if (hasToolResult(msg) && prevMsg && hasToolUse(prevMsg)) {
+        // Keep tool_result with its tool_use — don't start a new turn
+        currentEntries.push({ index: i, id: entry.id, message: msg });
+      } else {
+        turns.push(currentEntries);
+        currentEntries = [{ index: i, id: entry.id, message: msg }];
+      }
     } else {
       currentEntries.push({ index: i, id: entry.id, message: msg });
     }
   }
   if (currentEntries.length > 0) turns.push(currentEntries);
 
-  // Step 2 & 3: Split oversized turns into blocks
+  // Step 2 & 3: Split oversized turns into blocks, respecting tool_use/tool_result pairs
   const blocks = [];
   const maxTokens = config.blockSize || 4000;
   const maxChars = maxTokens * 4;
@@ -417,15 +559,45 @@ function groupEntriesIntoBlocks(branchEntries, startIndex) {
       continue;
     }
 
-    // Oversized turn — split at message boundaries
+    // Oversized turn — split at message boundaries, keeping tool pairs together
     let blockEntries = [];
     let blockTokens = 0;
 
-    for (const entry of turnEntries) {
+    for (let j = 0; j < turnEntries.length; j++) {
+      const entry = turnEntries[j];
       const msgText = extractMessageText(entry.message);
       const msgTokens = estimateTokens(msgText);
 
-      if (msgTokens > maxTokens) {
+      // Check if this entry starts a tool_use pair (assistant with tool_use + next is tool_result)
+      // OpenAI can have MULTIPLE tool results (role:"tool") following one assistant tool_calls.
+      // Anthropic wraps all results in a single user message. Handle both.
+      let pairedEntries = [entry];
+      let pairedTokens = msgTokens;
+      if (hasToolUse(entry.message)) {
+        while (j + 1 < turnEntries.length && hasToolResult(turnEntries[j + 1].message)) {
+          const nextEntry = turnEntries[j + 1];
+          const nextText = extractMessageText(nextEntry.message);
+          pairedEntries.push(nextEntry);
+          pairedTokens += estimateTokens(nextText);
+          j++; // skip the tool_result(s) in the next iteration
+        }
+      }
+
+      // If paired entries are themselves larger than maxTokens, they still go together
+      // (splitting a tool_use from its tool_result is worse than having an oversized block)
+      if (pairedTokens > maxTokens && pairedEntries.length > 1) {
+        // Flush current block first
+        if (blockEntries.length > 0) {
+          blocks.push(finalizeEntryBlock(blockEntries));
+          blockEntries = [];
+          blockTokens = 0;
+        }
+        // Keep the pair together as one oversized block (safe: no API error)
+        blocks.push(finalizeEntryBlock(pairedEntries));
+        continue;
+      }
+
+      if (pairedTokens > maxTokens && pairedEntries.length === 1) {
         if (blockEntries.length > 0) {
           blocks.push(finalizeEntryBlock(blockEntries));
           blockEntries = [];
@@ -446,13 +618,13 @@ function groupEntriesIntoBlocks(branchEntries, startIndex) {
         continue;
       }
 
-      if (blockTokens + msgTokens > maxTokens && blockEntries.length > 0) {
+      if (blockTokens + pairedTokens > maxTokens && blockEntries.length > 0) {
         blocks.push(finalizeEntryBlock(blockEntries));
-        blockEntries = [entry];
-        blockTokens = msgTokens;
+        blockEntries = [...pairedEntries];
+        blockTokens = pairedTokens;
       } else {
-        blockEntries.push(entry);
-        blockTokens += msgTokens;
+        blockEntries.push(...pairedEntries);
+        blockTokens += pairedTokens;
       }
     }
     if (blockEntries.length > 0) {
@@ -467,8 +639,15 @@ function groupEntriesIntoBlocks(branchEntries, startIndex) {
  */
 function getMessageFromEntry(entry) {
   if (entry.type === "message" && entry.message) return entry.message;
-  if (entry.type === "custom") log("DEBUG", "Custom entry structure", { keys: Object.keys(entry), customType: entry.customType, dataType: typeof entry.data, dataPreview: JSON.stringify(entry.data).slice(0, 200) });
-  if (entry.type === "custom" && entry.data) return { role: "assistant", content: typeof entry.data === "string" ? entry.data : JSON.stringify(entry.data) };
+  // Skip OpenClaw metadata entries — they are NOT conversation content and should not
+  // be counted as blocks or cause "0 blocks" cancellation when they're the only entries.
+  if (entry.type === "custom") {
+    const ct = entry.customType || "";
+    const METADATA_TYPES = ["model-snapshot", "openclaw.cache-ttl", "openclaw.metadata"];
+    if (METADATA_TYPES.includes(ct)) return null; // explicitly skip, no debug log needed
+    log("DEBUG", "Custom entry structure", { keys: Object.keys(entry), customType: ct, dataType: typeof entry.data, dataPreview: JSON.stringify(entry.data).slice(0, 200) });
+    if (entry.data) return { role: "assistant", content: typeof entry.data === "string" ? entry.data : JSON.stringify(entry.data) };
+  }
   if (entry.type === "custom_message") return { role: "custom", content: entry.content || "" };
   if (entry.type === "compaction") return { role: "compactionSummary", summary: entry.summary || "" };
   if (entry.type === "branch_summary") return { role: "branchSummary", summary: entry.summary || "" };
@@ -492,8 +671,9 @@ function resolveApiKeyForProvider(provider) {
       const data = JSON.parse(fs.readFileSync(agentAuth, "utf-8"));
       if (data.profiles) {
         for (const [key, profile] of Object.entries(data.profiles)) {
-          if (key.includes(provider) && profile?.token) {
-            log("INFO", `API key from auth-profiles (${key})`); return profile.token;
+          if (key.includes(provider)) {
+            const tok = profile?.token || profile?.access;
+            if (tok) { log("INFO", `API key from auth-profiles (${key})`); return tok; }
           }
         }
       }
@@ -639,9 +819,13 @@ async function compressSingleBlock(rawText) {
   if (rawText.length < config.minCompressChars) {
     return { compressed: rawText, tokensRaw: rawTokens, tokensCompressed: rawTokens };
   }
-  const model = buildModelObject(config.compressionModel);
-  const apiKey = resolveApiKeyForProvider(model.provider);
-  if (!apiKey) return null;
+  // Camouflage: resolve model + key (may route off Anthropic)
+  const routing = resolveCamouflageModel("compression");
+  if (!routing || !routing.apiKey) return null;
+  const model = buildModelObject(routing.model);
+  const apiKey = routing.apiKey;
+  // Camouflage: behavioral jitter
+  await applyJitter();
   try {
     const response = await completeSimple(model, {
       systemPrompt: `You are a high-fidelity conversation compressor.
@@ -658,7 +842,7 @@ RULES:
 - Output must be significantly shorter than input`,
       messages: [{ role: "user", content: [{ type: "text", text: `Compress this conversation block:\n\n${rawText}` }], timestamp: Date.now() }],
     }, { maxTokens: Math.ceil(rawTokens * 0.8), apiKey });
-    if (response.stopReason === "error") { log("ERROR", "Compression model error", { error: response.errorMessage, provider: model.provider }); return null; }
+    if (response.stopReason === "error") { log("ERROR", "Compression model error", { error: response.errorMessage, provider: routing.provider }); return null; }
     const compressed = response.content.filter(c => c.type === "text").map(c => c.text).join("\n");
     const compressedTokens = estimateTokens(compressed);
     if (compressedTokens >= rawTokens * 0.95) {
@@ -812,7 +996,7 @@ async function handleBeforeCompact(event) {
   }
   const handled = typeCounts["message"] || 0;
   const total = branchEntries.length - startIdx;
-  const missed = total - handled - (typeCounts["compaction"] || 0) - (typeCounts["branch_summary"] || 0);
+  const missed = total - handled - (typeCounts["compaction"] || 0) - (typeCounts["branch_summary"] || 0) - (typeCounts["custom"] || 0);
   log("INFO", "=== DIAGNOSTIC: Entry types ===", {
     totalEntries: total,
     typeCounts,
@@ -1008,7 +1192,8 @@ async function handleBeforeCompact(event) {
     timestamp: Date.now()
   });
 
-  // FIFO eviction at 80k (compressed blocks only)
+  // FIFO eviction at config.evictTrigger (default 80k; set to 40k in config.json
+  // to keep ~10k headroom in 200k context window when combined with system prompt + raw messages)
   applyFifoEviction();
   saveCompactionHistory();
   saveMessageCache();
@@ -1062,10 +1247,10 @@ async function handleBeforeCompact(event) {
 // ============================================================================
 async function updateNarrativeThread(messages) {
   if (!completeSimple) return;
+  // Only resolve camouflage routing if no explicit narrativeModel in config
+  const routing = config.narrativeModel ? null : resolveCamouflageModel("narrative");
+  if (!config.narrativeModel && (!routing || !routing.apiKey)) return;
   if (!messages || messages.length < 2) return;
-  const narrativeModelStr = config.narrativeModel || config.compressionModel;
-  const narrativeApiKey = resolveApiKeyForProvider(buildModelObject(narrativeModelStr).provider);
-  if (!narrativeApiKey) return;
 
   try {
     // Extract last 10 message pairs (human + AI) for broad context
@@ -1128,55 +1313,78 @@ async function updateNarrativeThread(messages) {
       ...recentExchanges.map(e => `[${e.role}]: ${e.text}`),
     ].join("\n");
 
-    // Narrative model: config.narrativeModel overrides default compression model
-    let narrativeModelStr = config.narrativeModel || config.compressionModel;
-    log("DEBUG", "Narrative model", { model: narrativeModelStr });
+    // Narrative model: config.narrativeModel overrides camouflage routing (e.g. use Opus via Claude Max = free)
+    let narrativeModelStr;
+    if (config.narrativeModel) {
+      narrativeModelStr = config.narrativeModel;
+      log("DEBUG", "Narrative model from config", { model: narrativeModelStr });
+    } else if (camouflage.enabled && camouflage.backgroundModels && camouflage.backgroundModels["openai-narrative"]) {
+      const narrativeKey = resolveApiKeyForProvider(camouflage.preferredBackgroundProvider || "openai");
+      if (narrativeKey) {
+        narrativeModelStr = camouflage.backgroundModels["openai-narrative"];
+      } else {
+        narrativeModelStr = routing.model;
+      }
+    } else {
+      narrativeModelStr = routing.model;
+    }
     const narrativeModel = buildModelObject(narrativeModelStr);
+
+    if (!config.narrativeModel) await applyJitter(); // skip jitter when using direct model (no camouflage needed)
     const response = await completeSimple(narrativeModel, {
-      systemPrompt: `You maintain an EVOLVING narrative document that serves as working memory for an AI assistant. This document survives context resets (compaction) and is the ONLY bridge between memory states. It is written BY AI, FOR AI — optimize for machine readability, not human aesthetics.
+      systemPrompt: `You maintain an EVOLVING narrative document that serves as working memory for an AI assistant. This document survives context resets (compaction) and is the ONLY bridge between memory states. Written BY AI, FOR AI — optimize for machine readability.
 
-OUTPUT FORMAT:
+The document has TWO critical functions:
+1. **Anchor the present** — After compaction, the AI reads this to know EXACTLY what's happening NOW. If the present is unclear, the AI is lost.
+2. **Map the session** — Show the arc of the day: what topics were explored, what decisions were made, what's pending.
 
-## Mission
-One line: the overarching goal of the current session/day. Only change when the human redirects to a fundamentally different objective.
+OUTPUT FORMAT (strict):
 
-## Thread
-Sequential, branching narrative of events. Format:
-- [N] TOPIC: what happened + why (reasoning, trigger)
-  - [N.1] Sub-action or branch detail
-  - [N.2] Outcome, error, or resolution
-  → merged back / resolved / abandoned
+## NOW
+**Rewrite this section every update.** 3-5 sentences. What is happening RIGHT NOW:
+- Current task/topic and its state (in progress / waiting / blocked)
+- What triggered it (human request, compaction recovery, cron, etc.)
+- What the expected next step is
+- Any pending human input needed
 
-Sequence numbers (1, 2, 3...) track ORDER, not time. Sub-events use decimals (1.1, 1.2). This is the BACKBONE — shows flow of work including branches and merges.
+This is the FIRST thing the AI reads after compaction. It must be self-contained — assume the reader has NO prior context.
 
-CRITICAL RULES for Thread:
-- APPEND new events. Never delete or rewrite existing entries.
-- When topics switch, note the trigger: "Human asked X because Y"
-- When a branch resolves, mark it: → resolved (outcome)
-- When approaching space limits, COMPRESS old resolved branches into single lines. Keep active/recent branches detailed.
+## Session
+One paragraph: the arc of today's session from start to current moment. Think of it as "Previously on..." — enough to orient but not enough to drown. Update incrementally, don't rewrite from scratch. ~100 words max.
 
-## Active
-What we're doing RIGHT NOW. 2-3 sentences: task, why, trigger, expected outcome. This is the volatile section — rewrite freely.
+## Rivers
+Active topic streams. Each river is a named topic that has been discussed during the session. Format:
+
+### 🔵 [topic-name]
+**Status:** active | paused | resolved | abandoned
+**Summary:** 1-2 sentences capturing current state and key decisions.
+**Key turns:** Bullet list of pivotal moments (decisions, mistakes, redirections).
+
+Rivers that are RESOLVED can be compressed to one line. Active rivers get full detail. This is how the AI tracks multiple concurrent threads.
 
 ## Decisions
-Accumulative list of meaningful choices with brief reasoning. Add new ones at the bottom. Only remove if truly obsolete. Be specific: names, versions, paths, values.
+Accumulative list. Format: - **[topic]:** decision (rationale). Add at bottom. Never remove unless truly obsolete.
+
+## Queue
+What's pending. Ordered by priority. Format: - [ ] task (context/trigger).
 
 ## Errors
-Anything that went wrong, including what was tried. Remove once resolved.
+Active problems. Remove when resolved. Format: - **[topic]:** what went wrong → status.
 
 RULES:
-- EVOLVE, don't restart. The narrative you receive is the living document — add to it.
+- **NOW section is sacred.** Always current, always self-contained, always rewritten.
+- **Rivers replace Thread.** Instead of a linear sequence, group by topic. Topics can be active simultaneously.
+- **EVOLVE, don't restart.** Append to Session, update Rivers, rewrite NOW.
 - Be SPECIFIC: file paths, version numbers, config values, model names.
-- Track WHY, not just WHAT. Intent > action.
-- Max 600 words. If approaching limit, compress oldest resolved Thread entries first.
-- No prose filler. Dense, structured, information-rich.
-- Sequence matters more than timestamps. What came before what? What caused what?`,
+- Track WHY, not just WHAT.
+- Max 800 words total. Compress resolved rivers first if approaching limit.
+- No prose filler. Dense, structured, information-rich.`,
       messages: [{
         role: "user",
         content: [{ type: "text", text: contextText }],
         timestamp: Date.now(),
       }],
-    }, { maxTokens: 1200, apiKey: narrativeApiKey });
+    }, { maxTokens: 1600, apiKey: config.narrativeModel ? resolveApiKeyForProvider(narrativeModel.provider) : routing.apiKey });
 
     if (response.stopReason === "error") {
       log("WARN", "Narrative call failed", { error: response.errorMessage });
@@ -1227,6 +1435,7 @@ module.exports = function rMemoryExtension(api) {
     ensureDir(path.join(workspaceDir, config.storageDir));
     ensureDir(path.join(workspaceDir, config.archiveDir));
     loadConfig();
+    loadCamouflage();
     loadUsageStats();
     loadMessageCache();
     resolvedApiKey = resolveApiKey();
@@ -1254,6 +1463,9 @@ module.exports = function rMemoryExtension(api) {
       haiku: !!completeSimple,
       apiKey: !!resolvedApiKey,
       cachedBlocks: messageCache.size,
+      camouflage: camouflage.enabled,
+      camouflageElements: camouflage.enabled ? camouflage.elements : "disabled",
+      backgroundProvider: camouflage.enabled ? camouflage.preferredBackgroundProvider : "n/a",
     });
   }
 
