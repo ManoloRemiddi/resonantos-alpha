@@ -1357,10 +1357,8 @@ def api_wallet_build_transfer_tx():
         if not sender or not recipient or amount <= 0:
             return jsonify({"error": "Missing sender, recipient, or valid amount"}), 400
 
-        # Verify sender has Identity NFT
-        onboarding = _load_onboarding()
-        user_data = onboarding.get(sender, {})
-        if not user_data.get("identityNftMinted"):
+        # Verify sender has Identity NFT (on-chain check first, onboarding cache fallback)
+        if not _require_identity_nft(sender):
             return jsonify({"error": "Identity NFT required to send tokens"}), 403
 
         # Token config
