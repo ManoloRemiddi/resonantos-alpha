@@ -22,12 +22,8 @@ from pathlib import Path
 from flask import Flask, jsonify, render_template, request, send_from_directory
 from flask_cors import CORS
 
-# Derive repo root from this script's location (works for any clone name)
-_DASHBOARD_SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = _DASHBOARD_SCRIPT_DIR.parent  # <repo>/dashboard/../ = <repo>
-
 # Solana wallet integration imports
-sys.path.insert(0, str(REPO_ROOT / "solana-toolkit"))
+sys.path.insert(0, str(Path.home() / "resonantos-augmentor" / "solana-toolkit"))
 try:
     from nft_minter import NFTMinter
     from token_manager import TokenManager
@@ -51,22 +47,16 @@ except ImportError:
 OPENCLAW_HOME = Path.home() / ".openclaw"
 OPENCLAW_CONFIG = OPENCLAW_HOME / "openclaw.json"
 WORKSPACE = OPENCLAW_HOME / "workspace"
-# SSoT root: prefer ssot/, fall back to ssot-template/ for alpha users
-_ssot_candidate = REPO_ROOT / "ssot"
-SSOT_ROOT = _ssot_candidate if _ssot_candidate.exists() else REPO_ROOT / "ssot-template"
+SSOT_ROOT = WORKSPACE / "resonantos-augmentor" / "ssot"
 AGENTS_DIR = OPENCLAW_HOME / "agents"
 EXTENSIONS_DIR = OPENCLAW_HOME / "extensions"
 RMEMORY_DIR = WORKSPACE / "r-memory"
 RMEMORY_LOG = RMEMORY_DIR / "r-memory.log"
 RMEMORY_CONFIG = RMEMORY_DIR / "config.json"
 R_AWARENESS_LOG = WORKSPACE / "r-awareness" / "r-awareness.log"
-LOGICIAN_ROOT = REPO_ROOT / "logician"
-LOGICIAN_RULES_DIR = LOGICIAN_ROOT / "rules"
-LOGICIAN_CONFIG_DIR = LOGICIAN_ROOT / "config"
-LOGICIAN_ENABLED_RULES_FILE = LOGICIAN_CONFIG_DIR / "enabled_rules.json"
 
 # --- Load config.json (with hardcoded fallbacks for backward compatibility) ---
-_DASHBOARD_DIR = _DASHBOARD_SCRIPT_DIR  # reuse from above
+_DASHBOARD_DIR = Path(__file__).resolve().parent
 _CONFIG_FILE = _DASHBOARD_DIR / "config.json"
 _CFG = {}
 if _CONFIG_FILE.exists():
@@ -77,14 +67,14 @@ if _CONFIG_FILE.exists():
 
 # Solana wallet integration
 _SOLANA_KEYPAIR = Path(_CFG.get("solana", {}).get("keypairPath", "~/.config/solana/id.json")).expanduser()
-_DAO_DETAILS = REPO_ROOT / _CFG.get("paths", {}).get("daoDetails", "ssot/L2/DAO_DETAILS.json")
+_DAO_DETAILS = Path.home() / "resonantos-augmentor" / _CFG.get("paths", {}).get("daoDetails", "ssot/L2/DAO_DETAILS.json")
 _REGISTRATION_BASKET_KEYPAIR = Path(_CFG.get("solana", {}).get("daoRegistrationBasketKeypairPath", "~/.config/solana/dao-registration-basket.json")).expanduser()
 _MIN_SOL_FOR_GAS = _CFG.get("solana", {}).get("minSolForGas", 0.01)
 
 _RCT_MINT = _CFG.get("tokens", {}).get("RCT_MINT", "2z2GEVqhTVUc6Pb3pzmVTTyBh2BeMHqSw1Xrej8KVUKG")
 _RES_MINT = _CFG.get("tokens", {}).get("RES_MINT", "DiZuWvmQ6DEwsfz7jyFqXCsMfnJiMVahCj3J5MxkdV5N")
 
-_SOLANA_RPCS = {
+_SOLANA_RPCS = _CFG.get("solana", {}).get("rpcs") or {
     "devnet": "https://api.devnet.solana.com",
     "testnet": "https://api.testnet.solana.com",
     "mainnet-beta": "https://api.mainnet-beta.solana.com",
@@ -113,9 +103,26 @@ _RCT_DAILY_FLOOR = _rct_caps_cfg.get("dailyFloor", 300)
 _RCT_DAILY_MAX = _rct_caps_cfg.get("dailyMax", 100_000)
 _RCT_DECIMALS = _rct_caps_cfg.get("decimals", 9)
 _paths_cfg = _CFG.get("paths", {})
-_RCT_CAPS_FILE = REPO_ROOT / _paths_cfg.get("rctCapsFile", "data/rct_caps.json")
-_ONBOARDING_FILE = REPO_ROOT / _paths_cfg.get("onboardingFile", "data/onboarding.json")
-_DAILY_CLAIMS_FILE = REPO_ROOT / "data" / "daily_claims.json"
+
+
+def _resolve_data_file(path_from_cfg: str, default_rel: str) -> Path:
+    rel = path_from_cfg or default_rel
+    candidates = [
+        Path.home() / "resonantos-augmentor" / rel,
+        _DASHBOARD_DIR / rel,
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[-1]
+
+
+_RCT_CAPS_FILE = _resolve_data_file(_paths_cfg.get("rctCapsFile"), "data/rct_caps.json")
+_ONBOARDING_FILE = _resolve_data_file(_paths_cfg.get("onboardingFile"), "data/onboarding.json")
+_DAILY_CLAIMS_FILE = _resolve_data_file(_paths_cfg.get("dailyClaims"), "data/daily_claims.json")
+_BOUNTIES_FILE = _DASHBOARD_DIR / "data" / "bounties.json"
+_TRIBES_FILE = _DASHBOARD_DIR / "data" / "tribes.json"
+_PROFILES_FILE = _DASHBOARD_DIR / "data" / "profiles.json"
 
 # Level thresholds for reputation
 _LEVEL_THRESHOLDS = [0, 10, 50, 150, 400, 1000, 2500, 6000, 15000, 40000]
@@ -190,10 +197,45 @@ def _save_onboarding(data):
     _ONBOARDING_FILE.parent.mkdir(parents=True, exist_ok=True)
     _ONBOARDING_FILE.write_text(json.dumps(data, indent=2))
 
+def _wallet_has_nft(address, nft_type, network="devnet"):
+    """Check NFT presence on-chain first (PDA + wallet), onboarding cache second."""
+    checked_addresses = []
+    try:
+        pda = _derive_symbiotic_pda(address)
+        checked_addresses.append(pda)
+    except Exception:
+        pass
+    checked_addresses.append(address)
+
+    if NFTMinter and SolanaWallet:
+        try:
+            minter = NFTMinter(SolanaWallet(network=network))
+            for acct in checked_addresses:
+                try:
+                    found = minter.check_wallet_has_nft(acct, nft_type)
+                    if found.get("has_nft"):
+                        return True
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+    onboarding = _load_onboarding().get(address, {})
+    key_map = {
+        "identity": ("identityNftMinted", "identityNftMint", "identityNft"),
+        "alpha_tester": ("alphaNftMinted", "alphaNftMint", "alphaNft"),
+        "symbiotic_license": ("licenseSigned", "licenseNft"),
+        "manifesto": ("manifestoSigned", "manifestoNft"),
+    }
+    keys = key_map.get(nft_type, ())
+    for key in keys:
+        if onboarding.get(key):
+            return True
+    return False
+
 def _require_identity_nft(wallet_address):
     """Return True if wallet holds Identity NFT, else False."""
-    onboarding = _load_onboarding()
-    return onboarding.get(wallet_address, {}).get("identityNftMinted", False)
+    return _wallet_has_nft(wallet_address, "identity")
 
 def _load_daily_claims():
     try: return json.loads(_DAILY_CLAIMS_FILE.read_text())
@@ -210,6 +252,79 @@ def _load_rct_caps():
 def _save_rct_caps(caps):
     _RCT_CAPS_FILE.parent.mkdir(parents=True, exist_ok=True)
     _RCT_CAPS_FILE.write_text(json.dumps(caps, indent=2))
+
+
+def _load_bounties():
+    try:
+        data = json.loads(_BOUNTIES_FILE.read_text())
+        return data if isinstance(data, list) else []
+    except Exception:
+        return []
+
+
+def _save_bounties(bounties):
+    _BOUNTIES_FILE.parent.mkdir(parents=True, exist_ok=True)
+    _BOUNTIES_FILE.write_text(json.dumps(bounties, indent=2))
+
+
+def _load_tribes():
+    try:
+        data = json.loads(_TRIBES_FILE.read_text())
+        return data if isinstance(data, list) else []
+    except Exception:
+        return []
+
+
+def _save_tribes(tribes):
+    _TRIBES_FILE.parent.mkdir(parents=True, exist_ok=True)
+    _TRIBES_FILE.write_text(json.dumps(tribes, indent=2))
+
+
+def _sync_tribe_bounty_refs(tribes, bounties):
+    tribe_map = {t.get("id"): t for t in tribes if t.get("id")}
+    for tribe in tribe_map.values():
+        tribe["activeBounties"] = []
+        tribe["completedBounties"] = []
+    for bounty in bounties:
+        tribe_id = bounty.get("tribeId")
+        if not tribe_id or tribe_id not in tribe_map:
+            continue
+        bucket = "completedBounties" if bounty.get("status") == "rewarded" else "activeBounties"
+        tribe_map[tribe_id][bucket].append(bounty.get("id"))
+    for tribe in tribe_map.values():
+        tribe["activeBounties"] = sorted(set(tribe.get("activeBounties", [])))
+        tribe["completedBounties"] = sorted(set(tribe.get("completedBounties", [])))
+
+
+def _enrich_bounty_with_tribe(bounty, tribe_map):
+    tribe_id = bounty.get("tribeId")
+    tribe = tribe_map.get(tribe_id)
+    out = dict(bounty)
+    if tribe:
+        out["tribe"] = {
+            "id": tribe.get("id"),
+            "name": tribe.get("name"),
+            "category": tribe.get("category"),
+            "members": tribe.get("members", []),
+        }
+    else:
+        out["tribe"] = None
+    return out
+
+
+def _short_wallet(addr):
+    if not addr:
+        return ""
+    return f"{addr[:6]}...{addr[-4:]}" if len(addr) > 10 else addr
+
+
+def _is_valid_pubkey(addr: str) -> bool:
+    try:
+        from solders.pubkey import Pubkey as _Pubkey
+        _Pubkey.from_string(addr)
+        return True
+    except Exception:
+        return False
 
 def _check_rct_cap(recipient, amount_human):
     caps = _load_rct_caps()
@@ -593,25 +708,19 @@ def _rmem_parse_log():
 
 def _rmem_gateway_session():
     """Get main session data from sessions.json file directly."""
-    session_paths = [
-        Path.home() / ".openclaw" / "agents" / "main" / "sessions" / "sessions.json",
-        Path.home() / ".openclaw" / "memory" / "agents" / "main" / "sessions" / "sessions.json",
-    ]
-    for sessions_path in session_paths:
-        if not sessions_path.exists():
-            continue
-        try:
-            data = json.loads(sessions_path.read_text())
-            # sessions.json is a dict keyed by session key
-            if isinstance(data, dict) and "agent:main:main" in data:
-                return data["agent:main:main"]
-            # Fallback: list format
-            if isinstance(data, list):
-                for s in data:
-                    if s.get("key") == "agent:main:main":
-                        return s
-        except Exception:
-            pass
+    sessions_path = Path.home() / ".openclaw" / "agents" / "main" / "sessions" / "sessions.json"
+    try:
+        data = json.loads(sessions_path.read_text())
+        # sessions.json is a dict keyed by session key
+        if isinstance(data, dict) and "agent:main:main" in data:
+            return data["agent:main:main"]
+        # Fallback: list format
+        if isinstance(data, list):
+            for s in data:
+                if s.get("key") == "agent:main:main":
+                    return s
+    except Exception:
+        pass
     # Fallback: try WS
     try:
         sess_result = gw.request("sessions.list", timeout=5)
@@ -653,6 +762,14 @@ def chatbots_page():
 def wallet_page():
     return render_template("wallet.html", active_page="wallet")
 
+@app.route("/tribes")
+def tribes_page():
+    return render_template("tribes.html", active_page="tribes")
+
+@app.route("/bounties")
+def bounties_page():
+    return render_template("bounties.html", active_page="bounties")
+
 @app.route("/protocol-store")
 def protocol_store_page():
     cfg = {}
@@ -679,8 +796,7 @@ def license_page():
 # ============================================================================
 
 DOCS_WORKSPACE = WORKSPACE  # ~/.openclaw/workspace
-REPO_DIR = REPO_ROOT  # derived from script location — works regardless of clone name
-REPO_NAME = REPO_ROOT.name  # e.g. "resonantos-alpha" or "resonantos-augmentor"
+REPO_DIR = Path.home() / "resonantos-augmentor"  # actual repo location
 
 WORKSPACE_SYSTEM_FILES = {
     "AGENTS.md", "SOUL.md", "USER.md", "TOOLS.md", "IDENTITY.md",
@@ -722,30 +838,30 @@ def _docs_build_tree():
     # 1. Repo docs/
     docs_dir = REPO_DIR / "docs"
     if docs_dir.exists():
-        items = _docs_build_folder_tree(docs_dir, f"{REPO_NAME}/docs")
+        items = _docs_build_folder_tree(docs_dir, "resonantos-augmentor/docs")
         if items:
-            tree.append({"name": "docs", "type": "folder", "path": f"{REPO_NAME}/docs", "icon": "📖", "children": items, "fileCount": sum(i.get("fileCount", 0) if i["type"] == "folder" else 1 for i in items)})
+            tree.append({"name": "docs", "type": "folder", "path": "resonantos-augmentor/docs", "icon": "📖", "children": items, "fileCount": sum(i.get("fileCount", 0) if i["type"] == "folder" else 1 for i in items)})
 
     # 2. SSoT
     ssot_dir = REPO_DIR / "ssot"
     if ssot_dir.exists():
-        items = _docs_build_folder_tree(ssot_dir, f"{REPO_NAME}/ssot")
+        items = _docs_build_folder_tree(ssot_dir, "resonantos-augmentor/ssot")
         if items:
-            tree.append({"name": "ssot", "type": "folder", "path": f"{REPO_NAME}/ssot", "icon": "🗂️", "children": items, "fileCount": sum(i.get("fileCount", 0) if i["type"] == "folder" else 1 for i in items)})
+            tree.append({"name": "ssot", "type": "folder", "path": "resonantos-augmentor/ssot", "icon": "🗂️", "children": items, "fileCount": sum(i.get("fileCount", 0) if i["type"] == "folder" else 1 for i in items)})
 
     # 3. Dashboard source
     dash_dir = REPO_DIR / "dashboard"
     if dash_dir.exists():
-        items = _docs_build_folder_tree(dash_dir, f"{REPO_NAME}/dashboard")
+        items = _docs_build_folder_tree(dash_dir, "resonantos-augmentor/dashboard")
         if items:
-            tree.append({"name": "dashboard", "type": "folder", "path": f"{REPO_NAME}/dashboard", "icon": "📊", "children": items, "fileCount": sum(i.get("fileCount", 0) if i["type"] == "folder" else 1 for i in items)})
+            tree.append({"name": "dashboard", "type": "folder", "path": "resonantos-augmentor/dashboard", "icon": "📊", "children": items, "fileCount": sum(i.get("fileCount", 0) if i["type"] == "folder" else 1 for i in items)})
 
     # 4. Reference
     ref_dir = REPO_DIR / "reference"
     if ref_dir.exists():
-        items = _docs_build_folder_tree(ref_dir, f"{REPO_NAME}/reference")
+        items = _docs_build_folder_tree(ref_dir, "resonantos-augmentor/reference")
         if items:
-            tree.append({"name": "reference", "type": "folder", "path": f"{REPO_NAME}/reference", "icon": "📚", "children": items, "fileCount": sum(i.get("fileCount", 0) if i["type"] == "folder" else 1 for i in items)})
+            tree.append({"name": "reference", "type": "folder", "path": "resonantos-augmentor/reference", "icon": "📚", "children": items, "fileCount": sum(i.get("fileCount", 0) if i["type"] == "folder" else 1 for i in items)})
 
     # 5. Workspace root .md files (excluding system files)
     root_docs = []
@@ -781,9 +897,9 @@ def api_docs_file():
     path = request.args.get("path", "")
     if path.startswith("/"):
         filepath = Path(path)
-    elif path.startswith(f"{REPO_NAME}/"):
+    elif path.startswith("resonantos-augmentor/"):
         # Resolve against actual repo location
-        sub = path[len(f"{REPO_NAME}/"):]
+        sub = path[len("resonantos-augmentor/"):]
         filepath = REPO_DIR / sub
     else:
         filepath = DOCS_WORKSPACE / path
@@ -819,8 +935,8 @@ def api_docs_open_editor():
         return jsonify({"error": "No path"}), 400
     if path.startswith("/"):
         filepath = Path(path)
-    elif path.startswith(f"{REPO_NAME}/"):
-        filepath = REPO_DIR / path[len(f"{REPO_NAME}/"):]
+    elif path.startswith("resonantos-augmentor/"):
+        filepath = REPO_DIR / path[len("resonantos-augmentor/"):]
     else:
         filepath = DOCS_WORKSPACE / path
     try:
@@ -872,11 +988,11 @@ def api_docs_search():
         except Exception:
             pass
 
-    # Search all browsable sources (REPO_DIR is the repo root, not inside workspace)
+    # Search all browsable sources (REPO_DIR is ~/resonantos-augmentor, not inside workspace)
     search_roots = [
-        (REPO_DIR / "docs", f"{REPO_NAME}/docs"),
-        (REPO_DIR / "ssot", f"{REPO_NAME}/ssot"),
-        (REPO_DIR / "reference", f"{REPO_NAME}/reference"),
+        (REPO_DIR / "docs", "resonantos-augmentor/docs"),
+        (REPO_DIR / "ssot", "resonantos-augmentor/ssot"),
+        (REPO_DIR / "reference", "resonantos-augmentor/reference"),
         (DOCS_WORKSPACE / "memory", "memory"),
     ]
     for root, prefix in search_roots:
@@ -946,9 +1062,9 @@ def api_docs_search_semantic():
         return snip, best_i + 1
 
     search_roots = [
-        (f"{REPO_NAME}/docs", REPO_DIR / "docs"),
-        (f"{REPO_NAME}/ssot", REPO_DIR / "ssot"),
-        (f"{REPO_NAME}/reference", REPO_DIR / "reference"),
+        ("resonantos-augmentor/docs", REPO_DIR / "docs"),
+        ("resonantos-augmentor/ssot", REPO_DIR / "ssot"),
+        ("resonantos-augmentor/reference", REPO_DIR / "reference"),
         ("memory", DOCS_WORKSPACE / "memory"),
     ]
     for prefix, root in search_roots:
@@ -1102,6 +1218,21 @@ def api_wallet_mint_nft():
         
         if not recipient or not signature:
             return jsonify({"error": "recipient and signature required"}), 400
+        if not _is_valid_pubkey(recipient):
+            return jsonify({"error": "Invalid recipient address"}), 400
+
+        if nft_type not in {"identity", "alpha_tester"}:
+            return jsonify({"error": "Invalid NFT type. Use identity or alpha_tester"}), 400
+
+        pda_address = _derive_symbiotic_pda(recipient)
+        nft_minter = NFTMinter(SolanaWallet(network=network))
+        existing = nft_minter.check_wallet_has_nft(pda_address, nft_type)
+        if existing.get("has_nft"):
+            label = "Identity NFT" if nft_type == "identity" else "Alpha Tester NFT"
+            return jsonify({
+                "error": f"Already holds {label}",
+                "existing_mint": existing.get("mint"),
+            }), 409
         
         # Reward amounts
         rewards = {
@@ -1120,8 +1251,6 @@ def api_wallet_mint_nft():
         fee_payer_path, fee_payer_label = _get_fee_payer(network, recipient)
         
         # Mint NFT to Symbiotic PDA (not user wallet)
-        pda_address = _derive_symbiotic_pda(recipient)
-        nft_minter = NFTMinter(SolanaWallet(network=network))
         nft_result = nft_minter.mint_soulbound_nft(
             recipient=pda_address,
             nft_type=nft_type,
@@ -1154,7 +1283,7 @@ def api_wallet_mint_nft():
         
         # Update NFT registry for display name resolution
         try:
-            reg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "nft_registry.json")
+            reg_path = str(_DASHBOARD_DIR / "data" / "nft_registry.json")
             registry = {}
             if os.path.exists(reg_path):
                 with open(reg_path) as rf:
@@ -1413,6 +1542,8 @@ def api_wallet_daily_claim():
         
         if not recipient or not signature:
             return jsonify({"error": "recipient and signature required"}), 400
+        if not _is_valid_pubkey(recipient):
+            return jsonify({"error": "Invalid recipient address"}), 400
         
         # Require Identity NFT
         if not _require_identity_nft(recipient):
@@ -1496,28 +1627,55 @@ def api_wallet_daily_claim():
 
 @app.route("/api/wallet/onboarding-status")
 def api_wallet_onboarding_status():
-    """Check license/manifesto/NFT status."""
+    """Check onboarding status with blockchain as source of truth."""
     try:
         address = request.args.get("address")
+        network = request.args.get("network", "devnet")
         if not address:
             return jsonify({"error": "address parameter required"}), 400
-        
+        if not _is_valid_pubkey(address):
+            return jsonify({"error": "Invalid wallet address"}), 400
+
+        pda_address = _derive_symbiotic_pda(address)
+        pair_exists = False
+        try:
+            pair_info = _solana_rpc(network, "getAccountInfo", [pda_address, {"encoding": "base64"}])
+            pair_exists = pair_info.get("result", {}).get("value") is not None
+        except Exception:
+            pair_exists = False
+
+        license_status = _wallet_has_nft(address, "symbiotic_license", network=network) if pair_exists else False
+        manifesto_status = _wallet_has_nft(address, "manifesto", network=network) if pair_exists else False
+        identity_status = _wallet_has_nft(address, "identity", network=network) if pair_exists else False
+        alpha_status = _wallet_has_nft(address, "alpha_tester", network=network) if pair_exists else False
+
         onboarding = _load_onboarding()
-        user_onboarding = onboarding.get(address, {})
-        
+        user_onboarding = onboarding.setdefault(address, {})
+        user_onboarding["symbioticPairCreated"] = pair_exists
+        user_onboarding["symbioticPda"] = pda_address
+        user_onboarding["licenseSigned"] = license_status
+        user_onboarding["manifestoSigned"] = manifesto_status
+        user_onboarding["identityNftMinted"] = identity_status
+        user_onboarding["alphaNftMinted"] = alpha_status
+        _save_onboarding(onboarding)
+
         return jsonify({
             "address": address,
+            "network": network,
+            "symbioticPairCreated": pair_exists,
+            "symbioticPda": pda_address,
             "alphaAgreed": user_onboarding.get("alphaAgreed", False),
-            "licenseSigned": user_onboarding.get("licenseSigned", False),
-            "manifestoSigned": user_onboarding.get("manifestoSigned", False),
-            "identityNftMinted": user_onboarding.get("identityNftMinted", False),
-            "alphaNftMinted": user_onboarding.get("alphaNftMinted", False),
+            "licenseSigned": license_status,
+            "manifestoSigned": manifesto_status,
+            "identityNftMinted": identity_status,
+            "alphaNftMinted": alpha_status,
             "onboardingComplete": all([
                 user_onboarding.get("alphaAgreed"),
-                user_onboarding.get("licenseSigned"),
-                user_onboarding.get("manifestoSigned"),
-                user_onboarding.get("identityNftMinted"),
-                user_onboarding.get("alphaNftMinted")
+                pair_exists,
+                license_status,
+                manifesto_status,
+                identity_status,
+                alpha_status
             ])
         })
         
@@ -1535,6 +1693,8 @@ def api_wallet_agree_alpha():
 
         if not address or not signature:
             return jsonify({"error": "address and signature required"}), 400
+        if not _is_valid_pubkey(address):
+            return jsonify({"error": "Invalid wallet address"}), 400
 
         onboarding = _load_onboarding()
         if address not in onboarding:
@@ -1569,6 +1729,17 @@ def api_wallet_sign_license():
         
         if not address or not signature:
             return jsonify({"error": "address and signature required"}), 400
+        if not _is_valid_pubkey(address):
+            return jsonify({"error": "Invalid wallet address"}), 400
+
+        pda_address = _derive_symbiotic_pda(address)
+        nft_minter = NFTMinter(SolanaWallet(network=network))
+        existing = nft_minter.check_wallet_has_nft(pda_address, "symbiotic_license")
+        if existing.get("has_nft"):
+            return jsonify({
+                "error": "Already holds Symbiotic License NFT",
+                "existing_mint": existing.get("mint"),
+            }), 409
         
         # Verify signature is of correct license hash
         license_text = "Resonant Commons Symbiotic License (RC-SL) v1.0"
@@ -1588,9 +1759,6 @@ def api_wallet_sign_license():
         
         # Mint License NFT to Symbiotic PDA
         fee_payer_path, fee_payer_label = _get_fee_payer(network, address)
-        pda_address = _derive_symbiotic_pda(address)
-        
-        nft_minter = NFTMinter(SolanaWallet(network=network))
         nft_result = nft_minter.mint_soulbound_nft(
             recipient=pda_address,
             nft_type="symbiotic_license",
@@ -1637,6 +1805,15 @@ def api_wallet_sign_manifesto():
         
         if not user_onboarding.get("licenseSigned"):
             return jsonify({"error": "Must sign license first"}), 400
+
+        pda_address = _derive_symbiotic_pda(address)
+        nft_minter = NFTMinter(SolanaWallet(network=network))
+        existing = nft_minter.check_wallet_has_nft(pda_address, "manifesto")
+        if existing.get("has_nft"):
+            return jsonify({
+                "error": "Already holds Manifesto NFT",
+                "existing_mint": existing.get("mint"),
+            }), 409
         
         # Verify signature is of correct manifesto hash
         manifesto_text = "Augmentatism Manifesto v2.2"
@@ -1652,9 +1829,6 @@ def api_wallet_sign_manifesto():
         
         # Mint Manifesto NFT to Symbiotic PDA
         fee_payer_path, fee_payer_label = _get_fee_payer(network, address)
-        pda_address = _derive_symbiotic_pda(address)
-        
-        nft_minter = NFTMinter(SolanaWallet(network=network))
         nft_result = nft_minter.mint_soulbound_nft(
             recipient=pda_address,
             nft_type="manifesto",
@@ -1912,6 +2086,505 @@ def api_wallet_leaderboard():
         
         return jsonify(leaderboard)
         
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+# ---------------------------------------------------------------------------
+# Tribes + Bounties API
+# ---------------------------------------------------------------------------
+
+@app.route("/api/tribes", methods=["GET"])
+def api_tribes_list():
+    try:
+        tribes = _load_tribes()
+        bounties = _load_bounties()
+        _sync_tribe_bounty_refs(tribes, bounties)
+        _save_tribes(tribes)
+
+        payload = []
+        for tribe in tribes:
+            payload.append({
+                **tribe,
+                "memberCount": len(tribe.get("members", [])),
+                "activeBountyCount": len(tribe.get("activeBounties", [])),
+                "completedBountyCount": len(tribe.get("completedBounties", [])),
+            })
+        return jsonify({"tribes": payload, "count": len(payload)})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/tribes/<tribe_id>", methods=["GET"])
+def api_tribe_detail(tribe_id):
+    try:
+        tribes = _load_tribes()
+        bounties = _load_bounties()
+        tribe = next((t for t in tribes if t.get("id") == tribe_id), None)
+        if not tribe:
+            return jsonify({"error": "Tribe not found"}), 404
+
+        tribe_bounties = [b for b in bounties if b.get("tribeId") == tribe_id]
+        detail = dict(tribe)
+        detail["bounties"] = tribe_bounties
+        detail["memberCount"] = len(tribe.get("members", []))
+        detail["activeBountyCount"] = len([b for b in tribe_bounties if b.get("status") != "rewarded"])
+        detail["completedBountyCount"] = len([b for b in tribe_bounties if b.get("status") == "rewarded"])
+        return jsonify(detail)
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/tribes", methods=["POST"])
+def api_tribe_create():
+    try:
+        data = request.get_json(force=True) or {}
+        wallet = (data.get("wallet") or "").strip()
+        name = (data.get("name") or "").strip()
+        description = (data.get("description") or "").strip()
+        category = (data.get("category") or "core").strip()
+        tags = data.get("tags") if isinstance(data.get("tags"), list) else []
+
+        if not wallet or not name:
+            return jsonify({"error": "wallet and name are required"}), 400
+        if not _require_identity_nft(wallet):
+            return jsonify({"error": "Identity NFT required to create a tribe"}), 403
+
+        tribes = _load_tribes()
+        max_id = 0
+        for t in tribes:
+            try:
+                max_id = max(max_id, int(str(t.get("id", "")).split("-")[-1]))
+            except Exception:
+                continue
+        tribe_id = f"TRIBE-{max_id + 1:03d}"
+        now_iso = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        tribe = {
+            "id": tribe_id,
+            "name": name,
+            "description": description or f"Working group for {name}.",
+            "category": category,
+            "members": [{"wallet": wallet, "role": "coordinator", "joinedAt": now_iso}],
+            "coordinator": wallet,
+            "activeBounties": [],
+            "completedBounties": [],
+            "createdAt": now_iso,
+            "avatar": None,
+            "tags": [str(t).strip() for t in tags if str(t).strip()],
+        }
+        tribes.append(tribe)
+        _save_tribes(tribes)
+        return jsonify(tribe), 201
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/tribes/<tribe_id>/join", methods=["POST"])
+def api_tribe_join(tribe_id):
+    try:
+        data = request.get_json(force=True) or {}
+        wallet = (data.get("wallet") or "").strip()
+        role = (data.get("role") or "member").strip()
+        if not wallet:
+            return jsonify({"error": "wallet is required"}), 400
+        if not _require_identity_nft(wallet):
+            return jsonify({"error": "Identity NFT required"}), 403
+
+        tribes = _load_tribes()
+        tribe = next((t for t in tribes if t.get("id") == tribe_id), None)
+        if not tribe:
+            return jsonify({"error": "Tribe not found"}), 404
+        members = tribe.setdefault("members", [])
+        if any((m.get("wallet") == wallet) for m in members):
+            return jsonify({"error": "Already a tribe member"}), 409
+        members.append({
+            "wallet": wallet,
+            "role": role if role in {"member", "coordinator", "reviewer"} else "member",
+            "joinedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        })
+        _save_tribes(tribes)
+        return jsonify({"success": True, "tribeId": tribe_id, "memberCount": len(members)})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/tribes/<tribe_id>/leave", methods=["POST"])
+def api_tribe_leave(tribe_id):
+    try:
+        data = request.get_json(force=True) or {}
+        wallet = (data.get("wallet") or "").strip()
+        if not wallet:
+            return jsonify({"error": "wallet is required"}), 400
+
+        tribes = _load_tribes()
+        tribe = next((t for t in tribes if t.get("id") == tribe_id), None)
+        if not tribe:
+            return jsonify({"error": "Tribe not found"}), 404
+        members = tribe.get("members", [])
+        updated = [m for m in members if m.get("wallet") != wallet]
+        if len(updated) == len(members):
+            return jsonify({"error": "Wallet is not a tribe member"}), 404
+        tribe["members"] = updated
+        if tribe.get("coordinator") == wallet:
+            tribe["coordinator"] = updated[0]["wallet"] if updated else None
+            if updated:
+                updated[0]["role"] = "coordinator"
+        _save_tribes(tribes)
+        return jsonify({"success": True, "tribeId": tribe_id, "memberCount": len(updated)})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+def _auto_join_tribe(tribe, wallet, role="member"):
+    members = tribe.setdefault("members", [])
+    if any((m.get("wallet") == wallet) for m in members):
+        return False
+    members.append({
+        "wallet": wallet,
+        "role": role,
+        "joinedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+    })
+    return True
+
+
+@app.route("/api/bounties", methods=["GET"])
+def api_bounties_list():
+    try:
+        status = request.args.get("status")
+        category = request.args.get("category")
+        priority = request.args.get("priority")
+        size = request.args.get("size")
+        tribe_id = request.args.get("tribeId")
+        sort = request.args.get("sort", "priority")
+
+        bounties = _load_bounties()
+        tribes = _load_tribes()
+        tribe_map = {t.get("id"): t for t in tribes}
+
+        filtered = []
+        for bounty in bounties:
+            if status and bounty.get("status") != status:
+                continue
+            if category and bounty.get("category") != category:
+                continue
+            if priority and bounty.get("priority") != priority:
+                continue
+            if size and bounty.get("size") != size:
+                continue
+            if tribe_id and bounty.get("tribeId") != tribe_id:
+                continue
+            filtered.append(_enrich_bounty_with_tribe(bounty, tribe_map))
+
+        if sort == "reward":
+            filtered.sort(key=lambda b: (b.get("rewardRCT", 0), b.get("rewardRES", 0)), reverse=True)
+        elif sort == "date":
+            filtered.sort(key=lambda b: b.get("createdAt") or "", reverse=True)
+        else:
+            order = {"P0": 0, "P1": 1, "P2": 2}
+            filtered.sort(key=lambda b: (order.get(b.get("priority"), 9), -(b.get("rewardRCT", 0))))
+
+        return jsonify({"bounties": filtered, "count": len(filtered)})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/bounties/<bounty_id>", methods=["GET"])
+def api_bounty_detail(bounty_id):
+    try:
+        bounties = _load_bounties()
+        tribes = _load_tribes()
+        tribe_map = {t.get("id"): t for t in tribes}
+        bounty = next((b for b in bounties if b.get("id") == bounty_id), None)
+        if not bounty:
+            return jsonify({"error": "Bounty not found"}), 404
+        return jsonify(_enrich_bounty_with_tribe(bounty, tribe_map))
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/bounties/<bounty_id>/claim", methods=["POST"])
+def api_bounty_claim(bounty_id):
+    try:
+        data = request.get_json(force=True) or {}
+        wallet = (data.get("wallet") or "").strip()
+        if not wallet:
+            return jsonify({"error": "wallet is required"}), 400
+        if not _require_identity_nft(wallet):
+            return jsonify({"error": "Identity NFT required to claim bounties"}), 403
+
+        bounties = _load_bounties()
+        tribes = _load_tribes()
+        bounty = next((b for b in bounties if b.get("id") == bounty_id), None)
+        if not bounty:
+            return jsonify({"error": "Bounty not found"}), 404
+        if bounty.get("status") not in {"open", "claimed", "in_progress"}:
+            return jsonify({"error": f"Cannot claim bounty with status {bounty.get('status')}"}), 409
+
+        claimed_by = bounty.setdefault("claimedBy", [])
+        if wallet not in claimed_by:
+            claimed_by.append(wallet)
+        if bounty.get("status") == "open":
+            bounty["status"] = "claimed"
+        bounty["updatedAt"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+        tribe = next((t for t in tribes if t.get("id") == bounty.get("tribeId")), None)
+        if tribe:
+            _auto_join_tribe(tribe, wallet, "member")
+
+        _sync_tribe_bounty_refs(tribes, bounties)
+        _save_bounties(bounties)
+        _save_tribes(tribes)
+        return jsonify({"success": True, "bountyId": bounty_id, "status": bounty.get("status")})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/bounties/<bounty_id>/join", methods=["POST"])
+def api_bounty_join(bounty_id):
+    try:
+        data = request.get_json(force=True) or {}
+        wallet = (data.get("wallet") or "").strip()
+        role = (data.get("role") or "member").strip()
+        if not wallet:
+            return jsonify({"error": "wallet is required"}), 400
+        if not _require_identity_nft(wallet):
+            return jsonify({"error": "Identity NFT required"}), 403
+
+        bounties = _load_bounties()
+        tribes = _load_tribes()
+        bounty = next((b for b in bounties if b.get("id") == bounty_id), None)
+        if not bounty:
+            return jsonify({"error": "Bounty not found"}), 404
+        tribe = next((t for t in tribes if t.get("id") == bounty.get("tribeId")), None)
+        if not tribe:
+            return jsonify({"error": "Associated tribe not found"}), 404
+
+        if not _auto_join_tribe(tribe, wallet, role if role in {"member", "reviewer"} else "member"):
+            return jsonify({"error": "Already a tribe member"}), 409
+        _save_tribes(tribes)
+        return jsonify({"success": True, "tribeId": tribe.get("id"), "memberCount": len(tribe.get("members", []))})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/bounties/<bounty_id>/leave", methods=["POST"])
+def api_bounty_leave(bounty_id):
+    try:
+        data = request.get_json(force=True) or {}
+        wallet = (data.get("wallet") or "").strip()
+        if not wallet:
+            return jsonify({"error": "wallet is required"}), 400
+
+        bounties = _load_bounties()
+        tribes = _load_tribes()
+        bounty = next((b for b in bounties if b.get("id") == bounty_id), None)
+        if not bounty:
+            return jsonify({"error": "Bounty not found"}), 404
+        tribe = next((t for t in tribes if t.get("id") == bounty.get("tribeId")), None)
+        if not tribe:
+            return jsonify({"error": "Associated tribe not found"}), 404
+
+        members = tribe.get("members", [])
+        tribe["members"] = [m for m in members if m.get("wallet") != wallet]
+        claimed_by = bounty.get("claimedBy", [])
+        bounty["claimedBy"] = [w for w in claimed_by if w != wallet]
+        if not bounty["claimedBy"] and bounty.get("status") in {"claimed", "in_progress"}:
+            bounty["status"] = "open"
+        _save_tribes(tribes)
+        _save_bounties(bounties)
+        return jsonify({"success": True, "bountyId": bounty_id})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/bounties/<bounty_id>/submit", methods=["POST"])
+def api_bounty_submit(bounty_id):
+    try:
+        data = request.get_json(force=True) or {}
+        wallet = (data.get("wallet") or "").strip()
+        if not wallet:
+            return jsonify({"error": "wallet is required"}), 400
+
+        bounties = _load_bounties()
+        bounty = next((b for b in bounties if b.get("id") == bounty_id), None)
+        if not bounty:
+            return jsonify({"error": "Bounty not found"}), 404
+        if wallet not in bounty.get("claimedBy", []):
+            return jsonify({"error": "Only claimants can submit for review"}), 403
+
+        bounty["status"] = "review"
+        bounty["updatedAt"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        _save_bounties(bounties)
+        return jsonify({"success": True, "status": "review"})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/bounties/<bounty_id>/review", methods=["POST"])
+def api_bounty_review(bounty_id):
+    try:
+        data = request.get_json(force=True) or {}
+        reviewer_wallet = (data.get("wallet") or "").strip()
+        approved = bool(data.get("approve"))
+        score = int(data.get("score") or 0)
+        comments = (data.get("comments") or "").strip()
+        verification_method = (data.get("verificationMethod") or "peer-reviewed").strip()
+        if not reviewer_wallet:
+            return jsonify({"error": "wallet is required"}), 400
+        if score < 1 or score > 5:
+            return jsonify({"error": "score must be between 1 and 5"}), 400
+
+        bounties = _load_bounties()
+        tribes = _load_tribes()
+        bounty = next((b for b in bounties if b.get("id") == bounty_id), None)
+        if not bounty:
+            return jsonify({"error": "Bounty not found"}), 404
+        if bounty.get("status") not in {"review", "verified"}:
+            return jsonify({"error": f"Bounty status must be review/verified, got {bounty.get('status')}"}), 409
+
+        tribe = next((t for t in tribes if t.get("id") == bounty.get("tribeId")), None)
+        member_wallets = {m.get("wallet") for m in (tribe or {}).get("members", [])}
+        if reviewer_wallet in member_wallets:
+            return jsonify({"error": "Reviewer cannot be a tribe member"}), 409
+
+        reviews = bounty.setdefault("reviews", [])
+        if any(r.get("reviewerWallet") == reviewer_wallet for r in reviews):
+            return jsonify({"error": "Reviewer already reviewed this bounty"}), 409
+
+        review_entry = {
+            "reviewerWallet": reviewer_wallet,
+            "approved": approved,
+            "score": score,
+            "comments": comments,
+            "verificationMethod": verification_method,
+            "createdAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        }
+        reviews.append(review_entry)
+
+        approvals = [r for r in reviews if r.get("approved")]
+        required_reviews = 1 if bounty.get("size") == "small" else 2 if bounty.get("size") == "medium" else 3
+        if len(approvals) >= required_reviews:
+            bounty["status"] = "verified"
+            bounty["qualityGate"] = {
+                "status": "passed",
+                "reviewers": [r.get("reviewerWallet") for r in approvals],
+                "score": round(sum(r.get("score", 0) for r in approvals) / len(approvals), 2),
+                "verificationMethod": verification_method,
+            }
+        else:
+            bounty["status"] = "review"
+
+        bounty["updatedAt"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        _save_bounties(bounties)
+        return jsonify({"success": True, "status": bounty.get("status"), "reviews": len(reviews)})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/bounties/<bounty_id>/reward", methods=["POST"])
+def api_bounty_reward(bounty_id):
+    try:
+        bounties = _load_bounties()
+        tribes = _load_tribes()
+        bounty = next((b for b in bounties if b.get("id") == bounty_id), None)
+        if not bounty:
+            return jsonify({"error": "Bounty not found"}), 404
+        if bounty.get("status") != "verified":
+            return jsonify({"error": "Bounty must be verified before reward"}), 409
+
+        claimants = bounty.get("claimedBy", [])
+        if not claimants:
+            return jsonify({"error": "No claimants to reward"}), 409
+        split = len(claimants)
+        payout = []
+        rct_each = round(float(bounty.get("rewardRCT", 0)) / split, 4)
+        res_each = round(float(bounty.get("rewardRES", 0)) / split, 4)
+        for wallet in sorted(set(claimants)):
+            payout.append({"wallet": wallet, "rct": rct_each, "res": res_each})
+
+        bounty["status"] = "rewarded"
+        now_iso = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        bounty["updatedAt"] = now_iso
+        bounty["reward"] = {
+            "triggeredAt": now_iso,
+            "recipients": payout,
+            "totalRCT": float(bounty.get("rewardRCT", 0)),
+            "totalRES": float(bounty.get("rewardRES", 0)),
+            "onChain": False,
+            "transactions": None,
+        }
+
+        _sync_tribe_bounty_refs(tribes, bounties)
+        _save_bounties(bounties)
+        _save_tribes(tribes)
+        return jsonify({"success": True, "status": "rewarded", "recipients": payout})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/wallet/my-tribes", methods=["GET"])
+def api_wallet_my_tribes():
+    try:
+        wallet = request.args.get("address", "").strip()
+        if not wallet:
+            return jsonify({"error": "address parameter required"}), 400
+        tribes = _load_tribes()
+        mine = []
+        for tribe in tribes:
+            members = tribe.get("members", [])
+            if any(m.get("wallet") == wallet for m in members):
+                mine.append({
+                    "id": tribe.get("id"),
+                    "name": tribe.get("name"),
+                    "description": tribe.get("description"),
+                    "category": tribe.get("category"),
+                    "memberCount": len(members),
+                    "activeBountyCount": len(tribe.get("activeBounties", [])),
+                    "role": next((m.get("role") for m in members if m.get("wallet") == wallet), "member"),
+                })
+        return jsonify({"wallet": wallet, "tribes": mine, "count": len(mine)})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/wallet/my-bounties", methods=["GET"])
+def api_wallet_my_bounties():
+    try:
+        wallet = request.args.get("address", "").strip()
+        if not wallet:
+            return jsonify({"error": "address parameter required"}), 400
+        bounties = _load_bounties()
+        tribes = _load_tribes()
+        tribe_map = {t.get("id"): t for t in tribes}
+        mine = []
+        for bounty in bounties:
+            if wallet not in bounty.get("claimedBy", []):
+                continue
+            entry = _enrich_bounty_with_tribe(bounty, tribe_map)
+            mine.append({
+                "id": entry.get("id"),
+                "title": entry.get("title"),
+                "status": entry.get("status"),
+                "priority": entry.get("priority"),
+                "rewardRCT": entry.get("rewardRCT"),
+                "rewardRES": entry.get("rewardRES"),
+                "tribe": entry.get("tribe"),
+            })
+        return jsonify({"wallet": wallet, "bounties": mine, "count": len(mine)})
     except Exception as e:
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
@@ -2311,17 +2984,17 @@ def api_wallet_owned_nfts():
                         elif record.get("manifestoNft") == mint:
                             nft_data.update({"name": "Augmentatism Manifesto", "tag": "Co-signed Commitment", "img": "/static/img/nfts/manifesto.png"})
                             matched = True; break
-                        elif record.get("identityNft") == mint:
+                        elif record.get("identityNft") == mint or record.get("identityNftMint") == mint:
                             nft_data.update({"name": "Augmentor Identity", "tag": "AI Agent NFT", "img": "/static/img/nfts/ai-identity.png"})
                             matched = True; break
-                        elif record.get("alphaNft") == mint:
+                        elif record.get("alphaNft") == mint or record.get("alphaNftMint") == mint:
                             nft_data.update({"name": "AI Artisan Alpha Tester", "tag": "Early Adopter", "img": "/static/img/nfts/alpha-tester.png"})
                             matched = True; break
                     
                     # Fallback 0: check nft_registry.json
                     if not matched:
                         try:
-                            reg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "nft_registry.json")
+                            reg_path = str(_DASHBOARD_DIR / "data" / "nft_registry.json")
                             if os.path.exists(reg_path):
                                 with open(reg_path) as rf:
                                     registry = json.load(rf)
@@ -2593,6 +3266,94 @@ def shield_page():
     return render_template("shield.html", active_page="shield")
 
 # ---------------------------------------------------------------------------
+# API: Dashboard Self-Update (git-based)
+# ---------------------------------------------------------------------------
+
+DASHBOARD_REPO_DIR = os.path.dirname(os.path.abspath(__file__))
+
+@app.route("/api/settings/check-update")
+def api_check_update():
+    """Check if a newer version is available on origin/main."""
+    try:
+        # Fetch latest from remote
+        fetch_result = subprocess.run(
+            ["git", "fetch", "origin", "main"],
+            cwd=DASHBOARD_REPO_DIR,
+            capture_output=True, text=True, timeout=30
+        )
+        if fetch_result.returncode != 0:
+            return jsonify({"error": f"git fetch failed: {fetch_result.stderr.strip()}"}), 500
+
+        # Get local HEAD commit
+        local = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=DASHBOARD_REPO_DIR,
+            capture_output=True, text=True, timeout=10
+        ).stdout.strip()
+
+        # Get remote HEAD commit
+        remote = subprocess.run(
+            ["git", "rev-parse", "origin/main"],
+            cwd=DASHBOARD_REPO_DIR,
+            capture_output=True, text=True, timeout=10
+        ).stdout.strip()
+
+        # Count how many commits behind
+        behind_result = subprocess.run(
+            ["git", "rev-list", "--count", f"HEAD..origin/main"],
+            cwd=DASHBOARD_REPO_DIR,
+            capture_output=True, text=True, timeout=10
+        )
+        behind = int(behind_result.stdout.strip()) if behind_result.returncode == 0 else 0
+
+        # Get current branch
+        branch_result = subprocess.run(
+            ["git", "branch", "--show-current"],
+            cwd=DASHBOARD_REPO_DIR,
+            capture_output=True, text=True, timeout=10
+        )
+        branch = branch_result.stdout.strip()
+
+        return jsonify({
+            "available": behind > 0,
+            "behind": behind,
+            "local": local[:12],
+            "remote": remote[:12],
+            "branch": branch,
+        })
+    except subprocess.TimeoutExpired:
+        return jsonify({"error": "git command timed out"}), 504
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/settings/update", methods=["POST"])
+def api_apply_update():
+    """Pull latest changes from origin/main (fast-forward only for safety)."""
+    try:
+        # Only allow fast-forward merges to avoid conflicts
+        pull_result = subprocess.run(
+            ["git", "pull", "--ff-only", "origin", "main"],
+            cwd=DASHBOARD_REPO_DIR,
+            capture_output=True, text=True, timeout=60
+        )
+
+        success = pull_result.returncode == 0
+        output = pull_result.stdout.strip()
+        error = pull_result.stderr.strip()
+
+        return jsonify({
+            "success": success,
+            "output": output,
+            "error": error if not success else None,
+            "message": "Update applied successfully. Restart the dashboard to load changes." if success else f"Update failed: {error}",
+        }), 200 if success else 500
+    except subprocess.TimeoutExpired:
+        return jsonify({"success": False, "error": "git pull timed out", "message": "Update timed out after 60s"}), 504
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e), "message": f"Update error: {e}"}), 500
+
+# ---------------------------------------------------------------------------
 # API: Gateway Status & Health
 # ---------------------------------------------------------------------------
 
@@ -2653,32 +3414,17 @@ def api_agents():
     # Helper: read workspace files for an agent
     def _read_workspace(agent_id):
         workspace_files = {}
-        # Check per-agent workspace first, then shared.
-        # Some setups store agent files under workspace/agents/<id> or
-        # workspace/memory/agents/<id> instead of workspace-<id>.
+        # Check per-agent workspace first, then shared
+        ws_dir = OPENCLAW_HOME / f"workspace-{agent_id}"
         if agent_id == "main":
-            candidate_dirs = [WORKSPACE]
-        else:
-            candidate_dirs = [
-                OPENCLAW_HOME / f"workspace-{agent_id}",
-                WORKSPACE / "agents" / agent_id,
-                WORKSPACE / "memory" / "agents" / agent_id,
-                OPENCLAW_HOME / "memory" / "agents" / agent_id,
-            ]
+            ws_dir = WORKSPACE
         for fname in ["SOUL.md", "AGENTS.md", "USER.md", "IDENTITY.md", "MEMORY.md"]:
-            fpath = None
-            for ws_dir in candidate_dirs:
-                candidate = ws_dir / fname
-                if candidate.exists():
-                    fpath = candidate
-                    break
-            if fpath is None and agent_id != "main":
+            fpath = ws_dir / fname
+            if not fpath.exists() and agent_id != "main":
                 if fname in ("IDENTITY.md", "SOUL.md", "MEMORY.md"):
                     continue  # agent-specific files should NOT fall back to main
-                shared = WORKSPACE / fname  # fallback to shared for AGENTS.md, USER.md
-                if shared.exists():
-                    fpath = shared
-            if fpath and fpath.exists():
+                fpath = WORKSPACE / fname  # fallback to shared for AGENTS.md, USER.md
+            if fpath.exists():
                 try:
                     workspace_files[fname] = fpath.read_text()[:2000]
                 except Exception:
@@ -2693,7 +3439,6 @@ def api_agents():
             for entry in cfg.get("agents", {}).get("list", []):
                 if entry.get("id") == agent_id and entry.get("model"):
                     m = entry["model"]
-                    # model can be string or {"primary": "..."} (OpenClaw docs format)
                     return m.get("primary", str(m)) if isinstance(m, dict) else m
             # 2. Check agents.defaults.model
             default_model = cfg.get("agents", {}).get("defaults", {}).get("model")
@@ -2754,7 +3499,7 @@ def api_agents():
         "mainModel": effective["compression"],
         "heartbeat": {},
         "sessions": {"count": 0},
-        "workspaceFiles": _read_workspace("memory"),
+        "workspaceFiles": {},
         "emoji": "🧠",
         "displayName": "R-Memory",
         "tier": 0.5,
@@ -2806,9 +3551,7 @@ def api_agents():
             seen_ids.add(agent_id)
             workspace_files = _read_workspace(agent_id)
             emoji, name = _parse_identity(workspace_files)
-            # Use the model from this agent's config, or the defaults model
-            raw = agent_entry.get("model") or cfg.get("agents", {}).get("defaults", {}).get("model") or "unknown"
-            model = raw.get("primary", str(raw)) if isinstance(raw, dict) else raw
+            model = agent_entry.get("model") or cfg.get("agents", {}).get("defaults", {}).get("model") or "unknown"
             agents.append({
                 "agentId": agent_id,
                 "isDefault": agent_entry.get("default", False),
@@ -2848,7 +3591,6 @@ def api_agents():
         })
 
     # 4. Guaranteed fallback: always include "main" agent
-    # Single-agent users may not have agents.list or workspace-* dirs
     if "main" not in seen_ids:
         workspace_files = _read_workspace("main")
         emoji, name = _parse_identity(workspace_files)
@@ -2868,6 +3610,151 @@ def api_agents():
     # Sort: tier 0 first, then alphabetical
     agents.sort(key=lambda a: (a.get("tier", 1), a["agentId"]))
     return jsonify(agents)
+
+@app.route("/api/system-agents")
+def api_system_agents():
+    """Return normalized data for system/background agents (Heartbeat, R-Memory, Cron, Subagents, etc.)."""
+    system_agents = []
+
+    # --- 1. Heartbeat ---
+    try:
+        cfg = json.loads(OPENCLAW_CONFIG.read_text())
+        hb_defaults = cfg.get("agents", {}).get("defaults", {}).get("heartbeat", {})
+        # Also get per-agent heartbeat overrides from gateway health
+        health = gw.health or {}
+        main_agent = next((a for a in health.get("agents", []) if a.get("isDefault")), {})
+        hb_live = main_agent.get("heartbeat", {})
+        hb_enabled = hb_live.get("enabled", hb_defaults.get("enabled", False))
+        hb_every = hb_live.get("every", hb_defaults.get("every", "-"))
+        hb_model = hb_live.get("model", hb_defaults.get("model", "unknown"))
+        hb_active_hours = hb_defaults.get("activeHours", {})
+        active_window = ""
+        if hb_active_hours:
+            active_window = f"{hb_active_hours.get('start','?')}-{hb_active_hours.get('end','?')} {hb_active_hours.get('timezone','')}"
+        system_agents.append({
+            "id": "heartbeat",
+            "name": "Heartbeat",
+            "emoji": "💓",
+            "role": "Periodic health check & proactive assistant",
+            "model": hb_model,
+            "status": "running" if hb_enabled else "disabled",
+            "interval": hb_every,
+            "activeWindow": active_window,
+            "details": {
+                "target": hb_live.get("target", "last"),
+                "prompt": hb_live.get("prompt", hb_defaults.get("prompt", "")),
+            },
+        })
+    except Exception:
+        system_agents.append({
+            "id": "heartbeat",
+            "name": "Heartbeat",
+            "emoji": "💓",
+            "role": "Periodic health check & proactive assistant",
+            "model": "unknown",
+            "status": "unknown",
+            "interval": "-",
+            "activeWindow": "",
+            "details": {},
+        })
+
+    # --- 2. R-Memory (compression + narrative) ---
+    try:
+        rmem_cfg = _rmem_config()
+        effective = _rmem_effective_models()
+        rmem_log = RMEMORY_DIR / "r-memory.log"
+        rmem_active = rmem_log.exists() and rmem_log.stat().st_size > 0
+        rmem_enabled = rmem_cfg.get("enabled", True)
+        usage_stats = {}
+        try:
+            usage_stats = json.loads((RMEMORY_DIR / "usage-stats.json").read_text())
+        except Exception:
+            pass
+        system_agents.append({
+            "id": "r-memory",
+            "name": "R-Memory",
+            "emoji": "🧠",
+            "role": "Conversation compression & narrative tracking",
+            "model": effective.get("compression", "unknown"),
+            "status": "running" if (rmem_active and rmem_enabled) else ("disabled" if not rmem_enabled else "inactive"),
+            "interval": "on-demand",
+            "activeWindow": "always",
+            "details": {
+                "compressionModel": effective.get("compression"),
+                "narrativeModel": effective.get("narrative"),
+                "compressionCalls": usage_stats.get("compression", {}).get("calls", 0),
+                "narrativeCalls": usage_stats.get("narrative", {}).get("calls", 0),
+                "evictTrigger": rmem_cfg.get("evictTrigger"),
+                "compressTrigger": rmem_cfg.get("compressTrigger"),
+            },
+        })
+    except Exception:
+        system_agents.append({
+            "id": "r-memory",
+            "name": "R-Memory",
+            "emoji": "🧠",
+            "role": "Conversation compression & narrative tracking",
+            "model": "unknown",
+            "status": "unknown",
+            "interval": "on-demand",
+            "activeWindow": "always",
+            "details": {},
+        })
+
+    # --- 3. Subagent Runtime ---
+    try:
+        cfg = json.loads(OPENCLAW_CONFIG.read_text())
+        sub_cfg = cfg.get("agents", {}).get("defaults", {}).get("subagents", {})
+        max_concurrent = sub_cfg.get("maxConcurrent", 4)
+        # Check active sessions for subagent activity
+        health = gw.health or {}
+        all_sessions = []
+        for ag in health.get("agents", []):
+            for s in ag.get("sessions", {}).get("recent", []):
+                if "subagent" in s.get("key", ""):
+                    all_sessions.append(s)
+        system_agents.append({
+            "id": "subagent-runtime",
+            "name": "Subagent Runtime",
+            "emoji": "🔀",
+            "role": "Spawns & manages task-specific sub-agents",
+            "model": "inherits parent",
+            "status": "running",
+            "interval": "on-demand",
+            "activeWindow": "always",
+            "details": {
+                "maxConcurrent": max_concurrent,
+                "recentSubagentSessions": len(all_sessions),
+            },
+        })
+    except Exception:
+        pass
+
+    # --- 4. Gateway ---
+    try:
+        cfg = json.loads(OPENCLAW_CONFIG.read_text())
+        gw_cfg = cfg.get("gateway", {})
+        gw_port = gw_cfg.get("port", 18789)
+        gw_status = "running" if (gw.health and gw.health.get("agents")) else "stopped"
+        system_agents.append({
+            "id": "gateway",
+            "name": "Gateway",
+            "emoji": "🌐",
+            "role": "Core message router & session manager",
+            "model": "n/a",
+            "status": gw_status,
+            "interval": "always-on",
+            "activeWindow": "always",
+            "details": {
+                "port": gw_port,
+                "mode": gw_cfg.get("mode", "local"),
+            },
+        })
+    except Exception:
+        pass
+
+    return jsonify(system_agents)
+
 
 @app.route("/api/agents/<agent_id>/sessions")
 def api_agent_sessions(agent_id):
@@ -3030,22 +3917,7 @@ def api_rmemory_available_models():
     except Exception:
         pass
     if not available:
-        # Fallback: read model from openclaw.json config
-        try:
-            cfg = json.loads(OPENCLAW_CONFIG.read_text())
-            raw_model = cfg.get("agents", {}).get("defaults", {}).get("model", "") or cfg.get("model", "")
-            # model can be string or {"primary": "...", "fallbacks": [...]}
-            if isinstance(raw_model, dict):
-                default_model = raw_model.get("primary", "")
-            else:
-                default_model = raw_model
-            if default_model:
-                provider = default_model.split("/")[0] if "/" in default_model else "unknown"
-                available = full_models.get(provider, [{"model": default_model, "label": default_model}])
-        except Exception:
-            pass
-    if not available:
-        available = [{"model": "unknown", "label": "No models configured"}]
+        available = [{"model": "anthropic/claude-haiku-4-5", "label": "Claude Haiku 4.5 (default)"}]
     return jsonify({"models": available})
 
 @app.route("/api/r-memory/config", methods=["GET", "PUT"])
@@ -3155,51 +4027,670 @@ def api_rmemory_stats():
     return jsonify(stats)
 
 
+# Known model pricing database — used as fallback when auto-discovering models
+_KNOWN_MODEL_PRICING = {
+    "anthropic/claude-opus-4-6": {"label": "Claude Opus 4.6", "inputPer1M": 15.0, "outputPer1M": 75.0, "cacheReadPer1M": 1.5, "cacheWritePer1M": 18.75},
+    "anthropic/claude-sonnet-4-6": {"label": "Claude Sonnet 4.6", "inputPer1M": 3.0, "outputPer1M": 15.0, "cacheReadPer1M": 0.3, "cacheWritePer1M": 3.75},
+    "anthropic/claude-haiku-4-5": {"label": "Claude Haiku 4.5", "inputPer1M": 1.0, "outputPer1M": 5.0, "cacheReadPer1M": 0.1, "cacheWritePer1M": 1.25},
+    "openai-codex/gpt-4o-mini": {"label": "GPT-4o mini", "inputPer1M": 0.15, "outputPer1M": 0.6, "cacheReadPer1M": 0.075, "cacheWritePer1M": 0.15},
+    "openai-codex/gpt-5.3-codex": {"label": "GPT-5.3 Codex", "inputPer1M": 2.0, "outputPer1M": 8.0, "cacheReadPer1M": 0.5, "cacheWritePer1M": 2.0},
+    "openai/gpt-4o-mini": {"label": "GPT-4o mini (direct)", "inputPer1M": 0.15, "outputPer1M": 0.6, "cacheReadPer1M": 0.075, "cacheWritePer1M": 0.15},
+    "openai/gpt-4o": {"label": "GPT-4o", "inputPer1M": 2.5, "outputPer1M": 10.0, "cacheReadPer1M": 1.25, "cacheWritePer1M": 2.5},
+    "google/gemini-2.0-flash": {"label": "Gemini 2.0 Flash", "inputPer1M": 0.1, "outputPer1M": 0.4, "cacheReadPer1M": 0.025, "cacheWritePer1M": 0.1},
+}
+
+def _ts_discover_system_models():
+    """Auto-discover all LLM models configured in the system (agents, cron, heartbeat, R-Memory)."""
+    models = set()
+    try:
+        cfg = json.loads(OPENCLAW_CONFIG.read_text()) if OPENCLAW_CONFIG.exists() else {}
+        # Default primary model
+        dp = cfg.get("agents", {}).get("defaults", {}).get("model", {}).get("primary", "")
+        if dp: models.add(dp)
+        # Heartbeat model
+        hb = cfg.get("agents", {}).get("defaults", {}).get("heartbeat", {}).get("model", "")
+        if hb: models.add(hb)
+        # Per-agent models
+        for a in cfg.get("agents", {}).get("list", []):
+            m = a.get("model", "")
+            if m: models.add(m)
+    except Exception:
+        pass
+    # Cron jobs
+    try:
+        cron_path = OPENCLAW_HOME / "cron" / "jobs.json"
+        if cron_path.exists():
+            data = json.loads(cron_path.read_text())
+            jobs = data if isinstance(data, list) else data.get("jobs", [])
+            for j in jobs:
+                m = j.get("payload", {}).get("model", "")
+                if m: models.add(m)
+    except Exception:
+        pass
+    # R-Memory camouflage models
+    try:
+        cam_path = RMEMORY_DIR / "camouflage.json"
+        if cam_path.exists():
+            cam = json.loads(cam_path.read_text())
+            for prov, model_str in cam.get("backgroundModels", {}).items():
+                if model_str: models.add(model_str)
+    except Exception:
+        pass
+    return sorted(models)
+
+
+_TOKEN_SAVINGS_DEFAULT_PRICING = {
+    "currency": "USD",
+    "defaultModel": "gateway/blended",
+    "models": {
+        "gateway/blended": {
+            "label": "Gateway Blended (from usage-cost)",
+            "inputPer1M": 5.0,
+            "outputPer1M": 25.0,
+            "cacheReadPer1M": 0.5,
+            "cacheWritePer1M": 6.25,
+        },
+    },
+    "assumptions": {
+        "avgOutputTokensPerCall": 800,
+        "heartbeatInputTokensPerCall": 700,
+        "heartbeatOutputTokensPerCall": 140,
+        "cronInputTokensPerCall": 900,
+        "cronOutputTokensPerCall": 180,
+        "subagentShare": 0.18,
+    },
+}
+
+
+def _ts_merge_dict(base, override):
+    out = dict(base) if isinstance(base, dict) else {}
+    if not isinstance(override, dict):
+        return out
+    for k, v in override.items():
+        if isinstance(v, dict) and isinstance(out.get(k), dict):
+            out[k] = _ts_merge_dict(out[k], v)
+        else:
+            out[k] = v
+    return out
+
+
+def _ts_load_dashboard_config():
+    try:
+        return json.loads(_CONFIG_FILE.read_text())
+    except Exception:
+        return _CFG if isinstance(_CFG, dict) else {}
+
+
+def _ts_save_dashboard_config(cfg):
+    global _CFG
+    _CONFIG_FILE.write_text(json.dumps(cfg, indent=2))
+    _CFG = cfg
+
+
+def _ts_float(v, default=0.0):
+    try:
+        return float(v)
+    except Exception:
+        return float(default)
+
+
+def _ts_int(v, default=0):
+    try:
+        return int(v)
+    except Exception:
+        return int(default)
+
+
+def _ts_parse_every_minutes(every):
+    if every is None:
+        return None
+    if isinstance(every, (int, float)):
+        return float(every) if every > 0 else None
+    s = str(every).strip().lower()
+    m = re.match(r"^(\d+(?:\.\d+)?)\s*([smhd])$", s)
+    if not m:
+        return None
+    num = _ts_float(m.group(1), 0)
+    unit = m.group(2)
+    if num <= 0:
+        return None
+    mult = {"s": 1 / 60, "m": 1, "h": 60, "d": 1440}
+    return num * mult[unit]
+
+
+def _ts_minutes_between(start, end):
+    try:
+        s_h, s_m = [int(x) for x in str(start).split(":")[:2]]
+        e_h, e_m = [int(x) for x in str(end).split(":")[:2]]
+        s = (s_h * 60 + s_m) % 1440
+        e = (e_h * 60 + e_m) % 1440
+        return (e - s) % 1440
+    except Exception:
+        return 24 * 60
+
+
+def _ts_estimate_calls_from_cron(expr, days):
+    if not expr or not isinstance(expr, str):
+        return 0
+    parts = expr.split()
+    if len(parts) < 5:
+        return 0
+    minute, hour, dom, _month, dow = parts[:5]
+
+    def _count_field(field, low, high):
+        span = high - low + 1
+        if field == "*":
+            return span
+        if field.startswith("*/"):
+            step = max(_ts_int(field[2:], 1), 1)
+            return max(1, (span + step - 1) // step)
+        if "," in field:
+            items = [p for p in field.split(",") if p]
+            return max(1, len(items))
+        if field.isdigit():
+            return 1
+        return 1
+
+    calls_per_day = _count_field(minute, 0, 59) * _count_field(hour, 0, 23)
+    day_factor = 1.0
+    if dom != "*" and dow == "*":
+        day_factor = min(1.0, _count_field(dom, 1, 31) / 30.0)
+    elif dow != "*" and dom == "*":
+        day_factor = min(1.0, _count_field(dow, 0, 6) / 7.0)
+    elif dom != "*" and dow != "*":
+        day_factor = min(1.0, _count_field(dow, 0, 6) / 7.0)
+    return max(0, int(round(calls_per_day * day_factor * max(days, 1))))
+
+
+def _ts_lookup_rates(pricing, model_name):
+    models = pricing.get("models", {})
+    default_key = pricing.get("defaultModel", "gateway/blended")
+    if model_name in models:
+        return model_name, models[model_name]
+    if isinstance(model_name, str):
+        needle = model_name.split("/")[-1]
+        for key, rates in models.items():
+            if key.endswith(needle):
+                return key, rates
+    return default_key, models.get(default_key, {})
+
+
+def _ts_component_cost(rates, input_tokens=0, output_tokens=0, cache_read_tokens=0, cache_write_tokens=0):
+    ip = _ts_float(rates.get("inputPer1M"), 0)
+    op = _ts_float(rates.get("outputPer1M"), 0)
+    cr = _ts_float(rates.get("cacheReadPer1M"), 0)
+    cw = _ts_float(rates.get("cacheWritePer1M"), 0)
+    return (
+        _ts_float(input_tokens) * ip / 1_000_000
+        + _ts_float(output_tokens) * op / 1_000_000
+        + _ts_float(cache_read_tokens) * cr / 1_000_000
+        + _ts_float(cache_write_tokens) * cw / 1_000_000
+    )
+
+
+def _ts_sanitize_pricing(pricing):
+    merged = _ts_merge_dict(_TOKEN_SAVINGS_DEFAULT_PRICING, pricing if isinstance(pricing, dict) else {})
+    models = merged.get("models", {})
+    for m_name, rates in list(models.items()):
+        if not isinstance(rates, dict):
+            models[m_name] = {}
+            rates = models[m_name]
+        for key in ("inputPer1M", "outputPer1M", "cacheReadPer1M", "cacheWritePer1M"):
+            rates[key] = max(0.0, _ts_float(rates.get(key), 0.0))
+        if "label" in rates and not isinstance(rates.get("label"), str):
+            rates["label"] = str(rates["label"])
+    assumptions = merged.get("assumptions", {})
+    assumptions["avgOutputTokensPerCall"] = max(1, _ts_int(assumptions.get("avgOutputTokensPerCall"), 800))
+    assumptions["heartbeatInputTokensPerCall"] = max(0, _ts_int(assumptions.get("heartbeatInputTokensPerCall"), 700))
+    assumptions["heartbeatOutputTokensPerCall"] = max(0, _ts_int(assumptions.get("heartbeatOutputTokensPerCall"), 140))
+    assumptions["cronInputTokensPerCall"] = max(0, _ts_int(assumptions.get("cronInputTokensPerCall"), 900))
+    assumptions["cronOutputTokensPerCall"] = max(0, _ts_int(assumptions.get("cronOutputTokensPerCall"), 180))
+    assumptions["subagentShare"] = min(0.95, max(0.0, _ts_float(assumptions.get("subagentShare"), 0.18)))
+    merged["assumptions"] = assumptions
+    return merged
+
+
+def _ts_load_pricing():
+    cfg = _ts_load_dashboard_config()
+    pricing = _ts_sanitize_pricing(cfg.get("pricing", {}))
+    # Auto-discover models from system and merge pricing for any that are missing
+    discovered = _ts_discover_system_models()
+    models = pricing.get("models", {})
+    for model_id in discovered:
+        if model_id not in models:
+            # Look up known pricing, or create a placeholder
+            known = _KNOWN_MODEL_PRICING.get(model_id)
+            if known:
+                models[model_id] = dict(known)
+            else:
+                # Unknown model — add with zero pricing so user sees it and can fill in
+                short_name = model_id.split("/")[-1] if "/" in model_id else model_id
+                models[model_id] = {
+                    "label": f"{short_name} (auto-discovered, set pricing)",
+                    "inputPer1M": 0.0, "outputPer1M": 0.0,
+                    "cacheReadPer1M": 0.0, "cacheWritePer1M": 0.0,
+                }
+    pricing["models"] = models
+    pricing["_discoveredModels"] = discovered
+    return pricing, cfg
+
+
+def _ts_collect_cron_jobs(cfg):
+    candidates = [
+        cfg.get("cron", {}).get("jobs"),
+        cfg.get("jobs"),
+        cfg.get("commands", {}).get("cron", {}).get("jobs"),
+        cfg.get("commands", {}).get("jobs"),
+    ]
+    out = []
+    for c in candidates:
+        if isinstance(c, list):
+            out.extend([j for j in c if isinstance(j, dict)])
+    return out
+
+
+def _ts_run_gateway_usage_cost(days):
+    cmd = ["openclaw", "gateway", "usage-cost", "--days", str(days), "--json"]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    except Exception as e:
+        return None, f"gateway usage-cost command failed: {e}", {"cmd": cmd}
+    if result.returncode != 0:
+        err = (result.stderr or result.stdout or "").strip()
+        return None, err or f"command exited {result.returncode}", {"cmd": cmd}
+
+    raw = (result.stdout or "").strip()
+    if not raw:
+        return None, "gateway usage-cost returned empty output", {"cmd": cmd}
+    try:
+        return json.loads(raw), None, {"cmd": cmd}
+    except Exception:
+        start = raw.find("{")
+        end = raw.rfind("}")
+        if start >= 0 and end > start:
+            try:
+                return json.loads(raw[start : end + 1]), None, {"cmd": cmd}
+            except Exception as e:
+                return None, f"invalid JSON from gateway usage-cost: {e}", {"cmd": cmd}
+        return None, "invalid JSON from gateway usage-cost", {"cmd": cmd}
+
+
+@app.route("/api/token-savings/pricing", methods=["PUT"])
+def api_token_savings_pricing():
+    """Update pricing reference used by /api/token-savings."""
+    patch = request.get_json(force=True) or {}
+    if not isinstance(patch, dict):
+        return jsonify({"ok": False, "error": "invalid payload"}), 400
+    pricing, cfg = _ts_load_pricing()
+    updated = _ts_sanitize_pricing(_ts_merge_dict(pricing, patch))
+    try:
+        cfg["pricing"] = updated
+        _ts_save_dashboard_config(cfg)
+        return jsonify({"ok": True, "pricing": updated})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 @app.route("/api/token-savings")
 def api_token_savings():
-    """Token savings & cost tracker. Uses R-Memory history data."""
-    all_blocks = _rmem_history_blocks()
-    total_raw = sum(b.get("tokensRaw", 0) for b in all_blocks)
-    total_comp = sum(b.get("tokensCompressed", 0) for b in all_blocks)
+    """Cost operations center using gateway usage-cost + R-Memory stats."""
+    days = max(1, min(30, _ts_int(request.args.get("days", 7), 7)))
+    pricing, _cfg = _ts_load_pricing()
+    assumptions = pricing.get("assumptions", {})
 
+    usage_stats = {}
+    usage_stats_path = RMEMORY_DIR / "usage-stats.json"
+    if usage_stats_path.exists():
+        try:
+            usage_stats = json.loads(usage_stats_path.read_text())
+        except Exception:
+            usage_stats = {}
+
+    all_blocks = _rmem_history_blocks()
     cur_sid = _rmem_current_session_id()
     cur_blocks = [b for b in all_blocks if cur_sid and cur_sid in b.get("_file", "")]
-    sess_raw = sum(b.get("tokensRaw", 0) for b in cur_blocks)
-    sess_comp = sum(b.get("tokensCompressed", 0) for b in cur_blocks)
 
-    def _calc(raw, comp):
-        saved = raw - comp
-        input_saved = saved * 0.6
-        output_saved = saved * 0.4
-        cost = (input_saved * 5 / 1_000_000) + (output_saved * 25 / 1_000_000)
-        # costWithout = what it would cost WITHOUT compression (full raw tokens)
-        cost_without = (raw * 0.6 * 5 / 1_000_000) + (raw * 0.4 * 25 / 1_000_000)
-        ratio = round(comp / raw, 3) if raw > 0 else None
-        return {
-            "rawTokens": raw,
-            "compressedTokens": comp,
-            "tokensSaved": saved,
-            "costSaved": round(cost, 4),
-            "costWithout": round(cost_without, 4),
-            "compressionRatio": ratio,
-        }
+    # Use ALL blocks for compound savings (not just current session — new sessions start empty)
+    all_raw = sum(_ts_int(b.get("tokensRaw"), 0) for b in all_blocks)
+    all_comp = sum(_ts_int(b.get("tokensCompressed"), 0) for b in all_blocks)
+    # Average tokens saved per API call = avg compressed blocks in context × savings per block
+    # Conservative: use current session blocks if they have data, otherwise estimate from all blocks
+    context_raw = sum(_ts_int(b.get("tokensRaw"), 0) for b in cur_blocks)
+    context_comp = sum(_ts_int(b.get("tokensCompressed"), 0) for b in cur_blocks)
+    cur_saved = sum(max(0, _ts_int(b.get("tokensRaw"), 0) - _ts_int(b.get("tokensCompressed"), 0)) for b in cur_blocks)
+    # If current session has meaningful savings, use it; otherwise estimate from lifetime average
+    if cur_saved > 1000:
+        context_saved_per_call = cur_saved
+    elif len(all_blocks) > 0:
+        # Estimate: average block saves (all_raw - all_comp) / num_blocks, times avg blocks in context (~25)
+        avg_saving_per_block = (all_raw - all_comp) / len(all_blocks) if len(all_blocks) > 0 else 0
+        avg_context_blocks = max(len(cur_blocks), 25)  # typical context holds ~25 compressed blocks
+        context_saved_per_call = int(avg_saving_per_block * avg_context_blocks)
+    else:
+        context_saved_per_call = 0
+    archived_blocks = max(0, len(all_blocks) - len(cur_blocks))
+    archived_raw = max(0, all_raw - context_raw)
+    archived_comp = max(0, all_comp - context_comp)
 
-    # Estimate non-block tokens (system prompt, workspace, SSoT, conversation)
-    # These are NOT compressed — they represent fixed overhead
-    overhead_tokens = 12000  # system prompt
-    for fname in ["AGENTS.md","SOUL.md","USER.md","TOOLS.md","IDENTITY.md","HEARTBEAT.md","MEMORY.md"]:
-        fp = WORKSPACE / fname
-        if fp.exists():
-            try: overhead_tokens += len(fp.read_text()) // 4
-            except: pass
+    gateway_data, gateway_error, gateway_meta = _ts_run_gateway_usage_cost(days)
+    daily = gateway_data.get("daily", []) if isinstance(gateway_data, dict) else []
+    totals = gateway_data.get("totals", {}) if isinstance(gateway_data, dict) else {}
 
-    return jsonify({
-        "session": _calc(sess_raw, sess_comp),
-        "lifetime": _calc(total_raw, total_comp),
-        "sessionBlocks": len(cur_blocks),
-        "lifetimeBlocks": len(all_blocks),
-        "overheadTokens": overhead_tokens,
-    })
+    total_cost = _ts_float(totals.get("totalCost"), 0)
+    total_input = _ts_int(totals.get("input"), 0)
+    total_output = _ts_int(totals.get("output"), 0)
+    total_cache_read = _ts_int(totals.get("cacheRead"), 0)
+    total_cache_write = _ts_int(totals.get("cacheWrite"), 0)
+    total_tokens = _ts_int(totals.get("totalTokens"), 0)
+
+    input_cost = _ts_float(totals.get("inputCost"), sum(_ts_float(d.get("inputCost"), 0) for d in daily))
+    output_cost = _ts_float(totals.get("outputCost"), sum(_ts_float(d.get("outputCost"), 0) for d in daily))
+    cache_read_cost = _ts_float(totals.get("cacheReadCost"), sum(_ts_float(d.get("cacheReadCost"), 0) for d in daily))
+    cache_write_cost = _ts_float(totals.get("cacheWriteCost"), sum(_ts_float(d.get("cacheWriteCost"), 0) for d in daily))
+
+    def _safe_rate(cost, tokens):
+        return (cost / tokens) if tokens > 0 else 0.0
+
+    rates = {
+        "input": _safe_rate(input_cost, total_input),
+        "output": _safe_rate(output_cost, total_output),
+        "cacheRead": _safe_rate(cache_read_cost, total_cache_read),
+        "cacheWrite": _safe_rate(cache_write_cost, total_cache_write),
+    }
+    fractions = {
+        "input": (input_cost / total_cost) if total_cost > 0 else 0.0,
+        "output": (output_cost / total_cost) if total_cost > 0 else 0.0,
+        "cacheRead": (cache_read_cost / total_cost) if total_cost > 0 else 0.0,
+        "cacheWrite": (cache_write_cost / total_cost) if total_cost > 0 else 0.0,
+    }
+    weighted_cost_per_token = (
+        fractions["input"] * rates["input"]
+        + fractions["output"] * rates["output"]
+        + fractions["cacheRead"] * rates["cacheRead"]
+        + fractions["cacheWrite"] * rates["cacheWrite"]
+    )
+    if weighted_cost_per_token <= 0 and total_cost > 0 and total_tokens > 0:
+        weighted_cost_per_token = total_cost / total_tokens
+
+    explicit_calls = None
+    for key in ("apiCalls", "requestCount", "totalTurns", "turns"):
+        v = totals.get(key)
+        if isinstance(v, (int, float)) and v > 0:
+            explicit_calls = int(v)
+            break
+    if explicit_calls is None:
+        for key in ("apiCalls", "requestCount", "totalTurns", "turns"):
+            summed = sum(_ts_int(d.get(key), 0) for d in daily)
+            if summed > 0:
+                explicit_calls = summed
+                break
+    if explicit_calls is None:
+        avg_output_per_call = max(1, _ts_int(assumptions.get("avgOutputTokensPerCall"), 800))
+        explicit_calls = max(1, int(round(total_output / avg_output_per_call))) if total_output > 0 else 0
+
+    compound_saved_tokens = context_saved_per_call * explicit_calls
+    compound_saved_cost = compound_saved_tokens * weighted_cost_per_token if (compound_saved_tokens > 0 and weighted_cost_per_token > 0) else 0.0
+    without_rmemory_cost = (total_cost + compound_saved_cost) if total_cost > 0 else None
+    saving_pct = ((compound_saved_cost / without_rmemory_cost) * 100.0) if without_rmemory_cost and without_rmemory_cost > 0 else None
+
+    try:
+        ocfg = json.loads(OPENCLAW_CONFIG.read_text())
+    except Exception:
+        ocfg = {}
+    defaults = ocfg.get("agents", {}).get("defaults", {})
+    main_model = defaults.get("model")
+    if isinstance(main_model, dict):
+        main_model = main_model.get("primary") or str(main_model)
+    if not main_model:
+        main_model = pricing.get("defaultModel", "gateway/blended")
+
+    hb_cfg = defaults.get("heartbeat", {}) if isinstance(defaults.get("heartbeat", {}), dict) else {}
+    hb_every = hb_cfg.get("every", "30m")
+    hb_model = hb_cfg.get("model", pricing.get("defaultModel", "gateway/blended"))
+    hb_enabled = hb_cfg.get("enabled", True)
+    hb_minutes = _ts_parse_every_minutes(hb_every)
+    active_hours = hb_cfg.get("activeHours", {})
+    active_minutes = _ts_minutes_between(active_hours.get("start", "00:00"), active_hours.get("end", "00:00")) if active_hours else 24 * 60
+    hb_calls_per_day = int(round((active_minutes / hb_minutes))) if (hb_enabled and hb_minutes and hb_minutes > 0) else 0
+    hb_calls = max(0, hb_calls_per_day * days)
+
+    cron_jobs = _ts_collect_cron_jobs(ocfg)
+
+    components = []
+
+    def _add_component(component_id, name, model, input_tokens, output_tokens, cost, source, estimated):
+        components.append(
+            {
+                "id": component_id,
+                "component": name,
+                "model": model,
+                "inputTokens": int(max(0, round(_ts_float(input_tokens, 0)))),
+                "outputTokens": int(max(0, round(_ts_float(output_tokens, 0)))),
+                "cost": round(max(0.0, _ts_float(cost, 0.0)), 4),
+                "source": source,
+                "estimated": bool(estimated),
+            }
+        )
+
+    rmem_effective = _rmem_effective_models()
+    comp_stats = usage_stats.get("compression", {}) if isinstance(usage_stats.get("compression"), dict) else {}
+    nar_stats = usage_stats.get("narrative", {}) if isinstance(usage_stats.get("narrative"), dict) else {}
+
+    comp_model = rmem_effective.get("compression", "anthropic/claude-haiku-4-5")
+    nar_model = rmem_effective.get("narrative", comp_model)
+    _, comp_rates = _ts_lookup_rates(pricing, comp_model)
+    _, nar_rates = _ts_lookup_rates(pricing, nar_model)
+
+    comp_input = _ts_int(comp_stats.get("inputTokens"), 0)
+    comp_output = _ts_int(comp_stats.get("outputTokens"), 0)
+    nar_input = _ts_int(nar_stats.get("inputTokens"), 0)
+    nar_output = _ts_int(nar_stats.get("outputTokens"), 0)
+
+    comp_cost = _ts_component_cost(comp_rates, comp_input, comp_output)
+    nar_cost = _ts_component_cost(nar_rates, nar_input, nar_output)
+    _add_component(
+        "r-memory-compression",
+        "R-Memory Compression",
+        comp_model,
+        comp_input,
+        comp_output,
+        comp_cost,
+        "~/.openclaw/workspace/r-memory/usage-stats.json",
+        False,
+    )
+    _add_component(
+        "r-memory-narrative",
+        "R-Memory Narrative",
+        nar_model,
+        nar_input,
+        nar_output,
+        nar_cost,
+        "~/.openclaw/workspace/r-memory/usage-stats.json",
+        False,
+    )
+
+    hb_input = hb_calls * _ts_int(assumptions.get("heartbeatInputTokensPerCall"), 700)
+    hb_output = hb_calls * _ts_int(assumptions.get("heartbeatOutputTokensPerCall"), 140)
+    _, hb_rates = _ts_lookup_rates(pricing, hb_model)
+    hb_cost = _ts_component_cost(hb_rates, hb_input, hb_output)
+    _add_component(
+        "heartbeat",
+        "Heartbeat",
+        hb_model,
+        hb_input,
+        hb_output,
+        hb_cost,
+        f"openclaw.json heartbeat.every={hb_every} (est.)",
+        True,
+    )
+
+    cron_total_input = 0
+    cron_total_output = 0
+    cron_total_cost = 0.0
+    for idx, job in enumerate(cron_jobs):
+        if job.get("enabled") is False:
+            continue
+        j_name = job.get("name") or job.get("id") or f"Job {idx + 1}"
+        j_model = job.get("model") or main_model
+        calls = 0
+        if job.get("every"):
+            m = _ts_parse_every_minutes(job.get("every"))
+            calls = int(round((days * 24 * 60) / m)) if m and m > 0 else 0
+        elif job.get("schedule"):
+            calls = _ts_estimate_calls_from_cron(str(job.get("schedule")), days)
+        if calls <= 0:
+            calls = days
+        inp_per_call = _ts_int(job.get("avgInputTokens"), _ts_int(assumptions.get("cronInputTokensPerCall"), 900))
+        out_per_call = _ts_int(job.get("avgOutputTokens"), _ts_int(assumptions.get("cronOutputTokensPerCall"), 180))
+        inp = max(0, calls * inp_per_call)
+        out = max(0, calls * out_per_call)
+        _, j_rates = _ts_lookup_rates(pricing, j_model)
+        cst = _ts_component_cost(j_rates, inp, out)
+        cron_total_input += inp
+        cron_total_output += out
+        cron_total_cost += cst
+        _add_component(
+            f"cron-{idx+1}",
+            f"Cron: {j_name}",
+            j_model,
+            inp,
+            out,
+            cst,
+            f"openclaw cron schedule ({job.get('every') or job.get('schedule') or 'default'}) (est.)",
+            True,
+        )
+
+    known_cost = comp_cost + nar_cost + hb_cost + cron_total_cost
+    known_input = comp_input + nar_input + hb_input + cron_total_input
+    known_output = comp_output + nar_output + hb_output + cron_total_output
+
+    remaining_cost = max(0.0, total_cost - known_cost)
+    subagent_share = _ts_float(assumptions.get("subagentShare"), 0.18)
+    subagent_share = min(0.95, max(0.0, subagent_share))
+    subagent_cost = remaining_cost * subagent_share
+    main_cost = max(0.0, remaining_cost - subagent_cost)
+
+    remaining_input = max(0, total_input - known_input)
+    remaining_output = max(0, total_output - known_output)
+    subagent_input = int(round(remaining_input * subagent_share))
+    subagent_output = int(round(remaining_output * subagent_share))
+    main_input = max(0, remaining_input - subagent_input)
+    main_output = max(0, remaining_output - subagent_output)
+
+    sub_model = "subagents/default"
+    _add_component(
+        "subagents",
+        "Sub-Agents Runtime",
+        sub_model,
+        subagent_input,
+        subagent_output,
+        subagent_cost,
+        "Residual share after known components (est.)",
+        True,
+    )
+    _add_component(
+        "main-session",
+        "Main Session",
+        main_model,
+        main_input,
+        main_output,
+        main_cost,
+        "Gateway total minus system components",
+        True,
+    )
+
+    components.sort(key=lambda x: x.get("cost", 0), reverse=True)
+
+    component_cost_lookup = {c["id"]: c["cost"] for c in components}
+    daily_breakdown = []
+    for entry in daily:
+        d_cost = _ts_float(entry.get("totalCost"), 0.0)
+        ratio = (d_cost / total_cost) if total_cost > 0 else 0.0
+        comp_costs = {cid: round(val * ratio, 4) for cid, val in component_cost_lookup.items()}
+        drift = d_cost - sum(comp_costs.values())
+        if "main-session" in comp_costs:
+            comp_costs["main-session"] = round(comp_costs["main-session"] + drift, 4)
+        daily_breakdown.append(
+            {
+                "date": entry.get("date"),
+                "totalCost": round(d_cost, 4),
+                "components": comp_costs,
+            }
+        )
+
+    context_efficiency = ((context_raw - context_comp) / context_raw) if context_raw > 0 else None
+    archived_efficiency = ((archived_raw - archived_comp) / archived_raw) if archived_raw > 0 else None
+    # Lifetime efficiency across ALL blocks (the real number)
+    lifetime_raw = all_raw
+    lifetime_comp = all_comp
+    lifetime_efficiency = ((lifetime_raw - lifetime_comp) / lifetime_raw) if lifetime_raw > 0 else None
+    payload = {
+        "ok": gateway_error is None and total_cost > 0,
+        "days": days,
+        "generatedAt": datetime.now(timezone.utc).isoformat(),
+        "sources": {
+            "gatewayUsageCost": "openclaw gateway usage-cost --days N --json",
+            "rMemoryUsageStats": "~/.openclaw/workspace/r-memory/usage-stats.json",
+            "rMemoryHistory": "~/.openclaw/workspace/r-memory/history-*.json",
+            "pricing": "dashboard/config.json:pricing",
+            "gatewayError": gateway_error,
+            "gatewayCmd": gateway_meta.get("cmd"),
+        },
+        "totals": {
+            "actualApiCost": round(total_cost, 4) if total_cost > 0 else None,
+            "withoutRMemoryCostEstimate": round(without_rmemory_cost, 4) if without_rmemory_cost is not None else None,
+            "rMemorySavingsEstimate": round(compound_saved_cost, 4) if compound_saved_cost > 0 else None,
+            "savingPctEstimate": round(saving_pct, 2) if saving_pct is not None else None,
+        },
+        "gatewayTotals": {
+            "inputTokens": total_input,
+            "outputTokens": total_output,
+            "cacheReadTokens": total_cache_read,
+            "cacheWriteTokens": total_cache_write,
+            "totalTokens": total_tokens,
+            "inputCost": round(input_cost, 4),
+            "outputCost": round(output_cost, 4),
+            "cacheReadCost": round(cache_read_cost, 4),
+            "cacheWriteCost": round(cache_write_cost, 4),
+            "fractions": fractions,
+            "ratesPerToken": rates,
+            "weightedCostPerToken": weighted_cost_per_token,
+        },
+        "compoundSavings": {
+            "estimated": True,
+            "method": "sum(tokensRaw - tokensCompressed in current context blocks) × estimated API calls",
+            "contextBlocks": len(cur_blocks),
+            "tokensSavedPerCall": context_saved_per_call,
+            "estimatedApiCalls": explicit_calls,
+            "compoundSavedTokens": compound_saved_tokens,
+            "weightedCostPerToken": weighted_cost_per_token,
+            "costSavedEstimate": round(compound_saved_cost, 4),
+        },
+        "compressionStats": {
+            "blocksInContext": len(cur_blocks),
+            "blocksCompressed": len(all_blocks),
+            "blocksArchived": archived_blocks,
+            "contextRawTokens": context_raw,
+            "contextCompressedTokens": context_comp,
+            "archivedRawTokens": archived_raw,
+            "archivedCompressedTokens": archived_comp,
+            "contextEfficiency": round(context_efficiency * 100, 2) if context_efficiency is not None else None,
+            "archivedEfficiency": round(archived_efficiency * 100, 2) if archived_efficiency is not None else None,
+            "lifetimeRawTokens": lifetime_raw,
+            "lifetimeCompressedTokens": lifetime_comp,
+            "lifetimeEfficiency": round(lifetime_efficiency * 100, 2) if lifetime_efficiency is not None else None,
+            "compressionCalls": _ts_int(comp_stats.get("calls"), 0),
+            "narrativeCalls": _ts_int(nar_stats.get("calls"), 0),
+            "compressionInputTokens": comp_input,
+            "compressionOutputTokens": comp_output,
+            "narrativeInputTokens": nar_input,
+            "narrativeOutputTokens": nar_output,
+        },
+        "componentBreakdown": components,
+        "dailyCostBreakdown": daily_breakdown,
+        "pricingReference": pricing,
+    }
+    return jsonify(payload)
 
 
 @app.route("/api/r-memory/lock/<path:doc_path>", methods=["POST"])
@@ -3856,6 +5347,146 @@ def api_chatbot_conversations(bot_id):
     db.close()
     return jsonify(convs)
 
+@app.route("/api/conversations")
+def api_conversations():
+    """List conversations across all chatbots with filtering/pagination."""
+    limit = request.args.get("limit", 20, type=int)
+    offset = request.args.get("offset", 0, type=int)
+    chatbot_id = request.args.get("chatbot_id", "")
+    search = request.args.get("search", "")
+    start_date = request.args.get("start_date", type=int)
+    end_date = request.args.get("end_date", type=int)
+
+    if not CHATBOTS_DB.exists():
+        return jsonify({"conversations": [], "total": 0})
+
+    db = _get_db()
+    where = []
+    params = []
+    if chatbot_id:
+        where.append("c.chatbot_id=?")
+        params.append(chatbot_id)
+    if start_date:
+        where.append("c.started_at>=?")
+        params.append(start_date)
+    if end_date:
+        where.append("c.started_at<=?")
+        params.append(end_date)
+
+    where_sql = (" AND " + " AND ".join(where)) if where else ""
+
+    total = db.execute(
+        f"SELECT COUNT(*) FROM chatbot_conversations c WHERE 1=1{where_sql}", params
+    ).fetchone()[0]
+
+    rows = db.execute(
+        f"""SELECT c.*, b.name as chatbot_name
+            FROM chatbot_conversations c
+            LEFT JOIN chatbots b ON b.id = c.chatbot_id
+            WHERE 1=1{where_sql}
+            ORDER BY c.started_at DESC LIMIT ? OFFSET ?""",
+        params + [limit, offset],
+    ).fetchall()
+
+    convs = []
+    for r in rows:
+        d = dict(r)
+        # Get first message
+        msg = db.execute(
+            "SELECT content FROM chatbot_messages WHERE conversation_id=? AND role='user' ORDER BY timestamp ASC LIMIT 1",
+            (d["id"],),
+        ).fetchone()
+        d["first_message"] = msg[0] if msg else None
+        d["duration_seconds"] = (
+            (d["ended_at"] - d["started_at"]) // 1000 if d.get("ended_at") and d.get("started_at") else None
+        )
+        convs.append(d)
+
+    db.close()
+    return jsonify({"conversations": convs, "total": total})
+
+@app.route("/api/conversations/<int:conv_id>")
+def api_conversation_detail(conv_id):
+    """Get a single conversation with messages."""
+    if not CHATBOTS_DB.exists():
+        return jsonify({"error": "not found"}), 404
+    db = _get_db()
+    conv = db.execute("SELECT c.*, b.name as chatbot_name FROM chatbot_conversations c LEFT JOIN chatbots b ON b.id=c.chatbot_id WHERE c.id=?", (conv_id,)).fetchone()
+    if not conv:
+        db.close()
+        return jsonify({"error": "not found"}), 404
+    result = dict(conv)
+    result["messages"] = [dict(m) for m in db.execute("SELECT * FROM chatbot_messages WHERE conversation_id=? ORDER BY timestamp ASC", (conv_id,)).fetchall()]
+    db.close()
+    return jsonify(result)
+
+@app.route("/api/chatbots/<bot_id>/knowledge")
+def api_chatbot_knowledge(bot_id):
+    """List knowledge files for a chatbot."""
+    if not CHATBOTS_DB.exists():
+        return jsonify({"files": []})
+    db = _get_db()
+    files = [dict(r) for r in db.execute(
+        "SELECT * FROM knowledge_files WHERE chatbot_id=? ORDER BY uploaded_at DESC", (bot_id,)
+    ).fetchall()]
+    db.close()
+    return jsonify({"files": files})
+
+@app.route("/api/chatbots/<bot_id>/knowledge", methods=["POST"])
+def api_chatbot_knowledge_upload(bot_id):
+    """Upload a knowledge file."""
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+    f = request.files["file"]
+    content = f.read().decode("utf-8", errors="replace")
+    db = _get_db()
+    db.execute(
+        "INSERT INTO knowledge_files (chatbot_id, filename, content, file_size) VALUES (?,?,?,?)",
+        (bot_id, f.filename, content, len(content)),
+    )
+    db.commit()
+    db.close()
+    return jsonify({"ok": True})
+
+@app.route("/api/chatbots/<bot_id>/knowledge/<int:file_id>", methods=["DELETE"])
+def api_chatbot_knowledge_delete(bot_id, file_id):
+    """Delete a knowledge file."""
+    db = _get_db()
+    db.execute("DELETE FROM knowledge_files WHERE id=? AND chatbot_id=?", (file_id, bot_id))
+    db.commit()
+    db.close()
+    return jsonify({"ok": True})
+
+@app.route("/api/system-keys")
+def api_system_keys():
+    """Check which system API keys are available."""
+    providers = []
+    try:
+        auth_path = os.path.expanduser("~/.openclaw/agents/main/agent/auth-profiles.json")
+        with open(auth_path) as f:
+            auth = json.load(f)
+        profiles = auth.get("profiles", {})
+        if "anthropic:manual" in profiles and profiles["anthropic:manual"].get("token"):
+            providers.append({
+                "id": "anthropic", "name": "Anthropic",
+                "models": [
+                    {"id": "claude-sonnet", "name": "Claude Sonnet"},
+                    {"id": "claude-opus", "name": "Claude Opus"},
+                    {"id": "claude-haiku", "name": "Claude Haiku"},
+                ]
+            })
+        if "openai:manual" in profiles and profiles["openai:manual"].get("token"):
+            providers.append({
+                "id": "openai", "name": "OpenAI",
+                "models": [
+                    {"id": "gpt-4o", "name": "GPT-4o"},
+                    {"id": "gpt-4", "name": "GPT-4"},
+                ]
+            })
+    except Exception:
+        pass
+    return jsonify({"hasSystemKeys": len(providers) > 0, "providers": providers})
+
 # ---------------------------------------------------------------------------
 # API: Widget Chat
 # ---------------------------------------------------------------------------
@@ -3969,23 +5600,15 @@ def api_shield_status():
         fg = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(fg)
         guard_status = fg.get_status()
-        total_groups = len(guard_status)
         total_files = sum(g["total"] for g in guard_status.values())
         locked_files = sum(g["locked_count"] for g in guard_status.values())
-        mode = "protected" if locked_files > 0 else "unlocked"
         return jsonify({
             "active": locked_files > 0,
             "available": True,
-            "mode": mode,
+            "mode": "protected",
             "file_guard": {
                 "total_files": total_files,
                 "locked_files": locked_files,
-                "summary": {
-                    "total_groups": total_groups,
-                    "total_files": total_files,
-                    "locked_files": locked_files,
-                    "unlocked_files": max(0, total_files - locked_files),
-                },
                 "groups": guard_status,
             },
         })
@@ -4079,153 +5702,12 @@ def api_shield_guard_unlock():
 # API: Logician Status
 # ---------------------------------------------------------------------------
 
-def _safe_logician_filename(filename):
-    name = Path(filename).name
-    if name != filename:
-        return None
-    if not re.fullmatch(r"[A-Za-z0-9_.-]+", name):
-        return None
-    return name
-
-
-def _logician_rules_state():
-    state = {"enabled": {}, "locked": []}
-    if not LOGICIAN_ENABLED_RULES_FILE.exists():
-        return state
-    try:
-        data = json.loads(LOGICIAN_ENABLED_RULES_FILE.read_text())
-        if isinstance(data.get("enabled"), dict):
-            state["enabled"] = data["enabled"]
-        if isinstance(data.get("locked"), list):
-            state["locked"] = data["locked"]
-    except Exception:
-        pass
-    return state
-
-
-def _save_logician_rules_state(state):
-    LOGICIAN_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    payload = {
-        "enabled": state.get("enabled", {}),
-        "locked": state.get("locked", []),
-        "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-    }
-    LOGICIAN_ENABLED_RULES_FILE.write_text(json.dumps(payload, indent=2))
-
-
-def _logician_rule_summary(text):
-    description = ""
-    rules_count = 0
-    facts_count = 0
-    for raw_line in text.splitlines():
-        line = raw_line.strip()
-        if not line:
-            continue
-        if line.startswith("%"):
-            if not description:
-                desc = line.lstrip("%").strip()
-                if desc and not set(desc).issubset(set("=-_ ")):
-                    description = desc
-            continue
-        if ":-" in line:
-            rules_count += 1
-        elif line.endswith("."):
-            facts_count += 1
-    if not description:
-        description = "Logician rules"
-    return description, rules_count, facts_count
-
-
-@app.route("/api/logician/rules")
-def api_logician_rules():
-    """List available Logician rule files and enabled/locked state."""
-    if not LOGICIAN_RULES_DIR.exists():
-        return jsonify({"rules": [], "status": "unavailable"})
-
-    state = _logician_rules_state()
-    enabled_map = state.get("enabled", {})
-    locked = set(state.get("locked", []))
-    rules = []
-
-    for fpath in sorted(LOGICIAN_RULES_DIR.glob("*")):
-        if not fpath.is_file() or fpath.suffix.lower() not in {".mg", ".mangle"}:
-            continue
-        try:
-            content = fpath.read_text()
-            description, rules_count, facts_count = _logician_rule_summary(content)
-        except Exception:
-            content = ""
-            description, rules_count, facts_count = ("Unreadable rule file", 0, 0)
-        rules.append({
-            "filename": fpath.name,
-            "description": description,
-            "rules": rules_count,
-            "facts": facts_count,
-            "enabled": bool(enabled_map.get(fpath.name, True)),
-            "locked": fpath.name in locked,
-        })
-
-    return jsonify({"rules": rules, "status": "ok"})
-
-
-@app.route("/api/logician/rules/<filename>")
-def api_logician_rule_content(filename):
-    """Read one Logician rule file."""
-    safe_name = _safe_logician_filename(filename)
-    if not safe_name:
-        return jsonify({"error": "invalid filename"}), 400
-    if not LOGICIAN_RULES_DIR.exists():
-        return jsonify({"error": "rules directory not found"}), 404
-
-    fpath = LOGICIAN_RULES_DIR / safe_name
-    if not fpath.exists() or not fpath.is_file():
-        return jsonify({"error": "rule not found"}), 404
-    if fpath.suffix.lower() not in {".mg", ".mangle"}:
-        return jsonify({"error": "unsupported rule file type"}), 400
-
-    try:
-        content = fpath.read_text()
-        return jsonify({"filename": safe_name, "content": content})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/api/logician/rules/<filename>/toggle", methods=["POST"])
-def api_logician_rule_toggle(filename):
-    """Enable/disable one Logician rule in enabled_rules.json."""
-    safe_name = _safe_logician_filename(filename)
-    if not safe_name:
-        return jsonify({"error": "invalid filename"}), 400
-    if not LOGICIAN_RULES_DIR.exists():
-        return jsonify({"error": "rules directory not found"}), 404
-
-    fpath = LOGICIAN_RULES_DIR / safe_name
-    if not fpath.exists() or not fpath.is_file():
-        return jsonify({"error": "rule not found"}), 404
-    if fpath.suffix.lower() not in {".mg", ".mangle"}:
-        return jsonify({"error": "unsupported rule file type"}), 400
-
-    data = request.get_json(silent=True) or {}
-    if "enabled" not in data:
-        return jsonify({"error": "enabled required"}), 400
-    enabled = bool(data.get("enabled"))
-
-    state = _logician_rules_state()
-    locked = set(state.get("locked", []))
-    if safe_name in locked:
-        return jsonify({"error": "rule is locked"}), 403
-
-    enabled_map = state.get("enabled", {})
-    enabled_map[safe_name] = enabled
-    state["enabled"] = enabled_map
-    _save_logician_rules_state(state)
-    return jsonify({"ok": True, "filename": safe_name, "enabled": enabled})
-
-
 @app.route("/api/logician/status")
 def api_logician_status():
     """Read Logician monitor status file (deterministic, no AI)."""
-    status_file = str(REPO_ROOT / "logician" / "monitor" / "status.json")
+    status_file = os.path.join(
+        str(Path.home()), "resonantos-augmentor", "logician", "monitor", "status.json"
+    )
     try:
         with open(status_file) as f:
             data = json.load(f)
@@ -4614,6 +6096,35 @@ def api_todo_delete_standalone(todo_id):
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
+# ── DAO Bounty Board routes (registered late so all helpers are defined) ──
+try:
+    from server_bounty_routes import register_bounty_routes
+    _bounty_ctx = {
+        "require_identity_nft": _require_identity_nft,
+        "check_rct_cap": _check_rct_cap,
+        "record_rct_mint": _record_rct_mint,
+        "derive_symbiotic_pda": _derive_symbiotic_pda,
+        "get_fee_payer": _get_fee_payer,
+        "TokenManager": TokenManager,
+        "SolanaWallet": SolanaWallet,
+        "RCT_MINT": _RCT_MINT,
+        "RES_MINT": _RES_MINT,
+        "RCT_DECIMALS": _RCT_DECIMALS,
+    }
+    register_bounty_routes(app, _bounty_ctx)
+    print("[OK] Bounty board routes loaded")
+except Exception as _bounty_err:
+    print(f"[WARN] Bounty routes not loaded: {_bounty_err}")
+
+# ── Contributor Profile routes ──
+try:
+    from server_profile_routes import register_profile_routes
+    register_profile_routes(app)
+    print("[OK] Profile routes loaded")
+except Exception as _profile_err:
+    print(f"[WARN] Profile routes not loaded: {_profile_err}")
+
 
 def main():
     """Start the dashboard server."""

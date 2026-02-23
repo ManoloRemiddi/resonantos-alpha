@@ -123,43 +123,140 @@
 <!-- Token Savings & Cost Panel (full-width) -->
 <div class="card" style="margin-bottom:20px;">
     <div class="card-header">
-        <h2 class="card-title">💰 Token Savings & Cost</h2>
+        <h2 class="card-title">Cost Operations Center</h2>
+        <span class="card-subtitle" id="tsWindowLabel">Last 7 days</span>
     </div>
     <div class="card-content">
-        <div id="tokenSavingsPanel" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px;">
-            <div style="background:var(--bg-primary); border-radius:10px; padding:16px; border:1px solid var(--border); text-align:center;">
-                <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">You Would Have Paid</div>
-                <div id="tsCostWithout" style="font-size:28px; font-weight:700; color:var(--error);">--</div>
+        <div class="ts-top-grid">
+            <div class="ts-top-card ts-card-primary">
+                <div class="ts-label">💰 What You'd Pay at API Rates (<span id="tsPeriodLabel">7 days</span>)</div>
+                <div id="tsCostActual" class="ts-value ts-value-primary">--</div>
+                <div id="tsProjected" class="ts-source" style="color:#f0b429; font-weight:600;">≈ --/month projected</div>
+                <div id="tsSourceActual" class="ts-source">source: gateway usage-cost (real token counts × published API prices)</div>
             </div>
-            <div style="background:var(--bg-primary); border-radius:10px; padding:16px; border:1px solid var(--border); text-align:center;">
-                <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">With ResonantOS</div>
-                <div id="tsCostWith" style="font-size:28px; font-weight:700; color:var(--success);">--</div>
+            <div class="ts-top-card">
+                <div class="ts-label">Without R-Memory — same <span class="ts-period-echo">7 days</span> (est.)</div>
+                <div id="tsCostWithout" class="ts-value ts-value-error">--</div>
+                <div id="tsWithoutProjected" class="ts-source" style="color:var(--text-secondary); font-weight:600;">≈ --/month projected</div>
+                <div id="tsSourceWithout" class="ts-source">source: actual cost + extra tokens that compression eliminated</div>
             </div>
-            <div style="background:var(--bg-primary); border-radius:10px; padding:16px; border:1px solid var(--border); text-align:center;">
-                <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">You Saved</div>
-                <div id="tsCostSaved" style="font-size:28px; font-weight:700; color:var(--success);">--</div>
+            <div class="ts-top-card">
+                <div class="ts-label">R-Memory Saves You — same <span class="ts-period-echo">7 days</span> (est.)</div>
+                <div id="tsCostSaved" class="ts-value ts-value-success">--</div>
+                <div id="tsSavedProjected" class="ts-source" style="color:var(--text-secondary); font-weight:600;">≈ --/month projected</div>
+                <div id="tsSourceSaved" class="ts-source">source: (without R-Memory) minus (actual cost)</div>
+            </div>
+            <div class="ts-top-card">
+                <div class="ts-label">Total Cost Reduction</div>
+                <div id="tsCostPct" class="ts-value ts-value-success">--</div>
+                <div id="tsSourcePct" class="ts-source">= savings ÷ cost-without-R-Memory</div>
+                <div id="tsPctExplain" class="ts-source" style="margin-top:4px; font-size:11px; color:var(--text-muted);">of your total API bill is eliminated by R-Memory compression across all calls</div>
             </div>
         </div>
-        <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:12px; margin-top:16px;">
-            <div style="background:var(--bg-primary); border-radius:8px; padding:12px; border:1px solid var(--border); text-align:center;">
-                <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Cost Savings</div>
-                <div id="tsCostPct" style="font-size:22px; font-weight:700; color:var(--success); margin-top:4px;">--</div>
+
+        <div class="ts-grid-2col">
+            <div class="ts-panel">
+                <div class="ts-panel-head">
+                    <h3>Per-Component Cost Breakdown</h3>
+                    <span class="muted" id="tsComponentSource">sorted by cost</span>
+                </div>
+                <div class="ts-table-wrap">
+                    <table class="ts-table" id="tsComponentTable">
+                        <thead>
+                            <tr>
+                                <th><button type="button" class="ts-sort" data-sort="component">Component</button></th>
+                                <th><button type="button" class="ts-sort" data-sort="model">Model</button></th>
+                                <th class="num"><button type="button" class="ts-sort" data-sort="inputTokens">Input Tokens</button></th>
+                                <th class="num"><button type="button" class="ts-sort" data-sort="outputTokens">Output Tokens</button></th>
+                                <th class="num"><button type="button" class="ts-sort" data-sort="cost">Cost</button></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tsComponentTableBody">
+                            <tr><td colspan="5" class="muted">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <div style="background:var(--bg-primary); border-radius:8px; padding:12px; border:1px solid var(--border); text-align:center;">
-                <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Compression</div>
-                <div id="tsCompression" style="font-size:22px; font-weight:700; color:var(--success); margin-top:4px;">--</div>
+
+            <div class="ts-panel">
+                <div class="ts-panel-head">
+                    <h3>Daily Cost (Stacked)</h3>
+                    <span class="muted" id="tsChartSource">source: gateway daily cost + component shares</span>
+                </div>
+                <div id="tsDailyChart" class="ts-chart">
+                    <div class="muted">Loading chart...</div>
+                </div>
+                <div id="tsDailyLegend" class="ts-legend"></div>
             </div>
-            <div style="background:var(--bg-primary); border-radius:8px; padding:12px; border:1px solid var(--border); text-align:center;">
-                <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Tokens Saved</div>
-                <div id="tsTokensSaved" style="font-size:22px; font-weight:700; margin-top:4px;">--</div>
+        </div>
+
+        <div class="ts-grid-2col" style="margin-top:14px;">
+            <div class="ts-panel">
+                <div class="ts-panel-head">
+                    <h3>Compression Stats</h3>
+                    <span class="muted">source: R-Memory usage + history files</span>
+                </div>
+                <div class="ts-stats-grid">
+                    <div class="ts-stat">
+                        <div class="k">Lifetime Compression Rate</div>
+                        <div class="v" id="tsLifetimeEfficiency" style="color:var(--success)">--</div>
+                        <div class="ts-source" style="font-size:10px">across all <span id="tsLifetimeBlocks">0</span> blocks ever compressed</div>
+                    </div>
+                    <div class="ts-stat">
+                        <div class="k">Blocks Compressed (total)</div>
+                        <div class="v" id="tsBlocksCompressed">--</div>
+                    </div>
+                    <div class="ts-stat">
+                        <div class="k">Archived Blocks (on disk)</div>
+                        <div class="v" id="tsBlocksArchived">--</div>
+                    </div>
+                    <div class="ts-stat">
+                        <div class="k">Blocks in Current Context</div>
+                        <div class="v" id="tsBlocksInContext">--</div>
+                        <div class="ts-source" style="font-size:10px">live active blocks in this session window</div>
+                    </div>
+                    <div class="ts-stat">
+                        <div class="k">Tokens Saved / API Call (est.)</div>
+                        <div class="v" id="tsTokensSavedPerCall">--</div>
+                    </div>
+                    <div class="ts-stat">
+                        <div class="k">API Calls in Period</div>
+                        <div class="v" id="tsEstimatedCalls">--</div>
+                    </div>
+                </div>
             </div>
-            <div style="background:var(--bg-primary); border-radius:8px; padding:12px; border:1px solid var(--border); text-align:center;">
-                <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Session Saved</div>
-                <div id="tsSessionSaved" style="font-size:22px; font-weight:700; margin-top:4px;">--</div>
-            </div>
-            <div style="background:var(--bg-primary); border-radius:8px; padding:12px; border:1px solid var(--border); text-align:center;">
-                <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Total Blocks</div>
-                <div id="tsTotalBlocks" style="font-size:22px; font-weight:700; margin-top:4px;">--</div>
+
+            <div class="ts-panel">
+                <div class="ts-panel-head">
+                    <h3>Pricing Reference (Editable)</h3>
+                    <span class="muted">auto-discovered from system config · <span style="color:var(--success)">●</span> active <span style="color:var(--text-muted)">○</span> inactive</span>
+                </div>
+                <div class="ts-table-wrap">
+                    <table class="ts-table" id="tsPricingTable">
+                        <thead>
+                            <tr>
+                                <th>Model</th>
+                                <th class="num">Input $/1M</th>
+                                <th class="num">Output $/1M</th>
+                                <th class="num">Cache Read $/1M</th>
+                                <th class="num">Cache Write $/1M</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tsPricingBody">
+                            <tr><td colspan="5" class="muted">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="ts-assumptions">
+                    <label>Avg output tokens/call
+                        <input id="tsAssumeAvgOutput" type="number" min="1" step="1">
+                    </label>
+                    <label>Subagent share
+                        <input id="tsAssumeSubagentShare" type="number" min="0" max="0.95" step="0.01">
+                    </label>
+                    <button id="tsSavePricing" class="btn btn-sm btn-outline" type="button">Save Pricing</button>
+                    <span id="tsPricingStatus" class="muted"></span>
+                </div>
             </div>
         </div>
     </div>
@@ -326,6 +423,216 @@
 .sub-detail { font-size: 11px; color: var(--text-muted); }
 .sub-time { font-size: 10px; color: var(--text-muted); opacity: 0.7; }
 
+/* Cost Operations Center */
+.ts-top-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.ts-top-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+}
+.ts-top-card.ts-card-primary {
+    border-color: #f0b429;
+    border-width: 2px;
+    background: linear-gradient(135deg, rgba(240,180,41,0.06) 0%, var(--bg-primary) 100%);
+}
+.ts-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.ts-value {
+    margin-top: 6px;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.ts-value-primary { color: #f0b429; font-size: 28px; } /* Amber/gold — YOUR number, what you actually pay */
+.ts-value-success { color: var(--success); opacity: 0.8; } /* Green but subdued — savings (good news, secondary) */
+.ts-value-error { color: var(--error); } /* Red — the scary "without compression" number */
+.ts-source {
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+.ts-grid-2col {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 12px;
+}
+.ts-panel {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+}
+.ts-panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+    gap: 8px;
+}
+.ts-panel-head h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.ts-table-wrap { overflow-x: auto; }
+.ts-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+.ts-table th, .ts-table td {
+    padding: 8px 6px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    white-space: nowrap;
+}
+.ts-table th.num, .ts-table td.num { text-align: right; }
+.ts-sort {
+    background: transparent;
+    border: 0;
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    padding: 0;
+}
+.ts-sort.active { color: var(--text-primary); }
+.ts-table input {
+    width: 88px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 6px;
+    padding: 3px 5px;
+    font-size: 12px;
+    text-align: right;
+}
+.ts-est {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 5px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--warning);
+    font-size: 10px;
+}
+.ts-chart {
+    min-height: 190px;
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    padding: 8px 2px 2px 2px;
+}
+.ts-bar-col {
+    flex: 1;
+    min-width: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+.ts-bar {
+    width: 100%;
+    max-width: 36px;
+    min-height: 8px;
+    height: 160px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--bg-tertiary);
+}
+.ts-seg { width: 100%; }
+.ts-bar-label {
+    font-size: 10px;
+    color: var(--text-muted);
+}
+.ts-legend {
+    display: flex;
+    gap: 8px 12px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+.ts-legend-item {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+.ts-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+}
+.ts-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+.ts-stat {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    padding: 10px;
+}
+.ts-stat .k {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+.ts-stat .v {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.ts-assumptions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+.ts-assumptions label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+.ts-assumptions input {
+    width: 84px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 6px;
+    padding: 4px 6px;
+}
+
+@media (max-width: 1200px) {
+    .ts-top-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ts-grid-2col { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+    .ts-top-grid { grid-template-columns: 1fr; }
+    .ts-stats-grid { grid-template-columns: 1fr 1fr; }
+}
+
 /* Activity Feed */
 .activity-feed-container { max-height: 400px; overflow-y: auto; }
 .activity-feed { font-family: 'SF Mono', Monaco, Consolas, monospace; font-size: 12px; }
@@ -380,22 +687,55 @@ async function loadHealth() {
         const h = await res.json();
         if (h.error) return;
 
-        // Channels
+        // Channels — iterate accounts within each channel provider
         const chInfo = document.getElementById('channelsInfo');
         const channels = h.channels || {};
         let chHtml = '';
-        for (const [name, ch] of Object.entries(channels)) {
-            const label = (h.channelLabels || {})[name] || name;
-            const probeOk = ch.probe?.ok;
-            const bot = ch.probe?.bot?.username;
-            const running = ch.running;
-            const dot = probeOk ? 'green' : 'red';
-            chHtml += `<div class="detail-row">
-                <span class="dot ${dot}"></span>
-                <span>${label}</span>
-                <span>${bot ? '@' + bot : (running ? 'running' : 'stopped')}</span>
-            </div>`;
-            setChip('svc-telegram', probeOk ? 'running' : 'error');
+        let anyChannelOk = false;
+        const dotsContainer = document.querySelector('.card-status-dots');
+        // Clear old static dots
+        if (dotsContainer) dotsContainer.innerHTML = '';
+        for (const [providerName, ch] of Object.entries(channels)) {
+            const label = (h.channelLabels || {})[providerName] || providerName;
+            const accounts = ch.accounts || {};
+            const accountKeys = Object.keys(accounts);
+            // If no accounts sub-object, treat the channel itself as a single account
+            if (!accountKeys.length) {
+                const probeOk = ch.probe?.ok;
+                const bot = ch.probe?.bot?.username;
+                const dot = probeOk ? 'green' : 'red';
+                if (probeOk) anyChannelOk = true;
+                chHtml += `<div class="detail-row">
+                    <span class="dot ${dot}"></span>
+                    <span>${label}</span>
+                    <span>${bot ? '@' + bot : (ch.running ? 'running' : 'stopped')}</span>
+                </div>`;
+            } else {
+                for (const [accId, acc] of Object.entries(accounts)) {
+                    const probeOk = acc.probe?.ok;
+                    const bot = acc.probe?.bot?.username;
+                    const configured = acc.configured;
+                    const dot = probeOk ? 'green' : (configured ? 'red' : 'gray');
+                    if (probeOk) anyChannelOk = true;
+                    const accLabel = accountKeys.length > 1 ? `${label} (${accId})` : label;
+                    chHtml += `<div class="detail-row">
+                        <span class="dot ${dot}"></span>
+                        <span>${accLabel}</span>
+                        <span>${bot ? '@' + bot : (configured ? 'configured' : 'disabled')}</span>
+                    </div>`;
+                }
+            }
+            // Add a status dot per provider in the header
+            if (dotsContainer) {
+                const allOk = Object.values(accounts).every(a => a.probe?.ok);
+                const someOk = Object.values(accounts).some(a => a.probe?.ok);
+                const dotColor = allOk ? 'var(--success)' : (someOk ? '#f0b429' : 'var(--error)');
+                const dotEl = document.createElement('span');
+                dotEl.className = 'svc-dot';
+                dotEl.title = label;
+                dotEl.style.cssText = `width:6px;height:6px;border-radius:50%;background:${dotColor};`;
+                dotsContainer.appendChild(dotEl);
+            }
         }
         chInfo.innerHTML = chHtml || '<div class="detail-row muted">No channels</div>';
 
@@ -481,33 +821,256 @@ async function loadRMemoryStats() {
     }
 }
 
+let tsLastPayload = null;
+let tsComponentSort = { key: 'cost', dir: -1 };
+let tsPricingBound = false;
+const tsPalette = ['#38bdf8', '#34d399', '#fbbf24', '#f97316', '#a78bfa', '#f87171', '#22d3ee', '#818cf8'];
+
+function tsFmtMoney(v) {
+    const n = Number(v);
+    return Number.isFinite(n) ? '$' + n.toFixed(2) : 'data unavailable';
+}
+
+function tsFmtPct(v) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n.toFixed(1) + '%' : 'data unavailable';
+}
+
+function tsFmtTokens(v) {
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.round(n).toLocaleString() : 'data unavailable';
+}
+
+function tsEsc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[m]));
+}
+
+function tsSet(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+}
+
+function tsBindComponentSort() {
+    const table = document.getElementById('tsComponentTable');
+    if (!table || table.dataset.bound === '1') return;
+    table.dataset.bound = '1';
+    table.querySelectorAll('.ts-sort').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const key = btn.dataset.sort;
+            if (!key) return;
+            if (tsComponentSort.key === key) tsComponentSort.dir *= -1;
+            else tsComponentSort = { key, dir: (key === 'component' || key === 'model') ? 1 : -1 };
+            table.querySelectorAll('.ts-sort').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            tsRenderComponentTable((tsLastPayload && tsLastPayload.componentBreakdown) || []);
+        });
+    });
+    const defaultBtn = table.querySelector('.ts-sort[data-sort="cost"]');
+    if (defaultBtn) defaultBtn.classList.add('active');
+}
+
+function tsRenderComponentTable(rows) {
+    const body = document.getElementById('tsComponentTableBody');
+    if (!body) return;
+    if (!rows || !rows.length) {
+        body.innerHTML = '<tr><td colspan="5" class="muted">data unavailable</td></tr>';
+        return;
+    }
+    const sorted = [...rows].sort((a, b) => {
+        const k = tsComponentSort.key;
+        const dir = tsComponentSort.dir;
+        const av = a[k];
+        const bv = b[k];
+        if (k === 'component' || k === 'model') return String(av || '').localeCompare(String(bv || '')) * dir;
+        return ((Number(av) || 0) - (Number(bv) || 0)) * dir;
+    });
+
+    body.innerHTML = sorted.map(r => {
+        const est = r.estimated ? '<span class="ts-est">est.</span>' : '';
+        return `<tr title="${tsEsc(r.source || '')}">
+            <td>${tsEsc(r.component || '-')} ${est}</td>
+            <td>${tsEsc(r.model || '-')}</td>
+            <td class="num">${tsFmtTokens(r.inputTokens)}</td>
+            <td class="num">${tsFmtTokens(r.outputTokens)}</td>
+            <td class="num">${tsFmtMoney(r.cost)}</td>
+        </tr>`;
+    }).join('');
+}
+
+function tsRenderDailyChart(dailyRows, components) {
+    const chart = document.getElementById('tsDailyChart');
+    const legend = document.getElementById('tsDailyLegend');
+    if (!chart || !legend) return;
+    if (!dailyRows || !dailyRows.length || !components || !components.length) {
+        chart.innerHTML = '<div class="muted">data unavailable</div>';
+        legend.innerHTML = '';
+        return;
+    }
+
+    const colorById = {};
+    components.forEach((c, i) => { colorById[c.id] = tsPalette[i % tsPalette.length]; });
+    const maxCost = Math.max(...dailyRows.map(d => Number(d.totalCost) || 0), 1);
+
+    chart.innerHTML = dailyRows.map(day => {
+        const segments = components.map(c => {
+            const val = Number((day.components || {})[c.id]) || 0;
+            if (val <= 0) return '';
+            const h = Math.max(1, (val / maxCost) * 100);
+            return `<div class="ts-seg" style="height:${h}%; background:${colorById[c.id]}" title="${tsEsc(c.component)}: ${tsFmtMoney(val)}"></div>`;
+        }).join('');
+        const d = String(day.date || '').slice(5);
+        return `<div class="ts-bar-col">
+            <div class="ts-bar">${segments}</div>
+            <div class="ts-bar-label">${tsEsc(d)}</div>
+        </div>`;
+    }).join('');
+
+    legend.innerHTML = components.map(c => `
+        <span class="ts-legend-item"><span class="ts-dot" style="background:${colorById[c.id]}"></span>${tsEsc(c.component)}</span>
+    `).join('');
+}
+
+function tsRenderPricing(pricing) {
+    const body = document.getElementById('tsPricingBody');
+    if (!body) return;
+    const models = (pricing && pricing.models) || {};
+    const discovered = new Set(pricing._discoveredModels || []);
+    const rows = Object.entries(models);
+    if (!rows.length) {
+        body.innerHTML = '<tr><td colspan="5" class="muted">data unavailable</td></tr>';
+        return;
+    }
+    // Sort: active (discovered) models first, then others
+    rows.sort((a, b) => {
+        const aActive = discovered.has(a[0]) ? 0 : 1;
+        const bActive = discovered.has(b[0]) ? 0 : 1;
+        if (aActive !== bActive) return aActive - bActive;
+        return a[0].localeCompare(b[0]);
+    });
+    body.innerHTML = rows.map(([model, rates]) => {
+        const r = rates || {};
+        const isActive = discovered.has(model);
+        const badge = isActive ? '<span style="color:var(--success); font-size:11px; margin-left:4px;" title="Active in system">●</span>'
+                               : '<span style="color:var(--text-muted); font-size:11px; margin-left:4px;" title="Not currently active">○</span>';
+        const rowStyle = isActive ? '' : ' style="opacity:0.5"';
+        return `<tr${rowStyle}>
+            <td>${tsEsc(model)}${badge}</td>
+            <td class="num"><input data-model="${tsEsc(model)}" data-key="inputPer1M" type="number" step="0.0001" min="0" value="${Number(r.inputPer1M || 0)}"></td>
+            <td class="num"><input data-model="${tsEsc(model)}" data-key="outputPer1M" type="number" step="0.0001" min="0" value="${Number(r.outputPer1M || 0)}"></td>
+            <td class="num"><input data-model="${tsEsc(model)}" data-key="cacheReadPer1M" type="number" step="0.0001" min="0" value="${Number(r.cacheReadPer1M || 0)}"></td>
+            <td class="num"><input data-model="${tsEsc(model)}" data-key="cacheWritePer1M" type="number" step="0.0001" min="0" value="${Number(r.cacheWritePer1M || 0)}"></td>
+        </tr>`;
+    }).join('');
+
+    const a = (pricing && pricing.assumptions) || {};
+    const avgOutputEl = document.getElementById('tsAssumeAvgOutput');
+    const subShareEl = document.getElementById('tsAssumeSubagentShare');
+    if (avgOutputEl) avgOutputEl.value = Number(a.avgOutputTokensPerCall || 800);
+    if (subShareEl) subShareEl.value = Number(a.subagentShare || 0.18);
+}
+
+function tsCollectPricingPatch() {
+    const patch = { models: {}, assumptions: {} };
+    document.querySelectorAll('#tsPricingBody input[data-model][data-key]').forEach(input => {
+        const model = input.dataset.model;
+        const key = input.dataset.key;
+        if (!patch.models[model]) patch.models[model] = {};
+        patch.models[model][key] = Number(input.value || 0);
+    });
+    patch.assumptions.avgOutputTokensPerCall = Number(document.getElementById('tsAssumeAvgOutput')?.value || 800);
+    patch.assumptions.subagentShare = Number(document.getElementById('tsAssumeSubagentShare')?.value || 0.18);
+    return patch;
+}
+
+async function tsSavePricing() {
+    const status = document.getElementById('tsPricingStatus');
+    if (status) status.textContent = 'saving...';
+    try {
+        const patch = tsCollectPricingPatch();
+        const res = await fetch('/api/token-savings/pricing', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(patch),
+        });
+        const out = await res.json();
+        if (!res.ok || !out.ok) throw new Error(out.error || 'save failed');
+        if (status) status.textContent = 'saved';
+        await loadTokenSavings();
+    } catch (e) {
+        if (status) status.textContent = 'save failed';
+        console.error('Pricing save error:', e);
+    }
+}
+
 async function loadTokenSavings() {
+    tsBindComponentSort();
+    if (!tsPricingBound) {
+        const btn = document.getElementById('tsSavePricing');
+        if (btn) btn.addEventListener('click', tsSavePricing);
+        tsPricingBound = true;
+    }
+
     try {
         const res = await fetch('/api/token-savings');
         const d = await res.json();
-        const s = d.session, l = d.lifetime;
-        const fmt = n => n >= 1000000 ? (n/1000000).toFixed(1) + 'M' : n >= 1000 ? (n/1000).toFixed(1) + 'k' : n.toString();
-        // Big 3 cost boxes
-        // Cost savings % accounts for overhead tokens that are never compressed
-        const overhead = d.overheadTokens || 0;
-        const totalWithout = l.rawTokens + overhead;  // what you'd use without compression
-        const totalWith = l.compressedTokens + overhead;  // what you actually use
-        const costTotalWithout = (totalWithout * 0.6 * 5 / 1e6) + (totalWithout * 0.4 * 25 / 1e6);
-        const costTotalWith = (totalWith * 0.6 * 5 / 1e6) + (totalWith * 0.4 * 25 / 1e6);
-        const pct = costTotalWithout > 0 ? Math.round(((costTotalWithout - costTotalWith) / costTotalWithout) * 100) : 0;
-        document.getElementById('tsCostPct').textContent = pct + '%';
-        document.getElementById('tsCostWithout').textContent = '$' + costTotalWithout.toFixed(2);
-        document.getElementById('tsCostWith').textContent = '$' + costTotalWith.toFixed(2);
-        document.getElementById('tsCostSaved').textContent = '$' + (costTotalWithout - costTotalWith).toFixed(2);
-        // Stats row
-        if (l.compressionRatio !== null) {
-            document.getElementById('tsCompression').textContent = Math.round((1 - l.compressionRatio) * 100) + '% removed';
+        tsLastPayload = d;
+
+        const numDays = d.days || 7;
+        tsSet('tsWindowLabel', `Last ${numDays} days`);
+        tsSet('tsPeriodLabel', `${numDays} days`);
+        // Update all period echo spans
+        document.querySelectorAll('.ts-period-echo').forEach(el => { el.textContent = `${numDays} days`; });
+
+        const actualCost = Number(d.totals?.actualApiCost || 0);
+        const withoutCost = Number(d.totals?.withoutRMemoryCostEstimate || 0);
+        const savedCost = Number(d.totals?.rMemorySavingsEstimate || 0);
+
+        tsSet('tsCostActual', tsFmtMoney(actualCost));
+        tsSet('tsCostWithout', tsFmtMoney(withoutCost));
+        tsSet('tsCostSaved', tsFmtMoney(savedCost));
+        tsSet('tsCostPct', tsFmtPct(d.totals?.savingPctEstimate));
+
+        // Monthly projections for all three cards
+        if (numDays > 0) {
+            const factor = 30.44 / numDays;
+            tsSet('tsProjected', actualCost > 0 ? `≈ ${tsFmtMoney(actualCost * factor)}/month projected` : '');
+            tsSet('tsWithoutProjected', withoutCost > 0 ? `≈ ${tsFmtMoney(withoutCost * factor)}/month projected` : '');
+            tsSet('tsSavedProjected', savedCost > 0 ? `≈ ${tsFmtMoney(savedCost * factor)}/month projected` : '');
+        } else {
+            tsSet('tsProjected', '');
+            tsSet('tsWithoutProjected', '');
+            tsSet('tsSavedProjected', '');
         }
-        document.getElementById('tsTokensSaved').textContent = fmt(l.tokensSaved);
-        document.getElementById('tsSessionSaved').textContent = '$' + s.costSaved.toFixed(2);
-        document.getElementById('tsTotalBlocks').textContent = d.lifetimeBlocks;
-    } catch(e) {
+
+        tsSet('tsSourceActual', d.sources?.gatewayError ? 'source: data unavailable' : 'source: gateway usage-cost (real token counts × published API prices)');
+        tsSet('tsSourceWithout', 'source: actual cost + extra tokens that compression eliminated');
+        tsSet('tsSourceSaved', 'source: (without R-Memory) minus (actual cost)');
+        tsSet('tsSourcePct', 'source: savings / without-rmemory');
+
+        tsRenderComponentTable(d.componentBreakdown || []);
+        tsRenderDailyChart(d.dailyCostBreakdown || [], d.componentBreakdown || []);
+        tsRenderPricing(d.pricingReference || {});
+
+        const c = d.compressionStats || {};
+
+        tsSet('tsBlocksCompressed', tsFmtTokens(c.blocksCompressed));
+        // Lifetime efficiency is the real number (across all blocks ever)
+        const lifetimeEff = Number(c.lifetimeEfficiency);
+        tsSet('tsLifetimeEfficiency', Number.isFinite(lifetimeEff) ? lifetimeEff.toFixed(1) + '% saved' : 'data unavailable');
+        tsSet('tsLifetimeBlocks', tsFmtTokens(c.blocksCompressed));
+        tsSet('tsBlocksInContext', tsFmtTokens(c.blocksInContext));
+        tsSet('tsBlocksArchived', tsFmtTokens(c.blocksArchived));
+        tsSet('tsTokensSavedPerCall', tsFmtTokens(d.compoundSavings?.tokensSavedPerCall));
+        tsSet('tsEstimatedCalls', tsFmtTokens(d.compoundSavings?.estimatedApiCalls));
+
+        tsSet('tsComponentSource', d.ok ? 'sorted by cost' : 'gateway data unavailable; showing partial stats');
+        tsSet('tsChartSource', 'source: gateway daily cost + component shares (est.)');
+    } catch (e) {
         console.error('Token savings error:', e);
+        ['tsCostActual','tsCostWithout','tsCostSaved','tsCostPct','tsBlocksCompressed','tsBlocksInContext',
+         'tsBlocksArchived','tsLifetimeEfficiency','tsTokensSavedPerCall','tsEstimatedCalls']
+            .forEach(id => tsSet(id, 'data unavailable'));
+        tsSet('tsSourceActual', 'source: data unavailable');
     }
 }
 
