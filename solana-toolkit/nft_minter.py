@@ -1,25 +1,17 @@
-"""Soulbound NFT minting using Token-2022 NonTransferable extension.
-
-Uses spl-token CLI for reliable Token-2022 operations (avoids Python SDK
-instruction encoding bugs). Metaplex metadata is handled separately.
-"""
+"""Soulbound NFT minting using Token-2022 NonTransferable extension."""
 
 import json
-import subprocess
-import re
-import time
 import urllib.request
 from pathlib import Path
 from typing import Optional, Dict, Any
 
-from solana.rpc.api import Client
-from solders.pubkey import Pubkey
-
+from token2022_utils import (
+    create_ata_and_mint,
+    create_token2022_mint,
+    initialize_metadata,
+    load_keypair_from_path,
+)
 from wallet import SolanaWallet
-
-
-# Solana CLI path
-_SOLANA_BIN = Path.home() / ".local" / "share" / "solana" / "install" / "active_release" / "bin"
 
 # Token-2022 program
 TOKEN_2022_PROGRAM = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
@@ -63,39 +55,8 @@ NFT_TYPES = {
         "uri": "https://resonantos.com/nft/dao-genesis.json",
     },
 }
-
-
-def _run_spl_token(*args: str, keypair_path: str = "~/.config/solana/id.json") -> str:
-    """Run an spl-token CLI command and return stdout.
-
-    Args:
-        *args: Arguments to pass to spl-token.
-        keypair_path: Path to the signing keypair.
-
-    Returns:
-        str: Command stdout.
-
-    Raises:
-        RuntimeError: If the command fails.
-    """
-    expanded = str(Path(keypair_path).expanduser())
-    cmd = [
-        str(_SOLANA_BIN / "spl-token"),
-        *args,
-        "--url", "devnet",
-        "--fee-payer", expanded,
-    ]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-    if result.returncode != 0:
-        raise RuntimeError(f"spl-token failed: {result.stderr.strip()}")
-    return result.stdout.strip()
-
-
 class NFTMinter:
-    """Mint soulbound (non-transferable) NFTs on Solana devnet via Token-2022.
-
-    Uses spl-token CLI for all Token-2022 operations to ensure correctness.
-    """
+    """Mint soulbound (non-transferable) NFTs on Solana devnet via Token-2022."""
 
     def __init__(self, wallet: Optional[SolanaWallet] = None):
         """Initialize NFTMinter.
@@ -105,6 +66,7 @@ class NFTMinter:
         """
         self.wallet = wallet or SolanaWallet()
         self.client = self.wallet.client
+        self.payer = self.wallet.keypair
         self.keypair_path = str(Path("~/.config/solana/id.json").expanduser())
 
     def mint_soulbound_nft(
@@ -136,7 +98,7 @@ class NFTMinter:
 
         Raises:
             ValueError: If nft_type is unknown.
-            RuntimeError: If any CLI command fails.
+            RuntimeError: If any mint operation fails.
         """
         if nft_type not in NFT_TYPES:
             raise ValueError(f"Unknown NFT type: {nft_type}. Options: {list(NFT_TYPES.keys())}")
@@ -146,36 +108,31 @@ class NFTMinter:
         _symbol = symbol or template["symbol"]
         _uri = uri or template["uri"]
 
-        payer = fee_payer_keypair or self.keypair_path
-
-        # Step 1: Create non-transferable mint with metadata extension (0 decimals = NFT)
-        output = _run_spl_token(
-            "create-token",
-            "--program-id", TOKEN_2022_PROGRAM,
-            "--decimals", "0",
-            "--enable-non-transferable",
-            "--enable-metadata",
-            keypair_path=payer,
+        payer_keypair = (
+            load_keypair_from_path(fee_payer_keypair)
+            if fee_payer_keypair
+            else self.payer
         )
 
-        # Extract mint address from output
-        mint_match = re.search(r"Address:\s+(\S+)", output)
-        if not mint_match:
-            # Try alternate format: "Creating token <address>"
-            mint_match = re.search(r"Creating token\s+(\S+)", output)
-        if not mint_match:
-            raise RuntimeError(f"Could not parse mint address from: {output}")
-        mint_address = mint_match.group(1)
+        # Step 1: Create non-transferable mint with metadata extension (0 decimals = NFT)
+        mint_result = create_token2022_mint(
+            self.client,
+            payer_keypair,
+            decimals=0,
+            enable_non_transferable=True,
+            enable_metadata=True,
+        )
+        mint_address = mint_result["mint"]
 
         # Step 1b: Initialize on-chain metadata (name, symbol, URI)
         try:
-            _run_spl_token(
-                "initialize-metadata",
+            initialize_metadata(
+                self.client,
+                payer_keypair,
                 mint_address,
                 _name,
                 _symbol,
                 _uri,
-                keypair_path=payer,
             )
         except RuntimeError as e:
             # Log but don't fail — NFT is still valid without metadata
@@ -183,30 +140,15 @@ class NFTMinter:
             print(f"Warning: metadata initialization failed: {e}", file=sys.stderr)
 
         # Step 2: Create ATA for recipient
-        create_output = _run_spl_token(
-            "create-account",
-            "--program-id", TOKEN_2022_PROGRAM,
-            "--owner", recipient,
+        mint_to_result = create_ata_and_mint(
+            self.client,
+            payer_keypair,
             mint_address,
-            keypair_path=payer,
+            recipient,
+            amount=1,
         )
-
-        # Extract ATA address
-        ata_match = re.search(r"Creating account\s+(\S+)", create_output)
-        ata_address = ata_match.group(1) if ata_match else "unknown"
-
-        # Step 3: Mint exactly 1 token
-        mint_output = _run_spl_token(
-            "mint",
-            "--program-id", TOKEN_2022_PROGRAM,
-            mint_address, "1",
-            ata_address,
-            keypair_path=payer,
-        )
-
-        # Extract signature
-        sig_match = re.search(r"Signature:\s+(\S+)", mint_output)
-        mint_sig = sig_match.group(1) if sig_match else "unknown"
+        ata_address = mint_to_result["ata"]
+        mint_sig = mint_to_result["signature"]
 
         return {
             "mint": mint_address,

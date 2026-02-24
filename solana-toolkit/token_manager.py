@@ -2,7 +2,6 @@
 
 import struct
 import time
-from pathlib import Path
 from typing import Dict, List, Optional, Any
 
 from solana.rpc.api import Client
@@ -21,6 +20,7 @@ from spl.token.instructions import (
     get_associated_token_address,
 )
 
+from token2022_utils import create_token2022_mint
 from wallet import SolanaWallet
 
 
@@ -31,10 +31,10 @@ _EXT_NON_TRANSFERABLE = 17  # NonTransferable extension
 def _initialize_non_transferable_mint_ix(mint: Pubkey) -> Instruction:
     """Build the InitializeNonTransferableMint instruction for Token-2022.
 
-    Instruction index 35 (0x23) with no additional data.
+    Instruction index 32 in Token-2022, no additional data.
     Must be called BEFORE InitializeMint.
     """
-    data = struct.pack("<B", 35)  # instruction discriminator
+    data = struct.pack("<B", 32)  # instruction discriminator
     accounts = [AccountMeta(pubkey=mint, is_signer=False, is_writable=True)]
     return Instruction(TOKEN_2022_PROGRAM_ID, data, accounts)
 
@@ -134,40 +134,20 @@ class TokenManager:
         """
         Create a Token-2022 mint with NonTransferable extension (soulbound).
 
-        Uses the spl-token CLI for correctness — the canonical implementation
-        for Token-2022 extension instructions. Security-first approach.
-
         Args:
             decimals: Number of decimal places.
 
         Returns:
             str: The mint public key as base58 string.
-
-        Raises:
-            Exception: If spl-token CLI is not available or creation fails.
         """
-        import subprocess
-        import re
-
-        solana_bin = str(Path.home() / ".local/share/solana/install/active_release/bin/spl-token")
-        result = subprocess.run(
-            [
-                solana_bin, "create-token",
-                "--program-id", str(TOKEN_2022_PROGRAM_ID),
-                "--decimals", str(decimals),
-                "--enable-non-transferable",
-            ],
-            capture_output=True, text=True, timeout=30,
+        result = create_token2022_mint(
+            self.client,
+            self.payer,
+            decimals=decimals,
+            enable_non_transferable=True,
+            enable_metadata=False,
         )
-        if result.returncode != 0:
-            raise Exception(f"spl-token create-token failed: {result.stderr}")
-
-        # Parse mint address from output: "Address:  <pubkey>"
-        match = re.search(r"Address:\s+(\S+)", result.stdout)
-        if not match:
-            raise Exception(f"Could not parse mint address from: {result.stdout}")
-
-        mint_address = match.group(1)
+        mint_address = result["mint"]
         print(f"Created Token-2022 NonTransferable mint: {mint_address}")
         return mint_address
 

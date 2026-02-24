@@ -1,24 +1,21 @@
 """Transferable Protocol NFT minting using Token-2022.
 
 Unlike soulbound NFTs, protocol NFTs are transferable — they can be
-traded, sold, or gifted between wallets. Still uses Token-2022 with
+traded, sold, or gifted between wallets. Uses Token-2022 with
 0 decimals for NFT semantics.
 """
 
-import json
-import subprocess
-import re
 from pathlib import Path
 from typing import Optional, Dict, Any
 
-from solana.rpc.api import Client
-from solders.pubkey import Pubkey
-
+from token2022_utils import (
+    create_ata_and_mint,
+    create_token2022_mint,
+    get_token_balance,
+    load_keypair_from_path,
+)
 from wallet import SolanaWallet
 
-
-# Solana CLI path
-_SOLANA_BIN = Path.home() / ".local" / "share" / "solana" / "install" / "active_release" / "bin"
 
 # Token-2022 program
 TOKEN_2022_PROGRAM = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
@@ -42,40 +39,13 @@ PROTOCOL_NFTS = {
         "image": "/static/img/protocol-acupuncturist.png",
     },
 }
-
-
-def _run_spl_token(*args: str, keypair_path: str = "~/.config/solana/id.json") -> str:
-    """Run an spl-token CLI command and return stdout.
-
-    Args:
-        *args: Arguments to pass to spl-token.
-        keypair_path: Path to the signing keypair.
-
-    Returns:
-        str: Command stdout.
-
-    Raises:
-        RuntimeError: If the command fails.
-    """
-    expanded = str(Path(keypair_path).expanduser())
-    cmd = [
-        str(_SOLANA_BIN / "spl-token"),
-        *args,
-        "--url", "devnet",
-        "--fee-payer", expanded,
-    ]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-    if result.returncode != 0:
-        raise RuntimeError(f"spl-token failed: {result.stderr.strip()}")
-    return result.stdout.strip()
-
-
 class ProtocolNFTMinter:
     """Mint transferable protocol NFTs on Solana devnet via Token-2022."""
 
     def __init__(self, wallet: Optional[SolanaWallet] = None):
         self.wallet = wallet or SolanaWallet()
         self.client = self.wallet.client
+        self.payer = self.wallet.keypair
         self.keypair_path = str(Path("~/.config/solana/id.json").expanduser())
 
     def mint_protocol_nft(
@@ -101,54 +71,39 @@ class ProtocolNFTMinter:
 
         Raises:
             ValueError: If protocol_id is unknown.
-            RuntimeError: If any CLI command fails.
+            RuntimeError: If any mint operation fails.
         """
         if protocol_id not in PROTOCOL_NFTS:
             raise ValueError(f"Unknown protocol: {protocol_id}. Options: {list(PROTOCOL_NFTS.keys())}")
 
         template = PROTOCOL_NFTS[protocol_id]
-        payer = fee_payer_keypair or self.keypair_path
+        payer_keypair = (
+            load_keypair_from_path(fee_payer_keypair)
+            if fee_payer_keypair
+            else self.payer
+        )
 
         # Step 1: Create transferable mint (0 decimals = NFT)
         # NOTE: No --enable-non-transferable flag — these are tradeable
-        output = _run_spl_token(
-            "create-token",
-            "--program-id", TOKEN_2022_PROGRAM,
-            "--decimals", "0",
-            keypair_path=payer,
+        mint_result = create_token2022_mint(
+            self.client,
+            payer_keypair,
+            decimals=0,
+            enable_non_transferable=False,
+            enable_metadata=False,
         )
+        mint_address = mint_result["mint"]
 
-        # Extract mint address
-        mint_match = re.search(r"Address:\s+(\S+)", output)
-        if not mint_match:
-            mint_match = re.search(r"Creating token\s+(\S+)", output)
-        if not mint_match:
-            raise RuntimeError(f"Could not parse mint address from: {output}")
-        mint_address = mint_match.group(1)
-
-        # Step 2: Create ATA for recipient
-        create_output = _run_spl_token(
-            "create-account",
-            "--program-id", TOKEN_2022_PROGRAM,
-            "--owner", recipient,
+        # Step 2 + 3: Create ATA for recipient, then mint exactly 1 token
+        mint_to_result = create_ata_and_mint(
+            self.client,
+            payer_keypair,
             mint_address,
-            keypair_path=payer,
+            recipient,
+            amount=1,
         )
-
-        ata_match = re.search(r"Creating account\s+(\S+)", create_output)
-        ata_address = ata_match.group(1) if ata_match else "unknown"
-
-        # Step 3: Mint exactly 1 token
-        mint_output = _run_spl_token(
-            "mint",
-            "--program-id", TOKEN_2022_PROGRAM,
-            mint_address, "1",
-            ata_address,
-            keypair_path=payer,
-        )
-
-        sig_match = re.search(r"Signature:\s+(\S+)", mint_output)
-        mint_sig = sig_match.group(1) if sig_match else "unknown"
+        ata_address = mint_to_result["ata"]
+        mint_sig = mint_to_result["signature"]
 
         return {
             "mint": mint_address,
@@ -175,17 +130,9 @@ class ProtocolNFTMinter:
             True if the wallet holds at least 1 token of this mint.
         """
         try:
-            output = _run_spl_token(
-                "balance",
-                "--program-id", TOKEN_2022_PROGRAM,
-                "--owner", wallet_address,
-                mint_address,
-                keypair_path=self.keypair_path,
-            )
-            # Output is just the balance number, e.g. "1"
-            balance = float(output.strip())
+            balance = get_token_balance(self.client, wallet_address, mint_address)
             return balance >= 1
-        except (RuntimeError, ValueError):
+        except Exception:
             return False
 
     def list_protocol_nfts(self) -> Dict[str, Dict[str, Any]]:
