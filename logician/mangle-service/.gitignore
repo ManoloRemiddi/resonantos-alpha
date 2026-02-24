@@ -1,0 +1,6 @@
+*.swp
+*.swo
+*.swn
+server/server
+client/client
+
