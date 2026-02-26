@@ -97,6 +97,7 @@ const extDir = path.join(OPENCLAW_AGENT_DIR, "extensions");
 mkdirp(extDir);
 copyFile(path.join(INSTALL_DIR, "extensions", "r-memory.js"), path.join(extDir, "r-memory.js"));
 copyFile(path.join(INSTALL_DIR, "extensions", "r-awareness.js"), path.join(extDir, "r-awareness.js"));
+copyFile(path.join(INSTALL_DIR, "extensions", "gateway-lifecycle.js"), path.join(extDir, "gateway-lifecycle.js"));
 ok("Extensions installed");
 
 // 5. SSoT template
