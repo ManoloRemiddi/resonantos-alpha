@@ -123,6 +123,10 @@ function loadKeywordManifest() {
     try {
       const data = JSON.parse(fs.readFileSync(kwPath, "utf-8"));
       for (const [keyword, docPath] of Object.entries(data)) {
+        if (typeof docPath !== "string") {
+          log("WARN", "Skipping keyword with non-string value", { keyword, type: typeof docPath });
+          continue;
+        }
         const level = detectLevel(docPath);
         keywordManifest.set(keyword.toLowerCase(), {
           docPath,
