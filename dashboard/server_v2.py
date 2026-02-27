@@ -5745,6 +5745,132 @@ def api_logician_status():
         return jsonify({"status": "error", "error": str(e)})
 
 
+@app.route("/api/logician/rules")
+def api_logician_rules():
+    """List all Logician rule files from logician/rules/ directory."""
+    rules_dir = os.path.join(os.path.dirname(__file__), "..", "logician", "rules")
+    config_path = os.path.join(os.path.dirname(__file__), "..", "config", "logician_rules.json")
+
+    # Load toggle state from config (if exists)
+    toggle_state = {}
+    try:
+        with open(config_path) as f:
+            toggle_state = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        pass
+
+    rules = []
+    try:
+        if not os.path.isdir(rules_dir):
+            return jsonify({"rules": [], "error": "logician/rules/ directory not found"})
+
+        for filename in sorted(os.listdir(rules_dir)):
+            if not filename.endswith(".mg"):
+                continue
+
+            filepath = os.path.join(rules_dir, filename)
+            try:
+                with open(filepath) as f:
+                    content = f.read()
+
+                # Count rules (lines containing :- which is Mangle rule syntax)
+                rule_count = len([l for l in content.split("\n") if ":-" in l and not l.strip().startswith("%")])
+                # Count facts (lines ending with . that aren't rules or comments)
+                fact_count = len([l for l in content.split("\n")
+                                  if l.strip().endswith(".") and ":-" not in l and not l.strip().startswith("%") and len(l.strip()) > 1])
+
+                # Description from first comment line
+                description = ""
+                for line in content.split("\n"):
+                    line = line.strip()
+                    if line.startswith("% ") and not line.startswith("% ==") and not line.startswith("% --"):
+                        description = line[2:].strip()
+                        break
+
+                # Security rules are locked (cannot be toggled off)
+                locked = filename in ("security_rules.mg", "audit_rules.mg")
+
+                file_state = toggle_state.get(filename, {})
+                enabled = file_state.get("enabled", True) if not locked else True
+
+                rules.append({
+                    "filename": filename,
+                    "description": description,
+                    "rules": rule_count,
+                    "facts": fact_count,
+                    "enabled": enabled,
+                    "locked": locked
+                })
+            except Exception as e:
+                rules.append({
+                    "filename": filename,
+                    "description": f"Error reading: {e}",
+                    "rules": 0,
+                    "facts": 0,
+                    "enabled": False,
+                    "locked": False
+                })
+
+        return jsonify({"rules": rules})
+    except Exception as e:
+        return jsonify({"rules": [], "error": str(e)})
+
+
+@app.route("/api/logician/rules/<filename>")
+def api_logician_rule_content(filename):
+    """Return content of a specific rule file."""
+    # Security: only allow .mg files, no path traversal
+    if not filename.endswith(".mg") or "/" in filename or "\\" in filename or ".." in filename:
+        return jsonify({"error": "Invalid filename"}), 400
+
+    rules_dir = os.path.join(os.path.dirname(__file__), "..", "logician", "rules")
+    filepath = os.path.join(rules_dir, filename)
+
+    try:
+        with open(filepath) as f:
+            content = f.read()
+        return jsonify({"content": content, "filename": filename})
+    except FileNotFoundError:
+        return jsonify({"error": f"Rule file not found: {filename}"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/logician/rules/<filename>/toggle", methods=["POST"])
+def api_logician_rule_toggle(filename):
+    """Toggle a rule file's enabled state."""
+    if not filename.endswith(".mg") or "/" in filename or "\\" in filename or ".." in filename:
+        return jsonify({"error": "Invalid filename"}), 400
+
+    # Security/audit rules cannot be toggled
+    if filename in ("security_rules.mg", "audit_rules.mg"):
+        return jsonify({"error": "Cannot toggle locked rules"}), 403
+
+    config_dir = os.path.join(os.path.dirname(__file__), "..", "config")
+    config_path = os.path.join(config_dir, "logician_rules.json")
+
+    # Load existing state
+    toggle_state = {}
+    try:
+        with open(config_path) as f:
+            toggle_state = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        pass
+
+    # Toggle
+    current = toggle_state.get(filename, {}).get("enabled", True)
+    toggle_state[filename] = {"enabled": not current}
+
+    # Save
+    try:
+        os.makedirs(config_dir, exist_ok=True)
+        with open(config_path, "w") as f:
+            json.dump(toggle_state, f, indent=2)
+        return jsonify({"filename": filename, "enabled": not current})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # ---------------------------------------------------------------------------
 # API: System Info (openclaw status)
 # ---------------------------------------------------------------------------
