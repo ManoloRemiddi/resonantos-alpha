@@ -5,7 +5,10 @@ from typing import List, Dict, Any
 
 from solana.rpc.api import Client
 from solders.keypair import Keypair
+from solders.message import Message
 from solders.pubkey import Pubkey
+from solders.system_program import TransferParams, transfer as transfer_ix
+from solders.transaction import Transaction
 
 
 class SolanaWallet:
@@ -100,6 +103,55 @@ class SolanaWallet:
                     current_delay *= 1.5
 
         raise Exception(f"Airdrop request failed after {retries} attempts: {last_error}")
+
+    def transfer(self, to: str, amount_sol: float) -> str:
+        """
+        Transfer SOL from this wallet to a recipient.
+
+        Args:
+            to: Recipient wallet public key (base58).
+            amount_sol: Amount of SOL to transfer.
+
+        Returns:
+            str: The transaction signature as a base58-encoded string.
+
+        Raises:
+            ValueError: If amount is not positive or recipient pubkey is invalid.
+            Exception: If transaction submission or confirmation fails.
+        """
+        lamports = int(amount_sol * 1e9)
+        if lamports <= 0:
+            raise ValueError("Transfer amount must be greater than zero")
+
+        recipient = Pubkey.from_string(to)
+        blockhash_resp = self.client.get_latest_blockhash()
+        blockhash = blockhash_resp.value.blockhash
+
+        ix = transfer_ix(
+            TransferParams(
+                from_pubkey=self.keypair.pubkey(),
+                to_pubkey=recipient,
+                lamports=lamports,
+            )
+        )
+        msg = Message.new_with_blockhash([ix], self.keypair.pubkey(), blockhash)
+        tx = Transaction.new_unsigned(msg)
+        tx.sign([self.keypair], blockhash)
+
+        send_resp = self.client.send_transaction(tx)
+        sig = send_resp.value
+        if sig is None:
+            raise Exception(f"Transfer transaction failed: {send_resp}")
+
+        for _ in range(30):
+            status = self.client.get_signature_statuses([sig])
+            if status.value and status.value[0] is not None:
+                if status.value[0].err:
+                    raise Exception(f"Transfer transaction error: {status.value[0].err}")
+                return str(sig)
+            time.sleep(1)
+
+        return str(sig)
     
     def get_recent_transactions(self, limit: int = 10) -> List[Dict[str, Any]]:
         """

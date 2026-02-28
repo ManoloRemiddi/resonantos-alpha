@@ -5,7 +5,11 @@ import argparse
 import json
 import sys
 
+from solders.pubkey import Pubkey
+from symbiotic_client import SymbioticClient
 from toolkit import create_toolkit
+
+SYMBIOTIC_PROGRAM_ID = "HMthR7AStR3YKJ4m8GMveWx5dqY3D2g2cfnji7VdcVoG"
 
 
 def cmd_balance(args):
@@ -23,6 +27,14 @@ def cmd_airdrop(args):
     print(f"Requesting {args.amount} SOL airdrop to {tk.pubkey}...")
     sig = tk.wallet.airdrop(args.amount)
     print(f"Airdrop tx: {sig}")
+
+
+def cmd_transfer(args):
+    """Transfer SOL to a recipient wallet."""
+    tk = create_toolkit(keypair_path=args.keypair, network=args.network)
+    print(f"Transferring {args.amount} SOL to {args.to}...")
+    sig = tk.wallet.transfer(args.to, args.amount)
+    print(f"Transfer tx: {sig}")
 
 
 def cmd_create_token(args):
@@ -114,6 +126,66 @@ def cmd_history(args):
         print(f"  {tx['signature'][:32]}...  slot={tx['slot']}  time={ts}{err}")
 
 
+def _create_symbiotic_client(args):
+    """Create a SymbioticClient from common CLI options."""
+    return SymbioticClient(
+        program_id=SYMBIOTIC_PROGRAM_ID,
+        keypair_path=args.keypair,
+        network=args.network,
+    )
+
+
+def cmd_symbiotic_init(args):
+    """Initialize a new symbiotic pair."""
+    sc = _create_symbiotic_client(args)
+    print(f"Initializing symbiotic pair (nonce={args.nonce})...")
+    result = sc.initialize_pair(
+        human_keypair=sc.keypair,
+        ai_pubkey=Pubkey.from_string(args.ai_pubkey),
+        pair_nonce=args.nonce,
+    )
+    print(json.dumps(result, indent=2))
+
+
+def cmd_symbiotic_info(args):
+    """Fetch symbiotic pair info."""
+    sc = _create_symbiotic_client(args)
+    human_pubkey = args.human or str(sc.keypair.pubkey())
+    info = sc.get_pair_info(Pubkey.from_string(human_pubkey), args.nonce)
+    if info is None:
+        print("Symbiotic pair not found.")
+        return
+    print(json.dumps(info, indent=2))
+
+
+def cmd_symbiotic_claim(args):
+    """Trigger daily claim for a symbiotic pair."""
+    sc = _create_symbiotic_client(args)
+    pda, _ = sc.find_pair_pda(Pubkey.from_string(args.human), args.nonce)
+    print(f"Claiming daily rewards for pair {pda}...")
+    sig = sc.daily_claim(signer_keypair=sc.keypair, pair_pda=pda)
+    print(f"Claim tx: {sig}")
+
+
+def cmd_symbiotic_freeze(args):
+    """Emergency freeze a symbiotic pair."""
+    sc = _create_symbiotic_client(args)
+    pda, _ = sc.find_pair_pda(Pubkey.from_string(args.human), args.nonce)
+    print(f"Freezing pair {pda}...")
+    sig = sc.emergency_freeze(signer_keypair=sc.keypair, pair_pda=pda)
+    print(f"Freeze tx: {sig}")
+
+
+def cmd_symbiotic_unfreeze(args):
+    """Unfreeze a symbiotic pair."""
+    sc = _create_symbiotic_client(args)
+    human_pubkey = args.human or str(sc.keypair.pubkey())
+    pda, _ = sc.find_pair_pda(Pubkey.from_string(human_pubkey), args.nonce)
+    print(f"Unfreezing pair {pda}...")
+    sig = sc.unfreeze(human_keypair=sc.keypair, pair_pda=pda)
+    print(f"Unfreeze tx: {sig}")
+
+
 def main():
     """CLI entry point."""
     parser = argparse.ArgumentParser(description="ResonantOS Solana Toolkit")
@@ -128,6 +200,11 @@ def main():
     # airdrop
     p = sub.add_parser("airdrop", help="Request SOL airdrop")
     p.add_argument("amount", type=float, default=1.0, nargs="?", help="Amount in SOL")
+
+    # transfer
+    p = sub.add_parser("transfer", help="Transfer SOL")
+    p.add_argument("to", help="Recipient wallet pubkey")
+    p.add_argument("amount", type=float, help="Amount in SOL")
 
     # create-token
     p = sub.add_parser("create-token", help="Create a new token mint")
@@ -148,7 +225,12 @@ def main():
     # mint-nft
     p = sub.add_parser("mint-nft", help="Mint a soulbound NFT")
     p.add_argument("--to", help="Recipient pubkey (default: own wallet)")
-    p.add_argument("--type", default="identity", choices=["identity", "alpha_tester"], help="NFT type")
+    p.add_argument(
+        "--type",
+        default="identity",
+        choices=["identity", "alpha_tester", "symbiotic_license", "manifesto", "founder", "dao_genesis"],
+        help="NFT type",
+    )
     p.add_argument("--name", help="Override NFT name")
     p.add_argument("--symbol", help="Override NFT symbol")
     p.add_argument("--uri", help="Override metadata URI")
@@ -161,16 +243,47 @@ def main():
     p = sub.add_parser("history", help="Show recent transactions")
     p.add_argument("--limit", type=int, default=10, help="Max transactions")
 
+    # symbiotic-init
+    p = sub.add_parser("symbiotic-init", help="Initialize a symbiotic wallet pair")
+    p.add_argument("--ai-pubkey", required=True, help="AI wallet pubkey")
+    p.add_argument("--nonce", type=int, default=0, help="Pair nonce")
+
+    # symbiotic-info
+    p = sub.add_parser("symbiotic-info", help="Show symbiotic pair account info")
+    p.add_argument("--human", help="Human wallet pubkey (default: own wallet)")
+    p.add_argument("--nonce", type=int, default=0, help="Pair nonce")
+
+    # symbiotic-claim
+    p = sub.add_parser("symbiotic-claim", help="Trigger symbiotic daily claim")
+    p.add_argument("--human", required=True, help="Human wallet pubkey")
+    p.add_argument("--nonce", type=int, default=0, help="Pair nonce")
+
+    # symbiotic-freeze
+    p = sub.add_parser("symbiotic-freeze", help="Emergency freeze a symbiotic pair")
+    p.add_argument("--human", required=True, help="Human wallet pubkey")
+    p.add_argument("--nonce", type=int, default=0, help="Pair nonce")
+
+    # symbiotic-unfreeze
+    p = sub.add_parser("symbiotic-unfreeze", help="Unfreeze a symbiotic pair")
+    p.add_argument("--human", help="Human wallet pubkey (default: own wallet)")
+    p.add_argument("--nonce", type=int, default=0, help="Pair nonce")
+
     args = parser.parse_args()
     cmd_map = {
         "balance": cmd_balance,
         "airdrop": cmd_airdrop,
+        "transfer": cmd_transfer,
         "create-token": cmd_create_token,
         "mint": cmd_mint,
         "tokens": cmd_tokens,
         "mint-nft": cmd_mint_nft,
         "dao-info": cmd_dao_info,
         "history": cmd_history,
+        "symbiotic-init": cmd_symbiotic_init,
+        "symbiotic-info": cmd_symbiotic_info,
+        "symbiotic-claim": cmd_symbiotic_claim,
+        "symbiotic-freeze": cmd_symbiotic_freeze,
+        "symbiotic-unfreeze": cmd_symbiotic_unfreeze,
     }
     try:
         cmd_map[args.command](args)
