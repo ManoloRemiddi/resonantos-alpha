@@ -206,6 +206,23 @@ if (process.platform === "win32") {
   }
 }
 
+// 10. Skills
+log("Installing skills...");
+const skillsSrc = path.join(INSTALL_DIR, "skills");
+const skillsDest = path.join(OPENCLAW_WORKSPACE, "skills");
+if (fs.existsSync(skillsSrc)) {
+  for (const entry of fs.readdirSync(skillsSrc, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      const src = path.join(skillsSrc, entry.name);
+      const dest = path.join(skillsDest, entry.name);
+      copyDirContents(src, dest);
+    }
+  }
+  ok("Skills installed");
+} else {
+  log("  No skills directory found — skipping");
+}
+
 // Register setup agent in openclaw.json if not already present
 const openclawCfgPath = path.join(HOME, ".openclaw", "openclaw.json");
 if (fs.existsSync(openclawCfgPath)) {
