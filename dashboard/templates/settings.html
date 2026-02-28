@@ -4,6 +4,35 @@
 {% block page_title %}Settings{% endblock %}
 
 {% block content %}
+<style>
+.rules-overview { margin-bottom: 24px; }
+.rules-overview-stats { display: flex; gap: 24px; padding: 16px 20px; background: var(--card-bg, #1a1a2e); border-radius: 12px; border: 1px solid var(--border-color, #2a2a4a); }
+.overview-stat { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.stat-value { font-size: 1.5rem; font-weight: 700; color: var(--accent, #4ade80); }
+.stat-label { font-size: 0.75rem; color: var(--text-secondary, #888); text-transform: uppercase; letter-spacing: 0.5px; }
+.rules-categories { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.category-card { position: relative; display: flex; align-items: flex-start; gap: 16px; padding: 20px; background: var(--card-bg, #1a1a2e); border-radius: 12px; border: 1px solid var(--border-color, #2a2a4a); transition: border-color 0.2s; }
+.category-card:hover { border-color: var(--accent, #4ade80); }
+.category-card.locked { border-color: rgba(239, 68, 68, 0.3); }
+.category-icon { font-size: 2rem; flex-shrink: 0; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: var(--accent-muted, rgba(74, 222, 128, 0.2)); border-radius: 10px; }
+.category-info { flex: 1; min-width: 0; }
+.category-name { font-weight: 600; font-size: 1rem; color: var(--text-primary, #fff); margin-bottom: 4px; }
+.category-description { font-size: 0.85rem; color: var(--text-secondary, #888); line-height: 1.4; }
+.category-stats { display: flex; gap: 12px; flex-shrink: 0; }
+.cat-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.cat-count { font-size: 1.1rem; font-weight: 600; color: var(--accent, #4ade80); }
+.cat-label { font-size: 0.7rem; color: var(--text-secondary, #888); text-transform: uppercase; }
+.category-locked-badge { position: absolute; top: 8px; right: 8px; font-size: 0.85rem; }
+.rules-help { display: flex; gap: 16px; padding: 20px; background: var(--accent-muted, rgba(74, 222, 128, 0.1)); border: 1px solid var(--accent, #4ade80); border-opacity: 0.2; border-color: rgba(74, 222, 128, 0.25); border-radius: 12px; }
+.rules-help-icon { font-size: 1.5rem; flex-shrink: 0; }
+.rules-help-content h3 { font-size: 1rem; font-weight: 600; margin: 0 0 8px 0; color: var(--text-primary, #fff); }
+.rules-help-content p { font-size: 0.9rem; color: var(--text-secondary, #888); line-height: 1.5; margin: 0 0 8px 0; }
+.rules-help-content ul { margin: 8px 0; padding-left: 20px; }
+.rules-help-content li { font-size: 0.85rem; color: var(--text-secondary, #888); margin-bottom: 4px; }
+.rules-help-content li strong { color: var(--text-primary, #fff); }
+.rules-help-note { font-size: 0.8rem !important; opacity: 0.7; }
+.rules-help-note a { color: var(--accent, #4ade80); }
+</style>
 <div class="settings-layout">
     <!-- Settings Navigation -->
     <nav class="settings-nav">
@@ -91,33 +120,30 @@
         <!-- Rules Section (Logician) -->
         <section class="settings-section" id="rulesSection">
             <h2 class="section-title">Logician Rules</h2>
-            <p class="section-description">Control which rule files are active in the Logician reasoning engine. Some rules are locked for security.</p>
-
-            <div class="rules-header">
-                <div class="rules-summary" id="rulesSummary">
-                    <div class="summary-stat">
-                        <span class="value" id="totalRules">-</span>
-                        <span class="label">Files</span>
-                    </div>
-                    <div class="summary-stat">
-                        <span class="value" id="enabledRules">-</span>
-                        <span class="label">Enabled</span>
-                    </div>
-                    <div class="summary-stat">
-                        <span class="value" id="lockedRules">-</span>
-                        <span class="label">Locked</span>
-                    </div>
+            <p class="section-description">The Logician enforces deterministic rules that govern AI behavior, security, and operations. Rules are evaluated in milliseconds &mdash; no AI reasoning required.</p>
+            <div class="rules-overview">
+                <div class="rules-overview-stats">
+                    <div class="overview-stat"><span class="stat-value" id="totalRules">-</span><span class="stat-label">Total Rules</span></div>
+                    <div class="overview-stat"><span class="stat-value" id="totalFacts">-</span><span class="stat-label">Facts</span></div>
+                    <div class="overview-stat"><span class="stat-value" id="totalCategories">-</span><span class="stat-label">Categories</span></div>
+                    <div class="overview-stat"><span class="stat-value" id="totalFiles">-</span><span class="stat-label">Files</span></div>
                 </div>
-                <button class="btn-secondary" onclick="loadRules()">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-                    Refresh
-                </button>
             </div>
-
-            <div class="rules-list" id="rulesList">
-                <div class="rules-loading">
-                    <div class="spinner"></div>
-                    <span>Loading rules...</span>
+            <div class="rules-categories" id="rulesCategories">
+                <div class="rules-loading"><div class="spinner"></div><span>Loading rules...</span></div>
+            </div>
+            <div class="rules-help">
+                <div class="rules-help-icon">&#x1F4A1;</div>
+                <div class="rules-help-content">
+                    <h3>Working with Rules</h3>
+                    <p>The Logician can contain hundreds or thousands of rules across many domains. Rather than browsing them manually, <strong>ask your AI agent</strong> to help you:</p>
+                    <ul>
+                        <li><strong>View rules:</strong> &ldquo;Show me all rules about agent spawning&rdquo;</li>
+                        <li><strong>Add rules:</strong> &ldquo;Create a rule that blocks expensive models on heartbeat tasks&rdquo;</li>
+                        <li><strong>Modify rules:</strong> &ldquo;Disable the rule that requires TASK.md for small fixes&rdquo;</li>
+                        <li><strong>Understand rules:</strong> &ldquo;Explain what the security rules protect against&rdquo;</li>
+                    </ul>
+                    <p class="rules-help-note">Rules use <a href="https://github.com/google/mangle" target="_blank" rel="noopener">Google Mangle</a> (Datalog) syntax. Your AI translates between human intent and machine-readable policy.</p>
                 </div>
             </div>
         </section>
@@ -431,20 +457,25 @@
 {% block extra_js %}
 <script>
 let pendingPermission = null;
-let rulesData = [];
-let expandedRules = new Set();
 
 document.addEventListener('DOMContentLoaded', function() {
     loadSettings();
     loadRules();
+    // Auto-select section from URL hash
+    var hash = window.location.hash.replace('#', '');
+    if (hash && document.getElementById(hash + 'Section')) {
+        showSection(hash);
+    }
 });
 
 function showSection(section) {
-    document.querySelectorAll('.settings-nav-item').forEach(i => i.classList.remove('active'));
-    document.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.settings-nav-item').forEach(function(i) { i.classList.remove('active'); });
+    document.querySelectorAll('.settings-section').forEach(function(s) { s.classList.remove('active'); });
     
-    event.target.closest('.settings-nav-item').classList.add('active');
-    document.getElementById(section + 'Section').classList.add('active');
+    var navLink = document.querySelector('a[href="#' + section + '"]');
+    if (navLink) navLink.classList.add('active');
+    var sec = document.getElementById(section + 'Section');
+    if (sec) sec.classList.add('active');
 }
 
 async function loadSettings() {
@@ -592,103 +623,51 @@ function showToast(message, type = 'info') {
 }
 
 // ============================================
-// Rules Management (embedded from /rules)
+// Rules Management - Category awareness UI
 // ============================================
 
 async function loadRules() {
-    const container = document.getElementById('rulesList');
+    const container = document.getElementById('rulesCategories');
     if (!container) return;
-
     container.innerHTML = '<div class="rules-loading"><div class="spinner"></div><span>Loading rules...</span></div>';
-
     try {
         const response = await fetch('/api/logician/rules');
         const data = await response.json();
-
-        if (data.error) {
-            container.innerHTML = '<div class="error-state">' + data.error + '</div>';
-            return;
-        }
-
-        rulesData = data.rules;
-        renderRules(data.rules);
-        updateRulesSummary(data.rules);
+        if (data.error) { container.innerHTML = '<div class="error-state">' + data.error + '</div>'; return; }
+        renderCategories(data.categories);
+        updateOverviewStats(data.totals);
     } catch (error) {
         container.innerHTML = '<div class="error-state">Failed to load rules: ' + error.message + '</div>';
     }
 }
 
-function updateRulesSummary(rules) {
-    const totalEl = document.getElementById('totalRules');
-    const enabledEl = document.getElementById('enabledRules');
-    const lockedEl = document.getElementById('lockedRules');
-    if (totalEl) totalEl.textContent = rules.length;
-    if (enabledEl) enabledEl.textContent = rules.filter(r => r.enabled).length;
-    if (lockedEl) lockedEl.textContent = rules.filter(r => r.locked).length;
+function updateOverviewStats(totals) {
+    var el = function(id) { return document.getElementById(id); };
+    if (el('totalRules')) el('totalRules').textContent = totals.rules;
+    if (el('totalFacts')) el('totalFacts').textContent = totals.facts;
+    if (el('totalCategories')) el('totalCategories').textContent = totals.categories;
+    if (el('totalFiles')) el('totalFiles').textContent = totals.files;
 }
 
-function renderRules(rules) {
-    const container = document.getElementById('rulesList');
-
-    if (rules.length === 0) {
-        container.innerHTML = '<div class="empty-state"><p>No rule files found</p></div>';
+function renderCategories(categories) {
+    const container = document.getElementById('rulesCategories');
+    if (!categories || categories.length === 0) {
+        container.innerHTML = '<div class="empty-state"><p>No rule categories found</p></div>';
         return;
     }
-
-    container.innerHTML = rules.map(rule => {
-        const safeId = rule.filename.replaceAll('.', '-');
-        return '<div class="rule-card ' + (rule.enabled ? '' : 'disabled') + ' ' + (rule.locked ? 'locked' : '') + '" id="rule-' + safeId + '">' +
-            '<div class="rule-header" onclick="toggleRuleExpand(\'' + rule.filename + '\')">' +
-                '<div class="rule-info">' +
-                    '<div class="rule-name">' + rule.filename + '</div>' +
-                    '<div class="rule-description">' + rule.description + '</div>' +
-                '</div>' +
-                '<div class="rule-stats">' +
-                    '<div class="rule-stat"><span class="count">' + rule.rules + '</span><span class="type">Rules</span></div>' +
-                    '<div class="rule-stat"><span class="count">' + rule.facts + '</span><span class="type">Facts</span></div>' +
-                '</div>' +
-                '<div class="rule-toggle" onclick="event.stopPropagation()">' +
-                    (rule.locked ?
-                        '<div class="locked-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> LOCKED</div>' :
-                        '<label class="switch"><input type="checkbox" ' + (rule.enabled ? 'checked' : '') + ' onchange="toggleRule(\'' + rule.filename + '\', this.checked)"><span class="slider"></span></label>'
-                    ) +
-                '</div>' +
+    container.innerHTML = categories.map(function(cat) {
+        var dn = cat.name.replace(/^\S+\s/, '');
+        return '<div class="category-card' + (cat.locked ? ' locked' : '') + '">' +
+            '<div class="category-icon">' + cat.icon + '</div>' +
+            '<div class="category-info"><div class="category-name">' + dn + '</div><div class="category-description">' + cat.description + '</div></div>' +
+            '<div class="category-stats">' +
+                '<div class="cat-stat"><span class="cat-count">' + cat.ruleCount + '</span><span class="cat-label">rules</span></div>' +
+                '<div class="cat-stat"><span class="cat-count">' + cat.factCount + '</span><span class="cat-label">facts</span></div>' +
+                '<div class="cat-stat"><span class="cat-count">' + cat.fileCount + '</span><span class="cat-label">' + (cat.fileCount === 1 ? 'file' : 'files') + '</span></div>' +
             '</div>' +
-            '<div class="rule-content" id="content-' + safeId + '" style="display:none">' +
-                '<div class="code-preview" id="code-' + safeId + '">Loading...</div>' +
-            '</div>' +
+            (cat.locked ? '<div class="category-locked-badge">&#x1F512;</div>' : '') +
         '</div>';
     }).join('');
-}
-
-function toggleRuleExpand(filename) {
-    const safeId = filename.replaceAll('.', '-');
-    const card = document.getElementById('rule-' + safeId);
-    const content = document.getElementById('content-' + safeId);
-    const code = document.getElementById('code-' + safeId);
-    if (!card || !content) return;
-
-    const wasExpanded = card.classList.contains('expanded');
-    card.classList.toggle('expanded');
-    content.style.display = wasExpanded ? 'none' : 'block';
-
-    if (!wasExpanded && code && code.textContent.trim() === 'Loading...') {
-        loadRuleContent(filename, code);
-    }
-}
-
-async function loadRuleContent(filename, codeEl) {
-    try {
-        const response = await fetch('/api/logician/rules/' + filename);
-        const data = await response.json();
-        if (data.error) {
-            codeEl.textContent = 'Error: ' + data.error;
-            return;
-        }
-        codeEl.textContent = data.content;
-    } catch (error) {
-        codeEl.textContent = 'Failed to load: ' + error.message;
-    }
 }
 
 // ============================================

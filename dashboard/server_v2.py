@@ -5747,73 +5747,127 @@ def api_logician_status():
 
 @app.route("/api/logician/rules")
 def api_logician_rules():
-    """List all Logician rule files from logician/rules/ directory."""
+    """List Logician rules grouped by category."""
     rules_dir = os.path.join(os.path.dirname(__file__), "..", "logician", "rules")
-    config_path = os.path.join(os.path.dirname(__file__), "..", "config", "logician_rules.json")
 
-    # Load toggle state from config (if exists)
-    toggle_state = {}
-    try:
-        with open(config_path) as f:
-            toggle_state = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        pass
+    RULE_CATEGORIES = {
+        "🤖 Agent Behavior": {
+            "description": "How agents spawn, communicate, and operate within the system",
+            "icon": "🤖",
+            "files": ["agent_rules.mg", "agent_creation_rules.mg"],
+        },
+        "🔒 Security": {
+            "description": "Data protection, access control, and threat prevention",
+            "icon": "🔒",
+            "files": ["security_rules.mg"],
+        },
+        "📋 Audit & Monitoring": {
+            "description": "Decision tracking, logging, and system observability",
+            "icon": "📋",
+            "files": ["audit_rules.mg"],
+        },
+        "💻 Code Quality": {
+            "description": "Testing requirements, coding standards, and verification gates",
+            "icon": "💻",
+            "files": ["coder_rules.mg", "coherence_gate_rules.mg"],
+        },
+        "🪙 Crypto & Wallet": {
+            "description": "Transaction safety, wallet protection, and blockchain operations",
+            "icon": "🪙",
+            "files": ["crypto_rules.mg"],
+        },
+        "📐 Protocols": {
+            "description": "Delegation, preparation, and research workflow enforcement",
+            "icon": "📐",
+            "files": ["delegation_rules.mg", "preparation_rules.mg", "research_rules.mg"],
+        },
+    }
 
-    rules = []
+    LOCKED_FILES = {"security_rules.mg", "audit_rules.mg"}
+
+    # Scan rule files
+    file_stats = {}
     try:
         if not os.path.isdir(rules_dir):
-            return jsonify({"rules": [], "error": "logician/rules/ directory not found"})
+            return jsonify({"categories": [], "totals": {"rules": 0, "facts": 0, "files": 0, "categories": 0}, "error": "logician/rules/ directory not found"})
 
         for filename in sorted(os.listdir(rules_dir)):
             if not filename.endswith(".mg"):
                 continue
-
             filepath = os.path.join(rules_dir, filename)
             try:
                 with open(filepath) as f:
-                    content = f.read()
-
-                # Count rules (lines containing :- which is Mangle rule syntax)
-                rule_count = len([l for l in content.split("\n") if ":-" in l and not l.strip().startswith("%")])
-                # Count facts (lines ending with . that aren't rules or comments)
-                fact_count = len([l for l in content.split("\n")
-                                  if l.strip().endswith(".") and ":-" not in l and not l.strip().startswith("%") and len(l.strip()) > 1])
-
-                # Description from first comment line
-                description = ""
-                for line in content.split("\n"):
-                    line = line.strip()
-                    if line.startswith("% ") and not line.startswith("% ==") and not line.startswith("% --"):
-                        description = line[2:].strip()
-                        break
-
-                # Security rules are locked (cannot be toggled off)
-                locked = filename in ("security_rules.mg", "audit_rules.mg")
-
-                file_state = toggle_state.get(filename, {})
-                enabled = file_state.get("enabled", True) if not locked else True
-
-                rules.append({
-                    "filename": filename,
-                    "description": description,
-                    "rules": rule_count,
-                    "facts": fact_count,
-                    "enabled": enabled,
-                    "locked": locked
-                })
-            except Exception as e:
-                rules.append({
-                    "filename": filename,
-                    "description": f"Error reading: {e}",
-                    "rules": 0,
-                    "facts": 0,
-                    "enabled": False,
-                    "locked": False
-                })
-
-        return jsonify({"rules": rules})
+                    lines = f.read().splitlines()
+                rule_count = len([l for l in lines if ":-" in l and not l.strip().startswith("%")])
+                fact_count = len([l for l in lines if l.strip().endswith(".") and ":-" not in l and not l.strip().startswith("%") and len(l.strip()) > 1])
+                file_stats[filename] = {"rules": rule_count, "facts": fact_count}
+            except Exception:
+                file_stats[filename] = {"rules": 0, "facts": 0}
     except Exception as e:
-        return jsonify({"rules": [], "error": str(e)})
+        return jsonify({"categories": [], "totals": {"rules": 0, "facts": 0, "files": 0, "categories": 0}, "error": str(e)})
+
+    # Build categories
+    assigned_files = set()
+    categories = []
+    for cat_name, cat_info in RULE_CATEGORIES.items():
+        rule_count = 0
+        fact_count = 0
+        file_count = 0
+        all_locked = True
+        for fn in cat_info["files"]:
+            if fn in file_stats:
+                rule_count += file_stats[fn]["rules"]
+                fact_count += file_stats[fn]["facts"]
+                file_count += 1
+                assigned_files.add(fn)
+                if fn not in LOCKED_FILES:
+                    all_locked = False
+            else:
+                all_locked = False
+        if file_count == 0:
+            all_locked = False
+        categories.append({
+            "name": cat_name,
+            "description": cat_info["description"],
+            "icon": cat_info["icon"],
+            "ruleCount": rule_count,
+            "factCount": fact_count,
+            "fileCount": file_count,
+            "locked": all_locked,
+        })
+
+    # Unassigned files go to Other
+    other_rules = 0
+    other_facts = 0
+    other_files = 0
+    for fn, stats in file_stats.items():
+        if fn not in assigned_files:
+            other_rules += stats["rules"]
+            other_facts += stats["facts"]
+            other_files += 1
+    if other_files > 0:
+        categories.append({
+            "name": "📦 Other",
+            "description": "Uncategorized rule files",
+            "icon": "📦",
+            "ruleCount": other_rules,
+            "factCount": other_facts,
+            "fileCount": other_files,
+            "locked": False,
+        })
+
+    total_rules = sum(s["rules"] for s in file_stats.values())
+    total_facts = sum(s["facts"] for s in file_stats.values())
+
+    return jsonify({
+        "categories": categories,
+        "totals": {
+            "rules": total_rules,
+            "facts": total_facts,
+            "files": len(file_stats),
+            "categories": len(categories),
+        }
+    })
 
 
 @app.route("/api/logician/rules/<filename>")
