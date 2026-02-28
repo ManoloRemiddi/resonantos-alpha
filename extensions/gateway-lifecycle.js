@@ -112,7 +112,9 @@ function ensureResumeScript() {
 }
 
 function matchesAny(command, patterns) {
-  for (const p of patterns) { if (p.test(command)) return true; }
+  // Only test the first line of multi-line commands (heredocs, Python strings, etc.)
+  const firstLine = command.split("\n")[0];
+  for (const p of patterns) { if (p.test(firstLine)) return true; }
   return false;
 }
 

@@ -61,11 +61,12 @@ A social contract between human and AI. The human is sovereign — the AI amplif
 <summary><strong>What the installer does</strong></summary>
 
 1. Checks dependencies (Node 18+, Python 3, Git, OpenClaw)
-2. Clones this repo to `~/resonantos-alpha/`
-3. Installs R-Memory & R-Awareness extensions into OpenClaw
-4. Sets up the SSoT template structure (L0–L4)
+2. Installs R-Memory, R-Awareness & Gateway Lifecycle extensions into OpenClaw
+3. Creates workspace templates (AGENTS.md, SOUL.md, USER.md, MEMORY.md, etc.)
+4. Sets up the SSoT document structure (L0–L4)
 5. Configures keyword triggers for contextual injection
-6. Installs the Dashboard and its dependencies
+6. Installs the Setup Agent for guided onboarding
+7. Installs Dashboard dependencies
 
 </details>
 

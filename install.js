@@ -102,7 +102,7 @@ ok("Extensions installed");
 
 // 5. SSoT template
 log("Setting up SSoT documents...");
-const ssotDir = path.join(OPENCLAW_WORKSPACE, "resonantos-augmentor", "ssot");
+const ssotDir = path.join(OPENCLAW_WORKSPACE, "resonantos-alpha", "ssot");
 mkdirp(ssotDir);
 const ssotEmpty = fs.readdirSync(ssotDir).length === 0;
 if (ssotEmpty) {
@@ -118,7 +118,7 @@ const workspaceTemplatesDir = path.join(INSTALL_DIR, "workspace-templates");
 const memoryDir = path.join(OPENCLAW_WORKSPACE, "memory");
 mkdirp(memoryDir);
 
-const templates = ["AGENTS.md", "SOUL.md", "USER.md", "MEMORY.md", "TOOLS.md"];
+const templates = ["AGENTS.md", "SOUL.md", "USER.md", "MEMORY.md", "TOOLS.md", "IDENTITY.md", "HEARTBEAT.md"];
 let templatesInstalled = 0;
 for (const tpl of templates) {
   const dest = path.join(OPENCLAW_WORKSPACE, tpl);
@@ -156,7 +156,7 @@ writeJsonIfMissing(
 writeJsonIfMissing(
   path.join(OPENCLAW_WORKSPACE, "r-awareness", "config.json"),
   {
-    ssotRoot: "resonantos-augmentor/ssot",
+    ssotRoot: "resonantos-alpha/ssot",
     coldStartOnly: true,
     coldStartDocs: ["L1/SSOT-L1-IDENTITY-STUB.ai.md"],
     tokenBudget: 15000,
@@ -214,7 +214,10 @@ if (fs.existsSync(openclawCfgPath)) {
     const agentsList = cfg.agents && cfg.agents.list ? cfg.agents.list : [];
     const hasSetup = agentsList.some(a => a.id === "setup");
     if (!hasSetup) {
-      agentsList.push({ id: "setup", model: "anthropic/claude-haiku-4-5" });
+      // Use the user's primary model for setup agent (don't assume a specific provider)
+      const primaryModel = (cfg.agents && cfg.agents.defaults && cfg.agents.defaults.model && cfg.agents.defaults.model.primary)
+        || "anthropic/claude-haiku-4-5";
+      agentsList.push({ id: "setup", model: primaryModel });
       if (!cfg.agents) cfg.agents = {};
       cfg.agents.list = agentsList;
       fs.writeFileSync(openclawCfgPath, JSON.stringify(cfg, null, 2) + "\n");
