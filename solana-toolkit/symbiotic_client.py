@@ -36,6 +36,12 @@ DISC_UNFREEZE = _discriminator("unfreeze")
 DISC_ROTATE_AI_KEY = _discriminator("rotate_ai_key")
 DISC_CO_SIGN_ACTION = _discriminator("co_sign_action")
 
+TOKEN_2022_PROGRAM_ID = Pubkey.from_string("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb")
+TOKEN_PROGRAM_ID = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
+ASSOCIATED_TOKEN_PROGRAM_ID = Pubkey.from_string(
+    "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+)
+
 
 class SymbioticClient:
     """Client for the Symbiotic Wallet program."""
@@ -77,6 +83,22 @@ class SymbioticClient:
         """
         seeds = [b"symbiotic", bytes(human), bytes([pair_nonce])]
         return Pubkey.find_program_address(seeds, self.program_id)
+
+    def find_mint_config_pda(self) -> tuple[Pubkey, int]:
+        """Derive the mint config PDA."""
+        return Pubkey.find_program_address([b"mint_config"], self.program_id)
+
+    def find_mint_authority_pda(self) -> tuple[Pubkey, int]:
+        """Derive the mint authority PDA."""
+        return Pubkey.find_program_address([b"mint_authority"], self.program_id)
+
+    def _get_ata(self, owner: Pubkey, mint: Pubkey, token_program_id: Pubkey) -> Pubkey:
+        """Derive associated token account for an owner/mint/program tuple."""
+        ata, _ = Pubkey.find_program_address(
+            [bytes(owner), bytes(token_program_id), bytes(mint)],
+            ASSOCIATED_TOKEN_PROGRAM_ID,
+        )
+        return ata
 
     def _send_tx(self, ixs: list[Instruction], signers: list[Keypair]) -> str:
         """Build, sign, send transaction. Returns signature."""
@@ -135,12 +157,29 @@ class SymbioticClient:
 
     def daily_claim(self, signer_keypair: Keypair, pair_pda: Pubkey) -> str:
         """Trigger daily claim. Signer must be human or AI of the pair."""
-        pair_data = self._fetch_pair(pair_pda)
+        mint_config_pda, _ = self.find_mint_config_pda()
+        mint_authority_pda, _ = self.find_mint_authority_pda()
+        mint_config_data = self._fetch_mint_config(mint_config_pda)
+        rct_mint = mint_config_data["rct_mint"]
+        res_mint = mint_config_data["res_mint"]
+
+        rct_destination = self._get_ata(pair_pda, rct_mint, TOKEN_2022_PROGRAM_ID)
+        res_destination = self._get_ata(pair_pda, res_mint, TOKEN_PROGRAM_ID)
 
         data = DISC_DAILY_CLAIM
         accounts = [
             AccountMeta(pubkey=pair_pda, is_signer=False, is_writable=True),
             AccountMeta(pubkey=signer_keypair.pubkey(), is_signer=True, is_writable=False),
+            AccountMeta(pubkey=mint_config_pda, is_signer=False, is_writable=True),
+            AccountMeta(pubkey=mint_authority_pda, is_signer=False, is_writable=False),
+            AccountMeta(pubkey=rct_mint, is_signer=False, is_writable=True),
+            AccountMeta(pubkey=res_mint, is_signer=False, is_writable=True),
+            AccountMeta(pubkey=rct_destination, is_signer=False, is_writable=True),
+            AccountMeta(pubkey=res_destination, is_signer=False, is_writable=True),
+            AccountMeta(pubkey=TOKEN_2022_PROGRAM_ID, is_signer=False, is_writable=False),
+            AccountMeta(pubkey=TOKEN_PROGRAM_ID, is_signer=False, is_writable=False),
+            AccountMeta(pubkey=ASSOCIATED_TOKEN_PROGRAM_ID, is_signer=False, is_writable=False),
+            AccountMeta(pubkey=SYSTEM_PROGRAM_ID, is_signer=False, is_writable=False),
         ]
 
         ix = Instruction(self.program_id, data, accounts)
@@ -267,6 +306,22 @@ class SymbioticClient:
             "last_claim": struct.unpack("<q", d[67:75])[0],
             "created_at": struct.unpack("<q", d[75:83])[0],
             "ai_rotations": struct.unpack("<H", d[83:85])[0],
+        }
+
+    def _fetch_mint_config(self, mint_config_pda: Pubkey) -> Dict[str, Pubkey]:
+        """Fetch and decode mint config account data."""
+        resp = self.client.get_account_info(mint_config_pda)
+        if resp.value is None:
+            raise Exception(f"Mint config account not found: {mint_config_pda}")
+        raw = resp.value.data
+        if len(raw) < 72:
+            raise Exception(f"Mint config account too small: {len(raw)} bytes")
+
+        # Anchor account layout: 8-byte discriminator + account fields.
+        data = raw[8:]
+        return {
+            "rct_mint": Pubkey.from_bytes(data[0:32]),
+            "res_mint": Pubkey.from_bytes(data[32:64]),
         }
 
     def get_pair_info(self, human: Pubkey, pair_nonce: int = 0) -> Optional[Dict]:
