@@ -423,14 +423,15 @@ def install_pre_push_hook(repo_path: str) -> bool:
 # Installed by data_leak_scanner.py — DO NOT EDIT
 # Queries Logician + scans for credential/private data leaks
 
-RESULT=$(python3 "{scanner_path}" pre-push "$(git rev-parse --show-toplevel)")
+PYTHON=$(command -v python3 2>/dev/null || command -v python 2>/dev/null || echo python3)
+RESULT=$($PYTHON "{scanner_path}" pre-push "$(git rev-parse --show-toplevel)")
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -ne 0 ]; then
     echo ""
     echo "═══════════════════════════════════════════"
     echo "  Shield blocked this push (exit $EXIT_CODE)"
-    echo "  Run: python3 {scanner_path} check-diff ."
+    echo "  Run: $PYTHON {scanner_path} check-diff ."
     echo "  to see details."
     echo "═══════════════════════════════════════════"
     exit 1

@@ -1,4 +1,5 @@
 import json
+import time
 from pathlib import Path
 from typing import List, Dict, Any
 
@@ -66,12 +67,14 @@ class SolanaWallet:
         
         return float(response.value) / 1e9
     
-    def airdrop(self, amount_sol: float) -> str:
+    def airdrop(self, amount_sol: float, retries: int = 3, delay: float = 2.0) -> str:
         """
         Request an airdrop of SOL (devnet/testnet only).
         
         Args:
             amount_sol: Amount of SOL to request.
+            retries: Number of attempts before failing.
+            delay: Initial delay between retries in seconds.
         
         Returns:
             str: The transaction signature as a base58-encoded string.
@@ -80,12 +83,23 @@ class SolanaWallet:
             Exception: If the airdrop request fails.
         """
         lamports = int(amount_sol * 1e9)
-        response = self.client.request_airdrop(self.pubkey, lamports)
-        
-        if response.value is None:
-            raise Exception(f"Airdrop request failed: {response}")
-        
-        return str(response.value)
+        current_delay = delay
+        last_error = None
+
+        for attempt in range(1, retries + 1):
+            try:
+                response = self.client.request_airdrop(self.pubkey, lamports)
+                if response.value is None:
+                    raise Exception(f"Airdrop request failed: {response}")
+                return str(response.value)
+            except Exception as e:
+                last_error = e
+                if attempt < retries:
+                    print(f"Airdrop attempt {attempt}/{retries} failed: {e}")
+                    time.sleep(current_delay)
+                    current_delay *= 1.5
+
+        raise Exception(f"Airdrop request failed after {retries} attempts: {last_error}")
     
     def get_recent_transactions(self, limit: int = 10) -> List[Dict[str, Any]]:
         """

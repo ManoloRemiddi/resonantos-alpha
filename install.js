@@ -193,6 +193,19 @@ if (fs.existsSync(setupSrc)) {
   log("  Setup Agent source not found — skipping");
 }
 
+// 9. Logician binary (Windows)
+if (process.platform === "win32") {
+  const logSrc = path.join(INSTALL_DIR, "bin", "mangle-server.exe");
+  const logDest = path.join(HOME, ".openclaw", "bin", "mangle-server.exe");
+  if (fs.existsSync(logSrc)) {
+    mkdirp(path.dirname(logDest));
+    copyFile(logSrc, logDest);
+    ok("Logician binary installed");
+  } else {
+    log("  Logician binary not found — skipping");
+  }
+}
+
 // Register setup agent in openclaw.json if not already present
 const openclawCfgPath = path.join(HOME, ".openclaw", "openclaw.json");
 if (fs.existsSync(openclawCfgPath)) {
@@ -214,7 +227,7 @@ if (fs.existsSync(openclawCfgPath)) {
   }
 }
 
-// 9. Dashboard dependencies
+// 10. Dashboard dependencies
 log("Installing dashboard dependencies...");
 try {
   run(`${pip} install -q flask flask-cors psutil websocket-client solana solders`, { cwd: path.join(INSTALL_DIR, "dashboard") });
@@ -223,7 +236,7 @@ try {
 }
 ok("Dashboard ready");
 
-// 10. Config from example
+// 11. Config from example
 const cfgPath = path.join(INSTALL_DIR, "dashboard", "config.json");
 const cfgExample = path.join(INSTALL_DIR, "dashboard", "config.example.json");
 if (!fs.existsSync(cfgPath) && fs.existsSync(cfgExample)) {
