@@ -140,9 +140,13 @@ _PROFILES_FILE = _DASHBOARD_DIR / "data" / "profiles.json"
 # Level thresholds for reputation
 _LEVEL_THRESHOLDS = [0, 10, 50, 150, 400, 1000, 2500, 6000, 15000, 40000]
 
-# Gateway WS config
+# Gateway WS config — read port from openclaw.json, fall back to 18789
 GW_HOST = "127.0.0.1"
-GW_PORT = 18789
+try:
+    _gw_cfg = json.loads(OPENCLAW_CONFIG.read_text()).get("gateway", {})
+    GW_PORT = int(_gw_cfg.get("port", 18789))
+except Exception:
+    GW_PORT = 18789
 GW_WS_URL = f"ws://{GW_HOST}:{GW_PORT}"
 
 # Read auth token
@@ -579,7 +583,7 @@ def _get_version():
 
 @app.context_processor
 def inject_version():
-    return {"resonantos_version": _get_version()}
+    return {"resonantos_version": _get_version(), "gw_port": GW_PORT}
 
 
 # ---------------------------------------------------------------------------
@@ -5958,13 +5962,13 @@ def api_system_restart():
     """Restart OpenClaw gateway via SIGUSR1 (works for TUI and service modes)."""
     import signal
     try:
-        # Find gateway process (node process on port 18789)
+        # Find gateway process (node process on configured port)
         result = subprocess.run(
-            ["lsof", "-ti", "tcp:18789"], capture_output=True, text=True
+            ["lsof", "-ti", f"tcp:{GW_PORT}"], capture_output=True, text=True
         )
         pids = result.stdout.strip().split('\n')
         if not pids or not pids[0]:
-            return jsonify({"ok": False, "error": "Gateway process not found on port 18789"}), 404
+            return jsonify({"ok": False, "error": f"Gateway process not found on port {GW_PORT}"}), 404
         # Send SIGUSR1 to trigger graceful restart
         pid = int(pids[0])
         os.kill(pid, signal.SIGUSR1)
