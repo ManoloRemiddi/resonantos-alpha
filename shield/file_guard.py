@@ -7,10 +7,13 @@ Previous version used `uchg` which could be bypassed without root.
 """
 
 import json
+import platform
 import os
 import subprocess
 import sys
 from pathlib import Path
+
+IS_WINDOWS = platform.system() == "Windows"
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _SSOT_ROOT = _REPO_ROOT / "ssot"
@@ -125,6 +128,11 @@ def collect_files(paths, include_data=False, exclude_names=None):
 
 def is_locked(filepath: Path) -> bool:
     """Check if file has schg or uchg flag set (either counts as locked)."""
+    if IS_WINDOWS:
+        try:
+            return not os.access(str(filepath), os.W_OK)
+        except Exception:
+            return False
     try:
         result = subprocess.run(
             ["ls", "-lO", str(filepath)],
@@ -195,6 +203,32 @@ def _sudo_chflags(flag: str, filepath: str, password: str = None) -> bool:
     return result.returncode == 0
 
 
+def _platform_lock(filepath: str, password: str = None) -> bool:
+    if IS_WINDOWS:
+        try:
+            result = subprocess.run(
+                ["icacls", filepath, "/deny", "Everyone:(W)"],
+                capture_output=True, text=True, timeout=10
+            )
+            return result.returncode == 0
+        except Exception:
+            return False
+    return _sudo_chflags("schg", filepath, password)
+
+
+def _platform_unlock(filepath: str, password: str = None) -> bool:
+    if IS_WINDOWS:
+        try:
+            result = subprocess.run(
+                ["icacls", filepath, "/remove:d", "Everyone"],
+                capture_output=True, text=True, timeout=10
+            )
+            return result.returncode == 0
+        except Exception:
+            return False
+    return _sudo_chflags("noschg", filepath, password)
+
+
 def lock_group(group_id: str, password: str = None) -> dict:
     """Lock all files in a group using sudo chflags schg (system immutable, root-only)."""
     if group_id not in GUARD_MANIFEST:
@@ -210,7 +244,7 @@ def lock_group(group_id: str, password: str = None) -> dict:
                           exclude_names=group.get("exclude_names"))
     results = []
     for f in files:
-        ok = _sudo_chflags("schg", str(f), password)
+        ok = _platform_lock(str(f), password)
         results.append({"path": str(f), "locked": ok, **({"error": "sudo failed"} if not ok else {})})
     return {"group": group_id, "results": results}
 
@@ -230,7 +264,7 @@ def unlock_group(group_id: str, password: str = None) -> dict:
                           exclude_names=group.get("exclude_names"))
     results = []
     for f in files:
-        ok = _sudo_chflags("noschg", str(f), password)
+        ok = _platform_unlock(str(f), password)
         results.append({"path": str(f), "unlocked": ok, **({"error": "sudo failed"} if not ok else {})})
     return {"group": group_id, "results": results}
 
@@ -253,7 +287,8 @@ def lock_hook(repo_path: Path) -> dict:
     if hook.exists() and "Shield File Guard" not in hook.read_text():
         hook.rename(hook.with_suffix(".pre-shield-backup"))
     hook.write_text(PRE_PUSH_HOOK)
-    hook.chmod(0o755)
+    if not IS_WINDOWS:
+        hook.chmod(0o755)
     return {"path": str(hook), "locked": True}
 
 
@@ -271,7 +306,7 @@ def lock_file(filepath: str, password: str = None) -> dict:
     fp = expand_path(filepath)
     if not fp.exists():
         return {"error": f"File not found: {filepath}"}
-    ok = _sudo_chflags("schg", str(fp), password)
+    ok = _platform_lock(str(fp), password)
     return {"path": str(fp), "locked": ok} if ok else {"error": "sudo failed — root required"}
 
 
@@ -279,7 +314,7 @@ def unlock_file(filepath: str, password: str = None) -> dict:
     fp = expand_path(filepath)
     if not fp.exists():
         return {"error": f"File not found: {filepath}"}
-    ok = _sudo_chflags("noschg", str(fp), password)
+    ok = _platform_unlock(str(fp), password)
     return {"path": str(fp), "unlocked": ok} if ok else {"error": "sudo failed — root required"}
 
 

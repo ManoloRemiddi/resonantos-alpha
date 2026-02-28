@@ -19,6 +19,10 @@ import sys
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 from flask import Flask, jsonify, render_template, request, send_from_directory
 from flask_cors import CORS
 

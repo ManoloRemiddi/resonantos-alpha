@@ -7,7 +7,7 @@ const path = require("path");
  */
 function detectLevel(filePath, content) {
   // 1. Check file path for /L{0-4}/ directory
-  const pathMatch = filePath.match(/\/L([0-4])\//);
+  const pathMatch = filePath.match(/[/\\\\]L([0-4])[/\\\\]/);
   if (pathMatch) return parseInt(pathMatch[1], 10);
   
   // 2. Check metadata header for Level field
