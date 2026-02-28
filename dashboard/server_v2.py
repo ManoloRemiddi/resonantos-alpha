@@ -779,13 +779,7 @@ def chatbots_page():
 def wallet_page():
     return render_template("wallet.html", active_page="wallet")
 
-@app.route("/tribes")
-def tribes_page():
-    return render_template("tribes.html", active_page="tribes")
-
-@app.route("/bounties")
-def bounties_page():
-    return render_template("bounties.html", active_page="bounties")
+# tribes and bounties routes are in server_bounty_routes.py and server_profile_routes.py
 
 @app.route("/protocol-store")
 def protocol_store_page():
