@@ -249,12 +249,33 @@ if (fs.existsSync(openclawCfgPath)) {
 
 // 10. Dashboard dependencies
 log("Installing dashboard dependencies...");
+const dashDir = path.join(INSTALL_DIR, "dashboard");
+const dashDeps = "flask flask-cors psutil websocket-client solana solders";
 try {
-  run(`${pip} install -q flask flask-cors psutil websocket-client solana solders`, { cwd: path.join(INSTALL_DIR, "dashboard") });
+  // Try venv first (works on all platforms, avoids PEP 668 issues on Ubuntu 24.04+)
+  const venvDir = path.join(dashDir, "venv");
+  if (!fs.existsSync(venvDir)) {
+    run(`${python} -m venv "${venvDir}"`, { cwd: dashDir });
+  }
+  const venvPip = isWin ? path.join(venvDir, "Scripts", "pip") : path.join(venvDir, "bin", "pip");
+  run(`"${venvPip}" install -q ${dashDeps}`, { cwd: dashDir });
+  ok("Dashboard ready (venv)");
 } catch {
-  run(`${pip} install flask flask-cors psutil websocket-client solana solders`, { cwd: path.join(INSTALL_DIR, "dashboard") });
+  // Fallback: try system pip with --break-system-packages (PEP 668 override)
+  try {
+    run(`${pip} install -q --break-system-packages ${dashDeps}`, { cwd: dashDir });
+    ok("Dashboard ready (system packages)");
+  } catch {
+    // Last resort: plain pip install
+    try {
+      run(`${pip} install ${dashDeps}`, { cwd: dashDir });
+      ok("Dashboard ready");
+    } catch {
+      log("  Warning: Could not install dashboard dependencies. Install manually:");
+      log(`  ${pip} install ${dashDeps}`);
+    }
+  }
 }
-ok("Dashboard ready");
 
 // 11. Config from example
 const cfgPath = path.join(INSTALL_DIR, "dashboard", "config.json");

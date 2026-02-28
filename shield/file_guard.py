@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
 Shield File Guard — filesystem-level protection for core system files.
-Uses macOS `chflags schg/noschg` (system immutable) — requires root to modify.
-This means the AI agent CANNOT unlock files; only a human with sudo can.
-Previous version used `uchg` which could be bypassed without root.
+Cross-platform: macOS (chflags schg/noschg), Linux (chattr +i/-i), Windows (icacls).
+Requires root/admin to modify. The AI agent CANNOT unlock files without the password.
 """
 
 import json
@@ -14,6 +13,7 @@ import sys
 from pathlib import Path
 
 IS_WINDOWS = platform.system() == "Windows"
+IS_LINUX = platform.system() == "Linux"
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _SSOT_ROOT = _REPO_ROOT / "ssot"
@@ -137,6 +137,17 @@ def is_locked(filepath: Path) -> bool:
             return "(DENY)" in result.stdout and "(W)" in result.stdout
         except Exception:
             return False
+    if IS_LINUX:
+        try:
+            result = subprocess.run(
+                ["lsattr", str(filepath)],
+                capture_output=True, text=True, timeout=5
+            )
+            # lsattr output: "----i---------e------- /path/to/file"
+            attrs = result.stdout.split()[0] if result.stdout.strip() else ""
+            return "i" in attrs
+        except Exception:
+            return False
     try:
         result = subprocess.run(
             ["ls", "-lO", str(filepath)],
@@ -217,6 +228,11 @@ def _platform_lock(filepath: str, password: str = None) -> bool:
             return result.returncode == 0
         except Exception:
             return False
+    if IS_LINUX:
+        cmd = ["sudo", "-S", "chattr", "+i", filepath] if password else ["sudo", "chattr", "+i", filepath]
+        stdin_data = (password + "\n") if password else None
+        result = subprocess.run(cmd, input=stdin_data, capture_output=True, text=True, timeout=10)
+        return result.returncode == 0
     return _sudo_chflags("schg", filepath, password)
 
 
@@ -230,6 +246,11 @@ def _platform_unlock(filepath: str, password: str = None) -> bool:
             return result.returncode == 0
         except Exception:
             return False
+    if IS_LINUX:
+        cmd = ["sudo", "-S", "chattr", "-i", filepath] if password else ["sudo", "chattr", "-i", filepath]
+        stdin_data = (password + "\n") if password else None
+        result = subprocess.run(cmd, input=stdin_data, capture_output=True, text=True, timeout=10)
+        return result.returncode == 0
     return _sudo_chflags("noschg", filepath, password)
 
 

@@ -512,7 +512,7 @@
             
             <h4 style="margin: 0 0 8px; font-size: 14px; color: var(--text-primary);">macOS</h4>
             <p style="color: var(--text-secondary, #aaa); line-height: 1.7; margin-bottom: 12px;">
-                Uses <code style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 3px;">chflags uchg</code> (OS-level immutable flag). Locking is instant, unlocking requires your Mac user password. This is the strongest protection available -- even the AI running as your user cannot bypass it without the password.
+                Uses OS-level immutable flags (<code style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 3px;">chflags uchg</code> on macOS, <code style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 3px;">chattr +i</code> on Linux). Locking is instant, unlocking requires your login password. This is the strongest protection available -- even the AI running as your user cannot bypass it without the password.
             </p>
 
             <h4 style="margin: 0 0 8px; font-size: 14px; color: var(--text-primary);">Linux</h4>

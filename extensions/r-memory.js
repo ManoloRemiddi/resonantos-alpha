@@ -672,7 +672,7 @@ function resolveApiKeyForProvider(provider) {
       if (data.profiles) {
         for (const [key, profile] of Object.entries(data.profiles)) {
           if (key.includes(provider)) {
-            const tok = profile?.token || profile?.access;
+            const tok = profile?.token || profile?.key || profile?.access;
             if (tok) { log("INFO", `API key from auth-profiles (${key})`); return tok; }
           }
         }
@@ -702,7 +702,7 @@ function discoverProviders() {
       const data = JSON.parse(fs.readFileSync(agentAuth, "utf-8"));
       if (data.profiles) {
         for (const [key, profile] of Object.entries(data.profiles)) {
-          if (profile?.token) {
+          if (profile?.token || profile?.key) {
             const prov = profile.provider || key.split(":")[0] || "unknown";
             providers.push({ key, provider: prov });
           }
