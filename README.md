@@ -79,6 +79,48 @@ open http://localhost:19100                                # 3. Open Mission Con
 
 ---
 
+## 🚀 Getting Started
+
+### Fresh Installation
+
+The installer creates workspace templates (`AGENTS.md`, `SOUL.md`, `USER.md`, `MEMORY.md`, `TOOLS.md`) that teach your AI how to operate. To get the most out of the system:
+
+1. **Gather your documents** — business plan, project briefs, values statement, anything that defines your work. Put them in a single folder (e.g., `~/Desktop/my-docs/`).
+2. **Tell your AI:** *"Read everything in ~/Desktop/my-docs/ and use it to fill in my SOUL.md, USER.md, and MEMORY.md."*
+3. Your AI will extract your values, communication style, project context, and preferences into the right files.
+
+### Existing Installation
+
+If you already have OpenClaw running with your own workspace files:
+
+1. Tell your AI where your existing documents live.
+2. Ask it to review them and populate the ResonantOS workspace templates with relevant context.
+3. Your existing files won't be overwritten — the installer only creates templates for files that don't exist yet.
+
+### The Memory System
+
+Your AI maintains two layers of memory:
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| **Daily logs** | `memory/YYYY-MM-DD.md` | Raw session notes: decisions, lessons, mistakes, open items |
+| **Long-term** | `MEMORY.md` | Curated insights distilled from daily logs |
+
+Daily logs follow a structured format that captures not just *what* happened, but *what was learned* — including mistakes and whether they can be prevented by rules. OpenClaw's built-in `memory_search` automatically indexes all memory files, making them searchable via RAG across sessions.
+
+### Self-Improvement Loop
+
+ResonantOS includes a self-improvement protocol where your AI learns from its own mistakes:
+
+1. **First occurrence** of a mistake is tracked in the daily log
+2. **Second occurrence** (pattern detected) triggers evaluation: can this be prevented mechanically?
+3. **If enforceable**, a Logician rule is created — starting in advisory mode, then graduating to enforcement
+4. **If not enforceable**, it becomes a permanent lesson in `MEMORY.md`
+
+This means your AI gets better over time without you having to micromanage it. Mistakes become rules. Rules become guarantees.
+
+---
+
 ## 🔄 Updating
 
 Already installed? Get the latest:

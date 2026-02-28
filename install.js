@@ -112,7 +112,29 @@ if (ssotEmpty) {
   log("  SSoT directory not empty — skipping (won't overwrite your docs)");
 }
 
-// 6. R-Memory & R-Awareness configs
+// 6. Workspace templates (AGENTS.md, SOUL.md, USER.md, MEMORY.md, TOOLS.md)
+log("Setting up workspace templates...");
+const workspaceTemplatesDir = path.join(INSTALL_DIR, "workspace-templates");
+const memoryDir = path.join(OPENCLAW_WORKSPACE, "memory");
+mkdirp(memoryDir);
+
+const templates = ["AGENTS.md", "SOUL.md", "USER.md", "MEMORY.md", "TOOLS.md"];
+let templatesInstalled = 0;
+for (const tpl of templates) {
+  const dest = path.join(OPENCLAW_WORKSPACE, tpl);
+  const src = path.join(workspaceTemplatesDir, tpl);
+  if (!fs.existsSync(dest) && fs.existsSync(src)) {
+    fs.copyFileSync(src, dest);
+    templatesInstalled++;
+  }
+}
+if (templatesInstalled > 0) {
+  ok(templatesInstalled + " workspace templates installed (won't overwrite existing files)");
+} else {
+  log("  Workspace templates already exist — skipping");
+}
+
+// 7. R-Memory & R-Awareness configs
 mkdirp(path.join(OPENCLAW_WORKSPACE, "r-memory"));
 mkdirp(path.join(OPENCLAW_WORKSPACE, "r-awareness"));
 
@@ -157,7 +179,7 @@ writeJsonIfMissing(
   "R-Memory config"
 );
 
-// 7. Dashboard dependencies
+// 8. Dashboard dependencies
 log("Installing dashboard dependencies...");
 try {
   run(`${pip} install -q flask flask-cors psutil websocket-client`, { cwd: path.join(INSTALL_DIR, "dashboard") });
@@ -166,7 +188,7 @@ try {
 }
 ok("Dashboard ready");
 
-// 8. Config from example
+// 9. Config from example
 const cfgPath = path.join(INSTALL_DIR, "dashboard", "config.json");
 const cfgExample = path.join(INSTALL_DIR, "dashboard", "config.example.json");
 if (!fs.existsSync(cfgPath) && fs.existsSync(cfgExample)) {

@@ -118,6 +118,9 @@ WARN_MARKERS: List[Tuple[str, str]] = [
     (_m("Augmentatism", " Manifesto"), "philosophy_public"),
 ]
 
+# Paths that contain intentional template content (not leaks)
+TEMPLATE_PATHS = {"workspace-templates/"}
+
 # File paths that should never be committed or shared
 FORBIDDEN_FILE_PATTERNS: List[re.Pattern] = [
     re.compile(r"MEMORY\.md"),
@@ -263,6 +266,8 @@ def scan_git_diff(repo_path: str, staged: bool = True) -> ScanResult:
     files_cmd = ["git", "-C", repo_path, "diff", "--cached", "--name-only"]
     files = subprocess.run(files_cmd, capture_output=True, text=True, timeout=5)
     for fname in files.stdout.strip().splitlines():
+        if any(fname.startswith(tp) for tp in TEMPLATE_PATHS):
+            continue
         for pat in FORBIDDEN_FILE_PATTERNS:
             if pat.search(fname):
                 result.add("forbidden_file", pat.pattern, fname)
