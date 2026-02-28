@@ -121,6 +121,14 @@ This means your AI gets better over time without you having to micromanage it. M
 
 ---
 
+## 💬 Join the Community
+
+Building a second brain is better together. Join us on Discord — share your setup, get help, and help shape what ResonantOS becomes:
+
+**[→ Join the Discord](https://discord.gg/MRESQnf4R4)**
+
+---
+
 ## 🔄 Updating
 
 Already installed? Get the latest:
