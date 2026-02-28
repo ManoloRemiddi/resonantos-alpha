@@ -130,7 +130,11 @@ def is_locked(filepath: Path) -> bool:
     """Check if file has schg or uchg flag set (either counts as locked)."""
     if IS_WINDOWS:
         try:
-            return not os.access(str(filepath), os.W_OK)
+            result = subprocess.run(
+                ["icacls", str(filepath)],
+                capture_output=True, text=True, timeout=5
+            )
+            return "(DENY)" in result.stdout and "(W)" in result.stdout
         except Exception:
             return False
     try:
