@@ -179,7 +179,42 @@ writeJsonIfMissing(
   "R-Memory config"
 );
 
-// 8. Dashboard dependencies
+// 8. Setup Agent (onboarding for new users)
+log("Installing Setup Agent...");
+const setupSrc = path.join(INSTALL_DIR, "agents", "setup");
+const setupDest = path.join(HOME, ".openclaw", "agents", "setup", "agent");
+if (fs.existsSync(setupSrc)) {
+  mkdirp(setupDest);
+  for (const f of fs.readdirSync(setupSrc)) {
+    copyFile(path.join(setupSrc, f), path.join(setupDest, f));
+  }
+  ok("Setup Agent installed");
+} else {
+  log("  Setup Agent source not found — skipping");
+}
+
+// Register setup agent in openclaw.json if not already present
+const openclawCfgPath = path.join(HOME, ".openclaw", "openclaw.json");
+if (fs.existsSync(openclawCfgPath)) {
+  try {
+    const cfg = JSON.parse(fs.readFileSync(openclawCfgPath, "utf-8"));
+    const agentsList = cfg.agents && cfg.agents.list ? cfg.agents.list : [];
+    const hasSetup = agentsList.some(a => a.id === "setup");
+    if (!hasSetup) {
+      agentsList.push({ id: "setup", model: "anthropic/claude-haiku-4-5" });
+      if (!cfg.agents) cfg.agents = {};
+      cfg.agents.list = agentsList;
+      fs.writeFileSync(openclawCfgPath, JSON.stringify(cfg, null, 2) + "\n");
+      ok("Setup Agent registered in openclaw.json");
+    } else {
+      log("  Setup Agent already registered in openclaw.json");
+    }
+  } catch (e) {
+    log("  Warning: Could not update openclaw.json: " + e.message);
+  }
+}
+
+// 9. Dashboard dependencies
 log("Installing dashboard dependencies...");
 try {
   run(`${pip} install -q flask flask-cors psutil websocket-client solana solders`, { cwd: path.join(INSTALL_DIR, "dashboard") });
@@ -188,7 +223,7 @@ try {
 }
 ok("Dashboard ready");
 
-// 9. Config from example
+// 10. Config from example
 const cfgPath = path.join(INSTALL_DIR, "dashboard", "config.json");
 const cfgExample = path.join(INSTALL_DIR, "dashboard", "config.example.json");
 if (!fs.existsSync(cfgPath) && fs.existsSync(cfgExample)) {
