@@ -3785,10 +3785,11 @@ def api_agents():
         "main":     {"tier": 0, "role": "Orchestrator & Strategist", "category": "core"},
         "doer":     {"tier": 1, "role": "Personal Assistant & Task Executor", "category": "direct"},
         "dao":      {"tier": 1, "role": "DAO Strategy & Governance", "category": "direct"},
-        "youtube":  {"tier": 1, "role": "Content Creation", "category": "direct"},
         "website":  {"tier": 1, "role": "Marketing Website", "category": "direct"},
-        "watchdog":      {"tier": 1, "role": "System Health Monitor", "category": "support"},
-        "decoder":       {"tier": 1, "role": "Coding Agent", "category": "background"},
+        "voice":         {"tier": 1, "role": "Content Voice & YouTube", "category": "direct"},
+        "coder":         {"tier": 1, "role": "Coding Agent", "category": "background"},
+        "researcher":    {"tier": 1, "role": "Deep Research (Perplexity)", "category": "background"},
+        "setup":         {"tier": 1, "role": "Onboarding & Setup", "category": "support"},
         "acupuncturist": {"tier": 1, "role": "Protocol Enforcement", "category": "support"},
         "blindspot":     {"tier": 1, "role": "Red Team & Vulnerability Hunter", "category": "support"},
     }
@@ -4199,6 +4200,7 @@ def api_rmemory_available_models():
         "anthropic": {"model": "anthropic/claude-haiku-4-5", "label": "Claude Haiku 4.5 (cheap)"},
         "openai": {"model": "openai/gpt-4o-mini", "label": "GPT-4o Mini (cheap)"},
         "google": {"model": "google/gemini-2.0-flash", "label": "Gemini 2.0 Flash (cheap)"},
+        "minimax": {"model": "minimax/MiniMax-M2.5-Lightning", "label": "MiniMax M2.5 Lightning"},
     }
     full_models = {
         "anthropic": [
@@ -4212,6 +4214,11 @@ def api_rmemory_available_models():
         ],
         "google": [
             {"model": "google/gemini-2.0-flash", "label": "Gemini 2.0 Flash (cheap)"},
+        ],
+        "minimax": [
+            {"model": "minimax/MiniMax-M2.5-Lightning", "label": "MiniMax M2.5 Lightning"},
+            {"model": "minimax/MiniMax-M2.5", "label": "MiniMax M2.5"},
+            {"model": "minimax/MiniMax-M2.1", "label": "MiniMax M2.1"},
         ],
     }
     available = []
@@ -4342,6 +4349,8 @@ def api_rmemory_stats():
 # Known model pricing database — used as fallback when auto-discovering models
 _KNOWN_MODEL_PRICING = {
     "anthropic/claude-opus-4-6": {"label": "Claude Opus 4.6", "inputPer1M": 5.0, "outputPer1M": 25.0, "cacheReadPer1M": 0.5, "cacheWritePer1M": 6.25},
+    "minimax/MiniMax-M2.5": {"label": "MiniMax M2.5", "inputPer1M": 0.3, "outputPer1M": 1.2, "cacheReadPer1M": 0.03, "cacheWritePer1M": 0.12},
+    "minimax/MiniMax-M2.5-Lightning": {"label": "MiniMax M2.5 Lightning", "inputPer1M": 0.3, "outputPer1M": 1.2, "cacheReadPer1M": 0.03, "cacheWritePer1M": 0.12},
     "anthropic/claude-sonnet-4-6": {"label": "Claude Sonnet 4.6", "inputPer1M": 3.0, "outputPer1M": 15.0, "cacheReadPer1M": 0.3, "cacheWritePer1M": 3.75},
     "anthropic/claude-haiku-4-5": {"label": "Claude Haiku 4.5", "inputPer1M": 1.0, "outputPer1M": 5.0, "cacheReadPer1M": 0.1, "cacheWritePer1M": 1.25},
     "openai-codex/gpt-4o-mini": {"label": "GPT-4o mini", "inputPer1M": 0.15, "outputPer1M": 0.6, "cacheReadPer1M": 0.075, "cacheWritePer1M": 0.15},
@@ -5736,15 +5745,52 @@ CHATBOTS_DB = Path(__file__).parent / "chatbots.db"
 def _get_db():
     db = sqlite3.connect(str(CHATBOTS_DB))
     db.row_factory = sqlite3.Row
-    # Auto-migrate icon columns
-    try:
-        db.execute("ALTER TABLE chatbots ADD COLUMN icon TEXT DEFAULT '💬'")
-    except Exception:
-        pass
-    try:
-        db.execute("ALTER TABLE chatbots ADD COLUMN icon_type TEXT DEFAULT 'emoji'")
-    except Exception:
-        pass
+    # Auto-create tables if missing (first run on new install)
+    db.executescript("""
+        CREATE TABLE IF NOT EXISTS chatbots (
+            id TEXT PRIMARY KEY, user_id TEXT DEFAULT 'default', name TEXT NOT NULL,
+            system_prompt TEXT, greeting TEXT DEFAULT 'Hi! How can I help you today?',
+            suggested_prompts TEXT DEFAULT '[]', position TEXT DEFAULT 'bottom-right',
+            theme TEXT DEFAULT 'dark', primary_color TEXT DEFAULT '#4ade80',
+            bg_color TEXT DEFAULT '#1a1a1a', text_color TEXT DEFAULT '#e0e0e0',
+            allowed_domains TEXT DEFAULT '', rate_per_minute INTEGER DEFAULT 10,
+            rate_per_hour INTEGER DEFAULT 100, enable_analytics INTEGER DEFAULT 1,
+            show_watermark INTEGER DEFAULT 1, status TEXT DEFAULT 'active',
+            created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+            updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+            api_type TEXT DEFAULT 'internal', api_key_encrypted TEXT,
+            model_id TEXT DEFAULT 'claude-sonnet', last_used_at INTEGER,
+            icon_url TEXT DEFAULT '', icon TEXT DEFAULT '💬', icon_type TEXT DEFAULT 'emoji'
+        );
+        CREATE TABLE IF NOT EXISTS chatbot_conversations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, chatbot_id TEXT NOT NULL,
+            session_id TEXT NOT NULL, started_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+            ended_at INTEGER, message_count INTEGER DEFAULT 0, satisfaction_rating INTEGER,
+            FOREIGN KEY (chatbot_id) REFERENCES chatbots(id)
+        );
+        CREATE TABLE IF NOT EXISTS chatbot_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, conversation_id INTEGER NOT NULL,
+            role TEXT NOT NULL, content TEXT NOT NULL,
+            timestamp INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+            FOREIGN KEY (conversation_id) REFERENCES chatbot_conversations(id)
+        );
+        CREATE TABLE IF NOT EXISTS licenses (
+            id TEXT PRIMARY KEY, user_id TEXT NOT NULL, chatbot_id TEXT,
+            tier TEXT DEFAULT 'free', features TEXT DEFAULT '[]',
+            stripe_subscription_id TEXT, stripe_customer_id TEXT, expires_at INTEGER,
+            created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+            updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
+        );
+        CREATE TABLE IF NOT EXISTS knowledge_files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, chatbot_id TEXT NOT NULL,
+            filename TEXT NOT NULL, content TEXT, file_size INTEGER,
+            uploaded_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+            FOREIGN KEY (chatbot_id) REFERENCES chatbots(id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_conversations_chatbot ON chatbot_conversations(chatbot_id);
+        CREATE INDEX IF NOT EXISTS idx_messages_conversation ON chatbot_messages(conversation_id);
+        CREATE INDEX IF NOT EXISTS idx_licenses_user ON licenses(user_id);
+    """)
     return db
 
 @app.route("/api/chatbots")
