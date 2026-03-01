@@ -1453,7 +1453,7 @@ def api_wallet_build_transfer_tx():
         )
 
         # Verify symbiotic pair exists on-chain and is active
-        pair_info = _solana_rpc(network, "getAccountInfo", [str(pda), {"encoding": "base64"}])
+        pair_info = _solana_rpc(network, "getAccountInfo", [str(pda), {"encoding": "base64", "commitment": "confirmed"}])
         pair_val = pair_info.get("result", {}).get("value") if isinstance(pair_info, dict) else None
         if not pair_val:
             return jsonify({"error": "Symbiotic wallet not initialized. Create Symbiotic Wallet first."}), 400
@@ -1717,7 +1717,7 @@ def api_wallet_onboarding_status():
         pda_address = _derive_symbiotic_pda(address)
         pair_exists = False
         try:
-            pair_info = _solana_rpc(network, "getAccountInfo", [pda_address, {"encoding": "base64"}])
+            pair_info = _solana_rpc(network, "getAccountInfo", [pda_address, {"encoding": "base64", "commitment": "confirmed"}])
             pair_exists = pair_info.get("result", {}).get("value") is not None
         except Exception:
             pair_exists = False
@@ -2977,7 +2977,7 @@ def symbiotic_pair_info():
                 data=json.dumps({
                     "jsonrpc": "2.0", "id": 1,
                     "method": "getAccountInfo",
-                    "params": [str(pda), {"encoding": "base64"}]
+                    "params": [str(pda), {"encoding": "base64", "commitment": "confirmed"}]
                 }).encode(),
                 headers={"Content-Type": "application/json"},
             ),
