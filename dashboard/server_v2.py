@@ -570,16 +570,13 @@ def chat_redirect():
 
 
 def _get_version():
-    """Derive version from git commit count: v3.<count>."""
     try:
-        import subprocess
-        count = subprocess.check_output(
-            ["git", "rev-list", "--count", "HEAD"],
-            cwd=os.path.dirname(__file__), stderr=subprocess.DEVNULL
-        ).decode().strip()
-        return f"v3.{count}"
+        version_file = Path(os.path.dirname(__file__)).parent / "VERSION"
+        if version_file.exists():
+            return "v" + version_file.read_text().strip()
+        return "v0.0.0"
     except Exception:
-        return "v3.0"
+        return "v0.0.0"
 
 
 @app.context_processor

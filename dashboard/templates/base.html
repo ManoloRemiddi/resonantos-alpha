@@ -109,6 +109,10 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
+
+        .version.up-to-date { color: #4ade80; }
+        .version.update-available { color: #f59e0b; }
+        .version.update-behind { color: #ef4444; }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -121,7 +125,7 @@
                     <span class="logo-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
                     <span class="logo-text">Resonant<span class="accent">OS</span></span>
                 </div>
-                <span class="version">{{ resonantos_version }}</span>
+                <span class="version" id="versionBadge">{{ resonantos_version }}</span>
             </div>
             
             <nav class="sidebar-nav">
@@ -132,7 +136,7 @@
                     <span class="shield-mode" id="shieldMode" style="display:none;"></span>
                 </a>
 
-                <!-- Logician indicator -->
+                <!-- Logician indicator (clickable -> rules page) -->
                 <a href="/settings#rules" class="nav-item" id="logicianStatus" title="Logician Engine" onclick="setTimeout(function(){if(typeof showSection==='function')showSection('rules')},100)">
                     <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
                     <span class="nav-label">Logician</span>
@@ -191,7 +195,7 @@
                 </a>
 
                 <div class="nav-section-label">System</div>
-                <a href="http://localhost:{{ gw_port }}" target="_blank" class="nav-item" title="OpenClaw Webchat">
+                <a href="/chat-redirect" target="_blank" class="nav-item" title="OpenClaw Webchat">
                     <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
                     <span class="nav-label">OpenClaw Chat</span>
                 </a>
@@ -308,6 +312,43 @@
             }
         }
 
+        // Version badge update status
+        async function updateVersionBadgeStatus() {
+            const badge = document.getElementById('versionBadge');
+            if (!badge) return;
+
+            function applyState(className, title) {
+                badge.classList.remove('up-to-date', 'update-available', 'update-behind');
+                badge.classList.add(className);
+                badge.title = title;
+            }
+
+            // Default to green/current when no status is available.
+            applyState('up-to-date', 'Up to date');
+
+            try {
+                const response = await fetch('/api/settings/update-config');
+                if (!response.ok) return;
+                const data = await response.json();
+                const result = data && typeof data === 'object' ? data.lastCheckResult : null;
+                if (!result || typeof result !== 'object') return;
+
+                const available = result.available === true;
+                const behindParsed = Number(result.behind);
+                const behind = Number.isFinite(behindParsed) ? behindParsed : 0;
+
+                if (!available) {
+                    applyState('up-to-date', 'Up to date');
+                } else if (behind >= 2) {
+                    applyState('update-behind', `${behind} updates behind`);
+                } else {
+                    applyState('update-available', '1 update available');
+                }
+            } catch (e) {
+                applyState('up-to-date', 'Up to date');
+            }
+        }
+
         // Gateway Restart (with confirmation)
         async function confirmRestartGateway() {
             if (!confirm('Are you sure you want to restart the OpenClaw Gateway? This will briefly disconnect all channels.')) return;
@@ -362,6 +403,7 @@
             updateShieldStatus();
             updateGatewayStatus();
             updateLogicianStatus();
+            updateVersionBadgeStatus();
             setInterval(updateShieldStatus, 30000);
             setInterval(updateGatewayStatus, 10000);
             setInterval(updateLogicianStatus, 60000);
