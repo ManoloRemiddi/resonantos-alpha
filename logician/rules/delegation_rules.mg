@@ -119,3 +119,22 @@ violation(orchestrator, undiagnosed_delegation) :-
 violation(orchestrator, delegated_architecture) :-
     task_contains_architectural_decision(Task),
     delegated(orchestrator, Task, coder).
+
+% --- Diagnosis Gate (2026-03-01) ---
+% Diagnostic claims on issues require deterministic evidence.
+% Failure mode: Issue #6 — "on-chain program issue" asserted without
+% testing the program. Program was fine. Bug was 1-line commitment fix.
+
+violation(orchestrator, unverified_diagnosis) :-
+    action(close_issue),
+    comment_has_diagnostic_claim(Comment),
+    \+ comment_has_evidence(Comment).
+
+violation(orchestrator, unverified_diagnosis) :-
+    action(comment_issue),
+    comment_has_diagnostic_claim(Comment),
+    \+ comment_has_evidence(Comment),
+    \+ comment_has_uncertainty(Comment).
+
+% Shield enforcement: shield/diagnosis_gate.py check "<comment>"
+% Exit 0 = pass, Exit 1 = blocked
