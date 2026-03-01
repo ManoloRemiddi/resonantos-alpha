@@ -32,6 +32,20 @@
 .rules-help-content li strong { color: var(--text-primary, #fff); }
 .rules-help-note { font-size: 0.8rem !important; opacity: 0.7; }
 .rules-help-note a { color: var(--accent, #4ade80); }
+.update-badge {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #ef4444;
+    margin-left: auto;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+.update-last-meta p {
+    margin-bottom: 4px;
+}
+.update-last-meta p:last-child {
+    margin-bottom: 0;
+}
 </style>
 <div class="settings-layout">
     <!-- Settings Navigation -->
@@ -62,7 +76,8 @@
         </a>
         <a href="#updates" class="settings-nav-item" onclick="showSection('updates')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-            Updates
+            <span>Updates</span>
+            <span id="updateBadge" class="update-badge" style="display:none;" aria-label="Update available"></span>
         </a>
     </nav>
     
@@ -388,7 +403,77 @@
                         </button>
                     </div>
                 </div>
+            </div>
 
+            <div class="settings-card">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Automatic Updates</h3>
+                        <p>Configure background checks and optional auto-apply behavior.</p>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Check for updates automatically</h3>
+                        <p>Run update checks in the background.</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="updateAutoCheck" onchange="handleAutoCheckToggle()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Check every</h3>
+                        <p>Background check interval.</p>
+                    </div>
+                    <div class="setting-control">
+                        <select id="updateIntervalHours" onchange="saveUpdateConfig()">
+                            <option value="1">1 hour</option>
+                            <option value="2">2 hours</option>
+                            <option value="4">4 hours</option>
+                            <option value="6">6 hours</option>
+                            <option value="12">12 hours</option>
+                            <option value="24">24 hours</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Apply updates automatically</h3>
+                        <p>Run <code>git pull --ff-only</code> when updates are found.</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="updateAutoApply" onchange="saveUpdateConfig()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Show notification when update available</h3>
+                        <p>Show a sidebar badge when the last check finds updates.</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="updateNotifyOnUpdate" onchange="saveUpdateConfig()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="setting-item update-last-meta">
+                    <div class="setting-info">
+                        <h3>Background Check Status</h3>
+                        <p id="updateLastChecked">Last checked: Never</p>
+                        <p id="updateLastResult">Result: No checks yet</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-card">
                 <div id="updateStatus" style="display:none;">
                     <div class="setting-item">
                         <div class="setting-info">
@@ -461,6 +546,7 @@ let pendingPermission = null;
 document.addEventListener('DOMContentLoaded', function() {
     loadSettings();
     loadRules();
+    loadUpdateConfig();
     // Auto-select section from URL hash
     var hash = window.location.hash.replace('#', '');
     if (hash && document.getElementById(hash + 'Section')) {
@@ -674,6 +760,116 @@ function renderCategories(categories) {
 // Software Updates
 // ============================================
 
+function setUpdateBadge(visible) {
+    const badge = document.getElementById('updateBadge');
+    if (!badge) return;
+    badge.style.display = visible ? 'inline-block' : 'none';
+}
+
+function formatRelativeTime(isoString) {
+    if (!isoString) return 'Never';
+    const ts = new Date(isoString);
+    if (Number.isNaN(ts.getTime())) return 'Never';
+    const diffSeconds = Math.max(0, Math.floor((Date.now() - ts.getTime()) / 1000));
+    if (diffSeconds < 60) return 'just now';
+    if (diffSeconds < 3600) {
+        const mins = Math.floor(diffSeconds / 60);
+        return mins + ' minute' + (mins === 1 ? '' : 's') + ' ago';
+    }
+    if (diffSeconds < 86400) {
+        const hours = Math.floor(diffSeconds / 3600);
+        return hours + ' hour' + (hours === 1 ? '' : 's') + ' ago';
+    }
+    const days = Math.floor(diffSeconds / 86400);
+    return days + ' day' + (days === 1 ? '' : 's') + ' ago';
+}
+
+function renderLastCheckMeta(lastCheck, lastCheckResult) {
+    const lastCheckedEl = document.getElementById('updateLastChecked');
+    const lastResultEl = document.getElementById('updateLastResult');
+    if (lastCheckedEl) {
+        lastCheckedEl.textContent = 'Last checked: ' + formatRelativeTime(lastCheck);
+    }
+    if (!lastResultEl) return;
+    if (!lastCheckResult || typeof lastCheckResult !== 'object') {
+        lastResultEl.textContent = 'Result: No checks yet';
+        return;
+    }
+    if (lastCheckResult.available === true) {
+        const behind = Number(lastCheckResult.behind || 0);
+        lastResultEl.textContent = 'Result: ' + behind + ' commit' + (behind === 1 ? '' : 's') + ' behind';
+        return;
+    }
+    if (lastCheckResult.error) {
+        lastResultEl.textContent = 'Result: ' + lastCheckResult.error;
+        return;
+    }
+    lastResultEl.textContent = 'Result: Up to date';
+}
+
+function updateAutoApplyState() {
+    const autoCheck = document.getElementById('updateAutoCheck');
+    const autoApply = document.getElementById('updateAutoApply');
+    if (!autoCheck || !autoApply) return;
+    autoApply.disabled = !autoCheck.checked;
+    autoApply.closest('.toggle-switch').style.opacity = autoCheck.checked ? '1' : '0.6';
+}
+
+async function loadUpdateConfig() {
+    try {
+        const res = await fetch('/api/settings/update-config');
+        const data = await res.json();
+
+        document.getElementById('updateAutoCheck').checked = !!data.autoCheck;
+        document.getElementById('updateIntervalHours').value = String(data.autoCheckIntervalHours || 6);
+        document.getElementById('updateAutoApply').checked = !!data.autoApply;
+        document.getElementById('updateNotifyOnUpdate').checked = !!data.notifyOnUpdate;
+
+        updateAutoApplyState();
+        renderLastCheckMeta(data.lastCheck, data.lastCheckResult);
+        setUpdateBadge(!!(data.notifyOnUpdate && data.lastCheckResult && data.lastCheckResult.available === true));
+    } catch (error) {
+        console.error('Error loading update config:', error);
+        renderLastCheckMeta(null, null);
+        setUpdateBadge(false);
+    }
+}
+
+async function saveUpdateConfig() {
+    const payload = {
+        autoCheck: document.getElementById('updateAutoCheck').checked,
+        autoCheckIntervalHours: parseInt(document.getElementById('updateIntervalHours').value, 10),
+        autoApply: document.getElementById('updateAutoApply').checked,
+        notifyOnUpdate: document.getElementById('updateNotifyOnUpdate').checked
+    };
+
+    try {
+        const res = await fetch('/api/settings/update-config', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) {
+            throw new Error(data.error || 'Failed to save update settings');
+        }
+        document.getElementById('updateAutoCheck').checked = !!data.autoCheck;
+        document.getElementById('updateIntervalHours').value = String(data.autoCheckIntervalHours || 6);
+        document.getElementById('updateAutoApply').checked = !!data.autoApply;
+        document.getElementById('updateNotifyOnUpdate').checked = !!data.notifyOnUpdate;
+        updateAutoApplyState();
+        renderLastCheckMeta(data.lastCheck, data.lastCheckResult);
+        setUpdateBadge(!!(data.notifyOnUpdate && data.lastCheckResult && data.lastCheckResult.available === true));
+    } catch (error) {
+        showToast('Failed to save update settings: ' + error.message, 'error');
+    }
+}
+
+async function handleAutoCheckToggle() {
+    updateAutoApplyState();
+    await saveUpdateConfig();
+}
+
 async function checkForUpdates() {
     const btn = document.getElementById('checkUpdateBtn');
     const statusDiv = document.getElementById('updateStatus');
@@ -708,10 +904,13 @@ async function checkForUpdates() {
             detailEl.innerHTML = '<strong>' + data.behind + '</strong> commit' + (data.behind > 1 ? 's' : '') +
                 ' behind. Remote: <code>' + data.remote + '</code>';
             applyBtn.style.display = 'inline-flex';
+            setUpdateBadge(document.getElementById('updateNotifyOnUpdate').checked);
         } else {
             titleEl.textContent = '✅ Up to date';
             detailEl.textContent = 'Local and remote are at the same commit (' + data.local + ').';
+            setUpdateBadge(false);
         }
+        renderLastCheckMeta(new Date().toISOString(), data);
     } catch (err) {
         titleEl.textContent = '⚠️ Connection error';
         detailEl.textContent = err.message;

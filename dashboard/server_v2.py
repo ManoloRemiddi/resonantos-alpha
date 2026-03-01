@@ -19,66 +19,13 @@ import sys
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-if sys.platform == "win32":
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
-
-# --- Cross-platform file lock helpers ---
-def _platform_lock_cmd(filepath, password=None):
-    """Return (cmd_list, stdin_bytes) for locking a file on current platform."""
-    if sys.platform == "linux":
-        cmd = ["sudo", "-S", "chattr", "+i", str(filepath)]
-        stdin = (password.encode() + b"\n") if password else None
-        return cmd, stdin
-    elif sys.platform == "win32":
-        cmd = ["icacls", str(filepath), "/deny", "Everyone:(W,D)"]
-        return cmd, None
-    else:  # macOS / darwin
-        cmd = ["sudo", "-S", "chflags", "schg", str(filepath)]
-        stdin = (password.encode() + b"\n") if password else None
-        return cmd, stdin
-
-def _platform_unlock_cmd(filepath, password=None):
-    """Return (cmd_list, stdin_bytes) for unlocking a file on current platform."""
-    if sys.platform == "linux":
-        cmd = ["sudo", "-S", "chattr", "-i", str(filepath)]
-        stdin = (password.encode() + b"\n") if password else None
-        return cmd, stdin
-    elif sys.platform == "win32":
-        cmd = ["icacls", str(filepath), "/remove:d", "Everyone"]
-        return cmd, None
-    else:  # macOS / darwin
-        cmd = ["sudo", "-S", "chflags", "noschg", str(filepath)]
-        stdin = (password.encode() + b"\n") if password else None
-        return cmd, stdin
-
-def _is_file_locked(filepath):
-    """Check if file is locked (immutable) on current platform."""
-    try:
-        if sys.platform == "linux":
-            result = subprocess.run(["lsattr", str(filepath)], capture_output=True, text=True, timeout=5)
-            attrs = result.stdout.split()[0] if result.stdout.strip() else ""
-            return "i" in attrs
-        elif sys.platform == "win32":
-            result = subprocess.run(["icacls", str(filepath)], capture_output=True, text=True, timeout=5)
-            return "(DENY)" in result.stdout
-        else:  # macOS
-            st = os.stat(str(filepath))
-            flags = st.st_flags
-            return bool(flags & (0x02 | 0x00020000))
-    except Exception:
-        return False
-# --- End cross-platform helpers ---
-
-
-
-from flask import Flask, jsonify, render_template, request, send_from_directory
+from flask import Flask, jsonify, redirect, render_template, request, send_from_directory
 from flask_cors import CORS
 
 # Solana wallet integration imports — resolve toolkit path dynamically
 _dashboard_dir = Path(__file__).resolve().parent
 _toolkit_candidates = [
-    _dashboard_dir.parent / "solana-toolkit",  # sibling dir (standard layout: resonantos-alpha/solana-toolkit)
+    _dashboard_dir.parent / "solana-toolkit",  # sibling dir (standard layout)
     Path.home() / "resonantos-augmentor" / "solana-toolkit",  # dev/augmentor fallback
     Path.home() / "resonantos-alpha" / "solana-toolkit",  # alpha explicit fallback
 ]
@@ -189,13 +136,9 @@ _PROFILES_FILE = _DASHBOARD_DIR / "data" / "profiles.json"
 # Level thresholds for reputation
 _LEVEL_THRESHOLDS = [0, 10, 50, 150, 400, 1000, 2500, 6000, 15000, 40000]
 
-# Gateway WS config — read port from openclaw.json, fall back to 18789
+# Gateway WS config
 GW_HOST = "127.0.0.1"
-try:
-    _gw_cfg = json.loads(OPENCLAW_CONFIG.read_text()).get("gateway", {})
-    GW_PORT = int(_gw_cfg.get("port", 18789))
-except Exception:
-    GW_PORT = 18789
+GW_PORT = 18789
 GW_WS_URL = f"ws://{GW_HOST}:{GW_PORT}"
 
 # Read auth token
@@ -616,6 +559,15 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.jinja_env.auto_reload = True
 CORS(app)
 
+@app.route("/chat-redirect")
+def chat_redirect():
+    """Redirect to OpenClaw webchat with auth token injected."""
+    token = _read_gw_token()
+    port = GW_PORT
+    if token:
+        return redirect(f"http://localhost:{port}/#token={token}")
+    return redirect(f"http://localhost:{port}/")
+
 
 def _get_version():
     """Derive version from git commit count: v3.<count>."""
@@ -632,7 +584,7 @@ def _get_version():
 
 @app.context_processor
 def inject_version():
-    return {"resonantos_version": _get_version(), "gw_port": GW_PORT}
+    return {"resonantos_version": _get_version()}
 
 
 # ---------------------------------------------------------------------------
@@ -681,11 +633,15 @@ def _rmem_effective_models():
     }
 
 def _rmem_history_blocks(session_id=None):
-    """Read compressed blocks from history-{sessionId}.json files.
-    If session_id given, only that file. Otherwise aggregate all.
+    """Read compressed blocks from history-{sessionId}.json files AND block-cache.json.
+    If session_id given, only that history file. Otherwise aggregate all.
+    block-cache.json contains lifetime compression data (all blocks ever compressed).
     Returns list of block dicts with compressed, tokensRaw, tokensCompressed, timestamp."""
-    pattern = str(RMEMORY_DIR / "history-*.json")
     all_blocks = []
+    history_hashes = set()
+
+    # 1. Read current/recent session blocks from history files
+    pattern = str(RMEMORY_DIR / "history-*.json")
     files = _glob.glob(pattern)
     for f in files:
         if session_id and session_id not in f:
@@ -695,9 +651,41 @@ def _rmem_history_blocks(session_id=None):
             if isinstance(data, list):
                 for b in data:
                     b["_file"] = Path(f).name
+                    b["_source"] = "history"
                     all_blocks.append(b)
+                    if "hash" in b:
+                        history_hashes.add(b["hash"])
         except Exception:
             pass
+
+    # 2. Read lifetime compression stats from block-cache.json
+    if not session_id:
+        cache_file = RMEMORY_DIR / "block-cache.json"
+        if cache_file.exists():
+            try:
+                cache_data = json.loads(cache_file.read_text())
+                if isinstance(cache_data, dict):
+                    for cache_hash, entry in cache_data.items():
+                        if str(cache_hash) in history_hashes:
+                            continue
+                        if not isinstance(entry, dict):
+                            continue
+                        raw_tokens = int(entry.get("tokensRaw", 0) or 0)
+                        comp_tokens = int(entry.get("tokensCompressed", 0) or 0)
+                        if raw_tokens <= 0 and comp_tokens <= 0:
+                            continue
+                        cache_block = {
+                            "tokensRaw": raw_tokens,
+                            "tokensCompressed": comp_tokens,
+                            "compressed": entry.get("compressed", ""),
+                            "hash": str(cache_hash),
+                            "_file": "block-cache.json",
+                            "_source": "cache",
+                        }
+                        all_blocks.append(cache_block)
+            except Exception:
+                pass
+
     return all_blocks
 
 def _rmem_current_session_id():
@@ -828,7 +816,13 @@ def chatbots_page():
 def wallet_page():
     return render_template("wallet.html", active_page="wallet")
 
-# tribes and bounties routes are in server_bounty_routes.py and server_profile_routes.py
+@app.route("/tribes")
+def tribes_page():
+    return render_template("tribes.html", active_page="tribes")
+
+@app.route("/bounties")
+def bounties_page():
+    return render_template("bounties.html", active_page="bounties")
 
 @app.route("/protocol-store")
 def protocol_store_page():
@@ -1453,7 +1447,7 @@ def api_wallet_build_transfer_tx():
         )
 
         # Verify symbiotic pair exists on-chain and is active
-        pair_info = _solana_rpc(network, "getAccountInfo", [str(pda), {"encoding": "base64", "commitment": "confirmed"}])
+        pair_info = _solana_rpc(network, "getAccountInfo", [str(pda), {"encoding": "base64"}])
         pair_val = pair_info.get("result", {}).get("value") if isinstance(pair_info, dict) else None
         if not pair_val:
             return jsonify({"error": "Symbiotic wallet not initialized. Create Symbiotic Wallet first."}), 400
@@ -1717,7 +1711,7 @@ def api_wallet_onboarding_status():
         pda_address = _derive_symbiotic_pda(address)
         pair_exists = False
         try:
-            pair_info = _solana_rpc(network, "getAccountInfo", [pda_address, {"encoding": "base64", "commitment": "confirmed"}])
+            pair_info = _solana_rpc(network, "getAccountInfo", [pda_address, {"encoding": "base64"}])
             pair_exists = pair_info.get("result", {}).get("value") is not None
         except Exception:
             pair_exists = False
@@ -2330,7 +2324,314 @@ def _auto_join_tribe(tribe, wallet, role="member"):
     return True
 
 
-# Bounty API routes are in server_bounty_routes.py
+@app.route("/api/bounties", methods=["GET"])
+def api_bounties_list():
+    try:
+        status = request.args.get("status")
+        category = request.args.get("category")
+        priority = request.args.get("priority")
+        size = request.args.get("size")
+        tribe_id = request.args.get("tribeId")
+        sort = request.args.get("sort", "priority")
+
+        bounties = _load_bounties()
+        tribes = _load_tribes()
+        tribe_map = {t.get("id"): t for t in tribes}
+
+        filtered = []
+        for bounty in bounties:
+            if status and bounty.get("status") != status:
+                continue
+            if category and bounty.get("category") != category:
+                continue
+            if priority and bounty.get("priority") != priority:
+                continue
+            if size and bounty.get("size") != size:
+                continue
+            if tribe_id and bounty.get("tribeId") != tribe_id:
+                continue
+            filtered.append(_enrich_bounty_with_tribe(bounty, tribe_map))
+
+        if sort == "reward":
+            filtered.sort(key=lambda b: (b.get("rewardRCT", 0), b.get("rewardRES", 0)), reverse=True)
+        elif sort == "date":
+            filtered.sort(key=lambda b: b.get("createdAt") or "", reverse=True)
+        else:
+            order = {"P0": 0, "P1": 1, "P2": 2}
+            filtered.sort(key=lambda b: (order.get(b.get("priority"), 9), -(b.get("rewardRCT", 0))))
+
+        return jsonify({"bounties": filtered, "count": len(filtered)})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/bounties/<bounty_id>", methods=["GET"])
+def api_bounty_detail(bounty_id):
+    try:
+        bounties = _load_bounties()
+        tribes = _load_tribes()
+        tribe_map = {t.get("id"): t for t in tribes}
+        bounty = next((b for b in bounties if b.get("id") == bounty_id), None)
+        if not bounty:
+            return jsonify({"error": "Bounty not found"}), 404
+        return jsonify(_enrich_bounty_with_tribe(bounty, tribe_map))
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/bounties/<bounty_id>/claim", methods=["POST"])
+def api_bounty_claim(bounty_id):
+    try:
+        data = request.get_json(force=True) or {}
+        wallet = (data.get("wallet") or "").strip()
+        if not wallet:
+            return jsonify({"error": "wallet is required"}), 400
+        if not _require_identity_nft(wallet):
+            return jsonify({"error": "Identity NFT required to claim bounties"}), 403
+
+        bounties = _load_bounties()
+        tribes = _load_tribes()
+        bounty = next((b for b in bounties if b.get("id") == bounty_id), None)
+        if not bounty:
+            return jsonify({"error": "Bounty not found"}), 404
+        if bounty.get("status") not in {"open", "claimed", "in_progress"}:
+            return jsonify({"error": f"Cannot claim bounty with status {bounty.get('status')}"}), 409
+
+        claimed_by = bounty.setdefault("claimedBy", [])
+        if wallet not in claimed_by:
+            claimed_by.append(wallet)
+        if bounty.get("status") == "open":
+            bounty["status"] = "claimed"
+        bounty["updatedAt"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+        tribe = next((t for t in tribes if t.get("id") == bounty.get("tribeId")), None)
+        if tribe:
+            _auto_join_tribe(tribe, wallet, "member")
+
+        _sync_tribe_bounty_refs(tribes, bounties)
+        _save_bounties(bounties)
+        _save_tribes(tribes)
+        return jsonify({"success": True, "bountyId": bounty_id, "status": bounty.get("status")})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/bounties/<bounty_id>/join", methods=["POST"])
+def api_bounty_join(bounty_id):
+    try:
+        data = request.get_json(force=True) or {}
+        wallet = (data.get("wallet") or "").strip()
+        role = (data.get("role") or "member").strip()
+        if not wallet:
+            return jsonify({"error": "wallet is required"}), 400
+        if not _require_identity_nft(wallet):
+            return jsonify({"error": "Identity NFT required"}), 403
+
+        bounties = _load_bounties()
+        tribes = _load_tribes()
+        bounty = next((b for b in bounties if b.get("id") == bounty_id), None)
+        if not bounty:
+            return jsonify({"error": "Bounty not found"}), 404
+        tribe = next((t for t in tribes if t.get("id") == bounty.get("tribeId")), None)
+        if not tribe:
+            return jsonify({"error": "Associated tribe not found"}), 404
+
+        if not _auto_join_tribe(tribe, wallet, role if role in {"member", "reviewer"} else "member"):
+            return jsonify({"error": "Already a tribe member"}), 409
+        _save_tribes(tribes)
+        return jsonify({"success": True, "tribeId": tribe.get("id"), "memberCount": len(tribe.get("members", []))})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/bounties/<bounty_id>/leave", methods=["POST"])
+def api_bounty_leave(bounty_id):
+    try:
+        data = request.get_json(force=True) or {}
+        wallet = (data.get("wallet") or "").strip()
+        if not wallet:
+            return jsonify({"error": "wallet is required"}), 400
+
+        bounties = _load_bounties()
+        tribes = _load_tribes()
+        bounty = next((b for b in bounties if b.get("id") == bounty_id), None)
+        if not bounty:
+            return jsonify({"error": "Bounty not found"}), 404
+        tribe = next((t for t in tribes if t.get("id") == bounty.get("tribeId")), None)
+        if not tribe:
+            return jsonify({"error": "Associated tribe not found"}), 404
+
+        members = tribe.get("members", [])
+        tribe["members"] = [m for m in members if m.get("wallet") != wallet]
+        claimed_by = bounty.get("claimedBy", [])
+        bounty["claimedBy"] = [w for w in claimed_by if w != wallet]
+        if not bounty["claimedBy"] and bounty.get("status") in {"claimed", "in_progress"}:
+            bounty["status"] = "open"
+        _save_tribes(tribes)
+        _save_bounties(bounties)
+        return jsonify({"success": True, "bountyId": bounty_id})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/bounties/<bounty_id>/submit", methods=["POST"])
+def api_bounty_submit(bounty_id):
+    try:
+        data = request.get_json(force=True) or {}
+        wallet = (data.get("wallet") or "").strip()
+        if not wallet:
+            return jsonify({"error": "wallet is required"}), 400
+
+        bounties = _load_bounties()
+        bounty = next((b for b in bounties if b.get("id") == bounty_id), None)
+        if not bounty:
+            return jsonify({"error": "Bounty not found"}), 404
+        if wallet not in bounty.get("claimedBy", []):
+            return jsonify({"error": "Only claimants can submit for review"}), 403
+
+        bounty["status"] = "review"
+        bounty["updatedAt"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        _save_bounties(bounties)
+        return jsonify({"success": True, "status": "review"})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/bounties/<bounty_id>/review", methods=["POST"])
+def api_bounty_review(bounty_id):
+    try:
+        data = request.get_json(force=True) or {}
+        reviewer_wallet = (data.get("wallet") or "").strip()
+        approved = bool(data.get("approve"))
+        score = int(data.get("score") or 0)
+        comments = (data.get("comments") or "").strip()
+        verification_method = (data.get("verificationMethod") or "peer-reviewed").strip()
+        if not reviewer_wallet:
+            return jsonify({"error": "wallet is required"}), 400
+        if score < 1 or score > 5:
+            return jsonify({"error": "score must be between 1 and 5"}), 400
+
+        bounties = _load_bounties()
+        tribes = _load_tribes()
+        bounty = next((b for b in bounties if b.get("id") == bounty_id), None)
+        if not bounty:
+            return jsonify({"error": "Bounty not found"}), 404
+        if bounty.get("status") not in {"review", "verified"}:
+            return jsonify({"error": f"Bounty status must be review/verified, got {bounty.get('status')}"}), 409
+
+        tribe = next((t for t in tribes if t.get("id") == bounty.get("tribeId")), None)
+        member_wallets = {m.get("wallet") for m in (tribe or {}).get("members", [])}
+        if reviewer_wallet in member_wallets:
+            return jsonify({"error": "Reviewer cannot be a tribe member"}), 409
+
+        reviews = bounty.setdefault("reviews", [])
+        if any(r.get("reviewerWallet") == reviewer_wallet for r in reviews):
+            return jsonify({"error": "Reviewer already reviewed this bounty"}), 409
+
+        review_entry = {
+            "reviewerWallet": reviewer_wallet,
+            "approved": approved,
+            "score": score,
+            "comments": comments,
+            "verificationMethod": verification_method,
+            "createdAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        }
+        reviews.append(review_entry)
+
+        approvals = [r for r in reviews if r.get("approved")]
+        required_reviews = 1 if bounty.get("size") == "small" else 2 if bounty.get("size") == "medium" else 3
+        if len(approvals) >= required_reviews:
+            bounty["status"] = "verified"
+            bounty["qualityGate"] = {
+                "status": "passed",
+                "reviewers": [r.get("reviewerWallet") for r in approvals],
+                "score": round(sum(r.get("score", 0) for r in approvals) / len(approvals), 2),
+                "verificationMethod": verification_method,
+            }
+        else:
+            bounty["status"] = "review"
+
+        bounty["updatedAt"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        _save_bounties(bounties)
+        return jsonify({"success": True, "status": bounty.get("status"), "reviews": len(reviews)})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/bounties/<bounty_id>/reward", methods=["POST"])
+def api_bounty_reward(bounty_id):
+    try:
+        bounties = _load_bounties()
+        tribes = _load_tribes()
+        bounty = next((b for b in bounties if b.get("id") == bounty_id), None)
+        if not bounty:
+            return jsonify({"error": "Bounty not found"}), 404
+        if bounty.get("status") != "verified":
+            return jsonify({"error": "Bounty must be verified before reward"}), 409
+
+        claimants = bounty.get("claimedBy", [])
+        if not claimants:
+            return jsonify({"error": "No claimants to reward"}), 409
+        split = len(claimants)
+        payout = []
+        rct_each = round(float(bounty.get("rewardRCT", 0)) / split, 4)
+        res_each = round(float(bounty.get("rewardRES", 0)) / split, 4)
+        for wallet in sorted(set(claimants)):
+            payout.append({"wallet": wallet, "rct": rct_each, "res": res_each})
+
+        bounty["status"] = "rewarded"
+        now_iso = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        bounty["updatedAt"] = now_iso
+        bounty["reward"] = {
+            "triggeredAt": now_iso,
+            "recipients": payout,
+            "totalRCT": float(bounty.get("rewardRCT", 0)),
+            "totalRES": float(bounty.get("rewardRES", 0)),
+            "onChain": False,
+            "transactions": None,
+        }
+
+        _sync_tribe_bounty_refs(tribes, bounties)
+        _save_bounties(bounties)
+        _save_tribes(tribes)
+        return jsonify({"success": True, "status": "rewarded", "recipients": payout})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/wallet/my-tribes", methods=["GET"])
+def api_wallet_my_tribes():
+    try:
+        wallet = request.args.get("address", "").strip()
+        if not wallet:
+            return jsonify({"error": "address parameter required"}), 400
+        tribes = _load_tribes()
+        mine = []
+        for tribe in tribes:
+            members = tribe.get("members", [])
+            if any(m.get("wallet") == wallet for m in members):
+                mine.append({
+                    "id": tribe.get("id"),
+                    "name": tribe.get("name"),
+                    "description": tribe.get("description"),
+                    "category": tribe.get("category"),
+                    "memberCount": len(members),
+                    "activeBountyCount": len(tribe.get("activeBounties", [])),
+                    "role": next((m.get("role") for m in members if m.get("wallet") == wallet), "member"),
+                })
+        return jsonify({"wallet": wallet, "tribes": mine, "count": len(mine)})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route("/api/wallet/my-bounties", methods=["GET"])
 def api_wallet_my_bounties():
@@ -2465,8 +2766,6 @@ def api_protocol_store_purchase():
             )
 
         # Use Registration Basket as fee payer
-        if not _REGISTRATION_BASKET_KEYPAIR.exists():
-            return jsonify({"error": "Solana fee payer keypair not found. Configure solana.daoRegistrationBasketKeypairPath in dashboard/config.json or run: solana-keygen new -o " + str(_REGISTRATION_BASKET_KEYPAIR)}), 500
         fee_payer = str(_REGISTRATION_BASKET_KEYPAIR)
 
         minter = ProtocolNFTMinter()
@@ -2977,7 +3276,7 @@ def symbiotic_pair_info():
                 data=json.dumps({
                     "jsonrpc": "2.0", "id": 1,
                     "method": "getAccountInfo",
-                    "params": [str(pda), {"encoding": "base64", "commitment": "confirmed"}]
+                    "params": [str(pda), {"encoding": "base64"}]
                 }).encode(),
                 headers={"Content-Type": "application/json"},
             ),
@@ -3043,6 +3342,249 @@ def shield_page():
 # ---------------------------------------------------------------------------
 
 DASHBOARD_REPO_DIR = os.path.dirname(os.path.abspath(__file__))
+_UPDATE_CONFIG_LOCK = threading.Lock()
+_UPDATE_CHECKER_STARTED = False
+_UPDATE_DEFAULTS = {
+    "autoCheck": True,
+    "autoCheckIntervalHours": 6,
+    "autoApply": False,
+    "notifyOnUpdate": True,
+    "lastCheck": None,
+    "lastCheckResult": None,
+}
+_UPDATE_INTERVAL_OPTIONS = {1, 2, 4, 6, 12, 24}
+
+
+def _utc_now_iso():
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _parse_iso_utc(ts):
+    if not ts or not isinstance(ts, str):
+        return None
+    try:
+        return datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone(timezone.utc)
+    except Exception:
+        return None
+
+
+def _normalize_updates_config(raw):
+    out = dict(_UPDATE_DEFAULTS)
+    if isinstance(raw, dict):
+        if isinstance(raw.get("autoCheck"), bool):
+            out["autoCheck"] = raw["autoCheck"]
+        if isinstance(raw.get("autoApply"), bool):
+            out["autoApply"] = raw["autoApply"]
+        if isinstance(raw.get("notifyOnUpdate"), bool):
+            out["notifyOnUpdate"] = raw["notifyOnUpdate"]
+        try:
+            interval = int(raw.get("autoCheckIntervalHours", _UPDATE_DEFAULTS["autoCheckIntervalHours"]))
+            if interval in _UPDATE_INTERVAL_OPTIONS:
+                out["autoCheckIntervalHours"] = interval
+        except Exception:
+            pass
+        if isinstance(raw.get("lastCheck"), str):
+            out["lastCheck"] = raw["lastCheck"]
+        if isinstance(raw.get("lastCheckResult"), dict):
+            out["lastCheckResult"] = raw["lastCheckResult"]
+    return out
+
+
+def _load_dashboard_config_for_updates():
+    try:
+        cfg = json.loads(_CONFIG_FILE.read_text())
+        if isinstance(cfg, dict):
+            return cfg
+    except Exception:
+        pass
+    return _CFG if isinstance(_CFG, dict) else {}
+
+
+def _read_updates_config():
+    with _UPDATE_CONFIG_LOCK:
+        cfg = _load_dashboard_config_for_updates()
+        return _normalize_updates_config(cfg.get("updates"))
+
+
+def _write_updates_config(updates):
+    global _CFG
+    normalized = _normalize_updates_config(updates)
+    with _UPDATE_CONFIG_LOCK:
+        cfg = _load_dashboard_config_for_updates()
+        cfg["updates"] = normalized
+        _CONFIG_FILE.write_text(json.dumps(cfg, indent=2))
+        _CFG = cfg
+    return normalized
+
+
+def _perform_update_check_logic():
+    """Run the same git logic used by the manual check endpoint."""
+    try:
+        fetch_result = subprocess.run(
+            ["git", "fetch", "origin", "main"],
+            cwd=DASHBOARD_REPO_DIR,
+            capture_output=True, text=True, timeout=30
+        )
+        if fetch_result.returncode != 0:
+            return None, f"git fetch failed: {fetch_result.stderr.strip()}"
+
+        local = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=DASHBOARD_REPO_DIR,
+            capture_output=True, text=True, timeout=10
+        ).stdout.strip()
+
+        remote = subprocess.run(
+            ["git", "rev-parse", "origin/main"],
+            cwd=DASHBOARD_REPO_DIR,
+            capture_output=True, text=True, timeout=10
+        ).stdout.strip()
+
+        behind_result = subprocess.run(
+            ["git", "rev-list", "--count", "HEAD..origin/main"],
+            cwd=DASHBOARD_REPO_DIR,
+            capture_output=True, text=True, timeout=10
+        )
+        behind = int(behind_result.stdout.strip()) if behind_result.returncode == 0 else 0
+
+        branch_result = subprocess.run(
+            ["git", "branch", "--show-current"],
+            cwd=DASHBOARD_REPO_DIR,
+            capture_output=True, text=True, timeout=10
+        )
+        branch = branch_result.stdout.strip()
+
+        return {
+            "available": behind > 0,
+            "behind": behind,
+            "local": local[:12],
+            "remote": remote[:12],
+            "branch": branch,
+        }, None
+    except subprocess.TimeoutExpired:
+        return None, "git command timed out"
+    except Exception as e:
+        return None, str(e)
+
+
+def _perform_auto_apply_logic():
+    try:
+        pull_result = subprocess.run(
+            ["git", "pull", "--ff-only", "origin", "main"],
+            cwd=DASHBOARD_REPO_DIR,
+            capture_output=True, text=True, timeout=60
+        )
+        if pull_result.returncode == 0:
+            return True, {"output": pull_result.stdout.strip()}
+        return False, {"error": pull_result.stderr.strip() or "git pull failed", "output": pull_result.stdout.strip()}
+    except subprocess.TimeoutExpired:
+        return False, {"error": "git pull timed out"}
+    except Exception as e:
+        return False, {"error": str(e)}
+
+
+def _run_background_update_check():
+    updates = _read_updates_config()
+    check_result, check_error = _perform_update_check_logic()
+
+    if check_result is None:
+        check_result = {"available": False, "behind": 0, "error": check_error}
+    else:
+        if updates.get("autoApply") and check_result.get("available"):
+            applied, apply_result = _perform_auto_apply_logic()
+            check_result["autoApplyAttempted"] = True
+            check_result["autoApplySuccess"] = applied
+            if not applied:
+                check_result["autoApplyError"] = apply_result.get("error")
+            else:
+                post_check, post_error = _perform_update_check_logic()
+                if post_check is not None:
+                    post_check["autoApplyAttempted"] = True
+                    post_check["autoApplySuccess"] = True
+                    check_result = post_check
+                elif post_error:
+                    check_result["postApplyCheckError"] = post_error
+
+    updates["lastCheck"] = _utc_now_iso()
+    updates["lastCheckResult"] = check_result
+    _write_updates_config(updates)
+
+
+def _auto_update_checker_loop():
+    while True:
+        try:
+            updates = _read_updates_config()
+            if not updates.get("autoCheck"):
+                time.sleep(60)
+                continue
+
+            interval_seconds = max(1, int(updates.get("autoCheckIntervalHours", 6))) * 3600
+            last_check_dt = _parse_iso_utc(updates.get("lastCheck"))
+            due = last_check_dt is None
+            if not due:
+                elapsed = (datetime.now(timezone.utc) - last_check_dt).total_seconds()
+                due = elapsed >= interval_seconds
+
+            if due:
+                _run_background_update_check()
+                time.sleep(5)
+                continue
+
+            wait_seconds = min(60, max(1, int(interval_seconds - elapsed)))
+            time.sleep(wait_seconds)
+        except Exception:
+            traceback.print_exc()
+            time.sleep(60)
+
+
+def start_auto_update_checker():
+    global _UPDATE_CHECKER_STARTED
+    if _UPDATE_CHECKER_STARTED:
+        return
+    thread = threading.Thread(target=_auto_update_checker_loop, daemon=True, name="auto-update-checker")
+    thread.start()
+    _UPDATE_CHECKER_STARTED = True
+
+
+@app.route("/api/settings/update-config")
+def api_get_update_config():
+    return jsonify(_read_updates_config())
+
+
+@app.route("/api/settings/update-config", methods=["PUT"])
+def api_put_update_config():
+    body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict):
+        return jsonify({"error": "Invalid JSON body"}), 400
+
+    updates = _read_updates_config()
+
+    if "autoCheck" in body:
+        if not isinstance(body["autoCheck"], bool):
+            return jsonify({"error": "autoCheck must be a boolean"}), 400
+        updates["autoCheck"] = body["autoCheck"]
+
+    if "autoApply" in body:
+        if not isinstance(body["autoApply"], bool):
+            return jsonify({"error": "autoApply must be a boolean"}), 400
+        updates["autoApply"] = body["autoApply"]
+
+    if "notifyOnUpdate" in body:
+        if not isinstance(body["notifyOnUpdate"], bool):
+            return jsonify({"error": "notifyOnUpdate must be a boolean"}), 400
+        updates["notifyOnUpdate"] = body["notifyOnUpdate"]
+
+    if "autoCheckIntervalHours" in body:
+        try:
+            interval = int(body["autoCheckIntervalHours"])
+        except Exception:
+            return jsonify({"error": "autoCheckIntervalHours must be an integer"}), 400
+        if interval not in _UPDATE_INTERVAL_OPTIONS:
+            return jsonify({"error": "autoCheckIntervalHours must be one of: 1, 2, 4, 6, 12, 24"}), 400
+        updates["autoCheckIntervalHours"] = interval
+
+    saved = _write_updates_config(updates)
+    return jsonify(saved)
 
 @app.route("/api/settings/check-update")
 def api_check_update():
@@ -3592,7 +4134,13 @@ def _scan_ssot_layer(layer_dir, layer_name):
         ai_path = f.with_suffix(".ai.md")
         has_compressed = ai_path.exists()
 
-        locked = _is_file_locked(f)
+        # Check lock status (macOS chflags uchg or schg)
+        locked = False
+        try:
+            flags = st.st_flags
+            locked = bool(flags & (0x02 | 0x00020000))  # UF_IMMUTABLE | SF_IMMUTABLE
+        except AttributeError:
+            pass
 
         # Token estimate (~4 chars per token)
         raw_tokens = st.st_size // 4
@@ -3796,7 +4344,7 @@ def api_rmemory_stats():
 
 # Known model pricing database — used as fallback when auto-discovering models
 _KNOWN_MODEL_PRICING = {
-    "anthropic/claude-opus-4-6": {"label": "Claude Opus 4.6", "inputPer1M": 15.0, "outputPer1M": 75.0, "cacheReadPer1M": 1.5, "cacheWritePer1M": 18.75},
+    "anthropic/claude-opus-4-6": {"label": "Claude Opus 4.6", "inputPer1M": 5.0, "outputPer1M": 25.0, "cacheReadPer1M": 0.5, "cacheWritePer1M": 6.25},
     "anthropic/claude-sonnet-4-6": {"label": "Claude Sonnet 4.6", "inputPer1M": 3.0, "outputPer1M": 15.0, "cacheReadPer1M": 0.3, "cacheWritePer1M": 3.75},
     "anthropic/claude-haiku-4-5": {"label": "Claude Haiku 4.5", "inputPer1M": 1.0, "outputPer1M": 5.0, "cacheReadPer1M": 0.1, "cacheWritePer1M": 1.25},
     "openai-codex/gpt-4o-mini": {"label": "GPT-4o mini", "inputPer1M": 0.15, "outputPer1M": 0.6, "cacheReadPer1M": 0.075, "cacheWritePer1M": 0.15},
@@ -4082,6 +4630,173 @@ def _ts_run_gateway_usage_cost(days):
         return None, "invalid JSON from gateway usage-cost", {"cmd": cmd}
 
 
+def _ts_parse_tracker_timestamp(value):
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        dt = value
+    elif isinstance(value, (int, float)):
+        num = float(value)
+        # Accept both epoch seconds and epoch milliseconds.
+        seconds = num / 1000.0 if num > 10_000_000_000 else num
+        try:
+            dt = datetime.fromtimestamp(seconds, tz=timezone.utc)
+        except Exception:
+            return None
+    elif isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return None
+        if re.match(r"^-?\d+(?:\.\d+)?$", raw):
+            try:
+                num = float(raw)
+                seconds = num / 1000.0 if num > 10_000_000_000 else num
+                dt = datetime.fromtimestamp(seconds, tz=timezone.utc)
+            except Exception:
+                return None
+        else:
+            try:
+                dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            except Exception:
+                return None
+    else:
+        return None
+
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def _ts_load_tracker_usage(days):
+    tracker_file = WORKSPACE / "usage-tracker" / "usage.jsonl"
+    meta = {
+        "path": str(tracker_file),
+        "days": int(days),
+        "exists": tracker_file.exists(),
+        "entries": 0,
+        "keptEntries": 0,
+        "invalidLines": 0,
+    }
+    empty_totals = {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "totalTokens": 0,
+        "inputCost": 0.0,
+        "outputCost": 0.0,
+        "cacheReadCost": 0.0,
+        "cacheWriteCost": 0.0,
+        "totalCost": 0.0,
+    }
+    empty_data = {"daily": [], "totals": dict(empty_totals)}
+
+    if not tracker_file.exists():
+        return empty_data, None, meta
+
+    try:
+        pricing, _cfg = _ts_load_pricing()
+    except Exception:
+        pricing = _TOKEN_SAVINGS_DEFAULT_PRICING
+
+    models = pricing.get("models", {}) if isinstance(pricing, dict) else {}
+    default_model = pricing.get("defaultModel", "gateway/blended") if isinstance(pricing, dict) else "gateway/blended"
+    fallback_rates = models.get(default_model) if isinstance(models, dict) else None
+    if not isinstance(fallback_rates, dict):
+        fallback_rates = _TOKEN_SAVINGS_DEFAULT_PRICING["models"]["gateway/blended"]
+
+    def _new_day_bucket(date_key):
+        return {
+            "date": date_key,
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "totalTokens": 0,
+            "inputCost": 0.0,
+            "outputCost": 0.0,
+            "cacheReadCost": 0.0,
+            "cacheWriteCost": 0.0,
+            "totalCost": 0.0,
+        }
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=max(1, _ts_int(days, 7)))
+    daily = {}
+    totals = dict(empty_totals)
+
+    try:
+        with tracker_file.open("r", encoding="utf-8", errors="ignore") as f:
+            for line in f:
+                row = line.strip()
+                if not row:
+                    continue
+                meta["entries"] += 1
+                try:
+                    payload = json.loads(row)
+                except Exception:
+                    meta["invalidLines"] += 1
+                    continue
+
+                ts = _ts_parse_tracker_timestamp(payload.get("ts"))
+                if ts is None or ts < cutoff:
+                    continue
+
+                input_tokens = max(0, _ts_int(payload.get("input"), 0))
+                output_tokens = max(0, _ts_int(payload.get("output"), 0))
+                cache_read_tokens = max(0, _ts_int(payload.get("cacheRead"), 0))
+                cache_write_tokens = max(0, _ts_int(payload.get("cacheWrite"), 0))
+                if (input_tokens + output_tokens + cache_read_tokens + cache_write_tokens) <= 0:
+                    continue
+
+                provider = str(payload.get("provider") or "").strip()
+                model = str(payload.get("model") or "").strip()
+                model_key = f"{provider}/{model}" if (provider and model) else None
+                rates = _KNOWN_MODEL_PRICING.get(model_key) if model_key else None
+                if not isinstance(rates, dict):
+                    rates = fallback_rates
+
+                ip = _ts_float(rates.get("inputPer1M"), 0.0)
+                op = _ts_float(rates.get("outputPer1M"), 0.0)
+                cr = _ts_float(rates.get("cacheReadPer1M"), 0.0)
+                cw = _ts_float(rates.get("cacheWritePer1M"), 0.0)
+
+                input_cost = input_tokens * ip / 1_000_000
+                output_cost = output_tokens * op / 1_000_000
+                cache_read_cost = cache_read_tokens * cr / 1_000_000
+                cache_write_cost = cache_write_tokens * cw / 1_000_000
+                total_tokens = input_tokens + output_tokens + cache_read_tokens + cache_write_tokens
+                total_cost = input_cost + output_cost + cache_read_cost + cache_write_cost
+
+                date_key = ts.date().isoformat()
+                bucket = daily.setdefault(date_key, _new_day_bucket(date_key))
+                bucket["input"] += input_tokens
+                bucket["output"] += output_tokens
+                bucket["cacheRead"] += cache_read_tokens
+                bucket["cacheWrite"] += cache_write_tokens
+                bucket["totalTokens"] += total_tokens
+                bucket["inputCost"] += input_cost
+                bucket["outputCost"] += output_cost
+                bucket["cacheReadCost"] += cache_read_cost
+                bucket["cacheWriteCost"] += cache_write_cost
+                bucket["totalCost"] += total_cost
+
+                totals["input"] += input_tokens
+                totals["output"] += output_tokens
+                totals["cacheRead"] += cache_read_tokens
+                totals["cacheWrite"] += cache_write_tokens
+                totals["totalTokens"] += total_tokens
+                totals["inputCost"] += input_cost
+                totals["outputCost"] += output_cost
+                totals["cacheReadCost"] += cache_read_cost
+                totals["cacheWriteCost"] += cache_write_cost
+                totals["totalCost"] += total_cost
+                meta["keptEntries"] += 1
+    except Exception as e:
+        return None, f"failed to read tracker usage file: {e}", meta
+
+    return {"daily": [daily[d] for d in sorted(daily.keys())], "totals": totals}, None, meta
+
+
 @app.route("/api/token-savings/pricing", methods=["PUT"])
 def api_token_savings_pricing():
     """Update pricing reference used by /api/token-savings."""
@@ -4117,20 +4832,27 @@ def api_token_savings():
     cur_sid = _rmem_current_session_id()
     cur_blocks = [b for b in all_blocks if cur_sid and cur_sid in b.get("_file", "")]
 
-    # Use ALL blocks for compound savings (not just current session — new sessions start empty)
+    # Use ALL blocks for total counts
     all_raw = sum(_ts_int(b.get("tokensRaw"), 0) for b in all_blocks)
     all_comp = sum(_ts_int(b.get("tokensCompressed"), 0) for b in all_blocks)
-    # Average tokens saved per API call = avg compressed blocks in context × savings per block
-    # Conservative: use current session blocks if they have data, otherwise estimate from all blocks
+
+    # Filter to meaningful blocks (raw > 50 tokens AND actual savings) for compression ratio
+    meaningful_blocks = [b for b in all_blocks
+                         if _ts_int(b.get("tokensRaw"), 0) > 50
+                         and _ts_int(b.get("tokensRaw"), 0) > _ts_int(b.get("tokensCompressed"), 0)]
+    meaningful_raw = sum(_ts_int(b.get("tokensRaw"), 0) for b in meaningful_blocks)
+    meaningful_comp = sum(_ts_int(b.get("tokensCompressed"), 0) for b in meaningful_blocks)
+
+    # Average tokens saved per API call = avg compressed blocks in context x savings per block
     context_raw = sum(_ts_int(b.get("tokensRaw"), 0) for b in cur_blocks)
     context_comp = sum(_ts_int(b.get("tokensCompressed"), 0) for b in cur_blocks)
     cur_saved = sum(max(0, _ts_int(b.get("tokensRaw"), 0) - _ts_int(b.get("tokensCompressed"), 0)) for b in cur_blocks)
-    # If current session has meaningful savings, use it; otherwise estimate from lifetime average
+    # If current session has meaningful savings, use it; otherwise estimate from lifetime meaningful blocks
     if cur_saved > 1000:
         context_saved_per_call = cur_saved
-    elif len(all_blocks) > 0:
-        # Estimate: average block saves (all_raw - all_comp) / num_blocks, times avg blocks in context (~25)
-        avg_saving_per_block = (all_raw - all_comp) / len(all_blocks) if len(all_blocks) > 0 else 0
+    elif len(meaningful_blocks) > 0:
+        # Use meaningful blocks only (excludes tiny/negative blocks that dilute the ratio)
+        avg_saving_per_block = (meaningful_raw - meaningful_comp) / len(meaningful_blocks)
         avg_context_blocks = max(len(cur_blocks), 25)  # typical context holds ~25 compressed blocks
         context_saved_per_call = int(avg_saving_per_block * avg_context_blocks)
     else:
@@ -4139,7 +4861,22 @@ def api_token_savings():
     archived_raw = max(0, all_raw - context_raw)
     archived_comp = max(0, all_comp - context_comp)
 
-    gateway_data, gateway_error, gateway_meta = _ts_run_gateway_usage_cost(days)
+    tracker_data, tracker_error, tracker_meta = _ts_load_tracker_usage(days)
+    tracker_meta = tracker_meta if isinstance(tracker_meta, dict) else {}
+    tracker_daily = tracker_data.get("daily", []) if isinstance(tracker_data, dict) else []
+    tracker_totals = tracker_data.get("totals", {}) if isinstance(tracker_data, dict) else {}
+    tracker_has_entries = (
+        _ts_int(tracker_meta.get("keptEntries"), 0) > 0
+        or len(tracker_daily) > 0
+        or _ts_int(tracker_totals.get("totalTokens"), 0) > 0
+    )
+
+    source = "usage-tracker" if tracker_has_entries else "gateway"
+    if tracker_has_entries:
+        gateway_data, gateway_error, gateway_meta = tracker_data, tracker_error, tracker_meta
+    else:
+        gateway_data, gateway_error, gateway_meta = _ts_run_gateway_usage_cost(days)
+
     daily = gateway_data.get("daily", []) if isinstance(gateway_data, dict) else []
     totals = gateway_data.get("totals", {}) if isinstance(gateway_data, dict) else {}
 
@@ -4196,8 +4933,20 @@ def api_token_savings():
         explicit_calls = max(1, int(round(total_output / avg_output_per_call))) if total_output > 0 else 0
 
     compound_saved_tokens = context_saved_per_call * explicit_calls
-    compound_saved_cost = compound_saved_tokens * weighted_cost_per_token if (compound_saved_tokens > 0 and weighted_cost_per_token > 0) else 0.0
-    without_rmemory_cost = (total_cost + compound_saved_cost) if total_cost > 0 else None
+
+    # Correct savings model: compression reduces ALL input-side tokens (input + cacheRead + cacheWrite).
+    # Output tokens are unaffected. Apply compression ratio to input-side costs directly.
+    input_side_cost = input_cost + cache_read_cost + cache_write_cost
+    meaningful_efficiency = (meaningful_raw - meaningful_comp) / meaningful_raw if meaningful_raw > 0 else 0.0
+    if meaningful_efficiency > 0 and input_side_cost > 0:
+        # Current input costs already reflect compressed tokens.
+        # Without compression, input-side would be cost / (1 - ratio) since current = raw * (1 - ratio)
+        without_rmemory_input = input_side_cost / (1.0 - meaningful_efficiency)
+        compound_saved_cost = without_rmemory_input - input_side_cost
+        without_rmemory_cost = output_cost + without_rmemory_input
+    else:
+        compound_saved_cost = compound_saved_tokens * weighted_cost_per_token if (compound_saved_tokens > 0 and weighted_cost_per_token > 0) else 0.0
+        without_rmemory_cost = (total_cost + compound_saved_cost) if total_cost > 0 else None
     saving_pct = ((compound_saved_cost / without_rmemory_cost) * 100.0) if without_rmemory_cost and without_rmemory_cost > 0 else None
 
     try:
@@ -4387,21 +5136,26 @@ def api_token_savings():
 
     context_efficiency = ((context_raw - context_comp) / context_raw) if context_raw > 0 else None
     archived_efficiency = ((archived_raw - archived_comp) / archived_raw) if archived_raw > 0 else None
-    # Lifetime efficiency across ALL blocks (the real number)
-    lifetime_raw = all_raw
-    lifetime_comp = all_comp
+    # Lifetime efficiency across meaningful blocks (excludes tiny/negative that dilute the ratio)
+    lifetime_raw = meaningful_raw if meaningful_raw > 0 else all_raw
+    lifetime_comp = meaningful_comp if meaningful_raw > 0 else all_comp
     lifetime_efficiency = ((lifetime_raw - lifetime_comp) / lifetime_raw) if lifetime_raw > 0 else None
     payload = {
         "ok": gateway_error is None and total_cost > 0,
+        "source": source,
         "days": days,
         "generatedAt": datetime.now(timezone.utc).isoformat(),
+        "trackingStartDate": "2026-02-25",
         "sources": {
+            "usageTracker": tracker_meta.get("path"),
+            "trackerError": tracker_error,
+            "trackerEntries": _ts_int(tracker_meta.get("keptEntries"), 0),
             "gatewayUsageCost": "openclaw gateway usage-cost --days N --json",
             "rMemoryUsageStats": "~/.openclaw/workspace/r-memory/usage-stats.json",
             "rMemoryHistory": "~/.openclaw/workspace/r-memory/history-*.json",
             "pricing": "dashboard/config.json:pricing",
-            "gatewayError": gateway_error,
-            "gatewayCmd": gateway_meta.get("cmd"),
+            "gatewayError": gateway_error if source == "gateway" else None,
+            "gatewayCmd": gateway_meta.get("cmd") if isinstance(gateway_meta, dict) else None,
         },
         "totals": {
             "actualApiCost": round(total_cost, 4) if total_cost > 0 else None,
@@ -4462,17 +5216,20 @@ def api_token_savings():
 
 @app.route("/api/r-memory/lock/<path:doc_path>", methods=["POST"])
 def api_rmemory_lock(doc_path):
-    """Lock a document (cross-platform, requires sudo password)."""
+    """Lock a document with chflags schg (requires sudo password)."""
     full_path = SSOT_ROOT / doc_path
     if not full_path.exists():
         return jsonify({"error": "not found"}), 404
     body = request.get_json(force=True) or {}
     password = body.get("password", "")
     if not password:
-        return jsonify({"error": "password required"}), 403
+        return jsonify({"error": "password required — schg needs root"}), 403
     try:
-        cmd, stdin = _platform_lock_cmd(full_path, password)
-        proc = subprocess.run(cmd, input=stdin, capture_output=True, timeout=10)
+        proc = subprocess.run(
+            ["sudo", "-S", "chflags", "schg", str(full_path)],
+            input=password.encode() + b"\n",
+            capture_output=True, timeout=10
+        )
         if proc.returncode == 0:
             return jsonify({"ok": True, "locked": True})
         else:
@@ -4493,8 +5250,11 @@ def api_rmemory_unlock(doc_path):
         return jsonify({"error": "password required"}), 400
 
     try:
-        cmd, stdin = _platform_unlock_cmd(full_path, password)
-        proc = subprocess.run(cmd, input=stdin, capture_output=True, timeout=10)
+        proc = subprocess.run(
+            ["sudo", "-S", "chflags", "noschg", str(full_path)],
+            input=password.encode() + b"\n",
+            capture_output=True, timeout=10
+        )
         if proc.returncode == 0:
             return jsonify({"ok": True, "locked": False})
         else:
@@ -4603,15 +5363,18 @@ def api_rmemory_lock_layer(layer):
     body = request.get_json(force=True) or {}
     password = body.get("password", "")
     if not password:
-        return jsonify({"ok": False, "error": "password required"}), 403
+        return jsonify({"ok": False, "error": "password required — schg needs root"}), 403
     count = 0
     errors = []
     for f in layer_dir.rglob("*.md"):
         if f.name.startswith("."):
             continue
         try:
-            cmd, stdin = _platform_lock_cmd(f, password)
-            proc = subprocess.run(cmd, input=stdin, capture_output=True, timeout=10)
+            proc = subprocess.run(
+                ["sudo", "-S", "chflags", "schg", str(f)],
+                input=password.encode() + b"\n",
+                capture_output=True, timeout=10
+            )
             if proc.returncode == 0:
                 count += 1
             else:
@@ -4639,8 +5402,11 @@ def api_rmemory_unlock_layer(layer):
         if f.name.startswith("."):
             continue
         try:
-            cmd, stdin = _platform_unlock_cmd(f, password)
-            proc = subprocess.run(cmd, input=stdin, capture_output=True, timeout=10)
+            proc = subprocess.run(
+                ["sudo", "-S", "chflags", "noschg", str(f)],
+                input=password.encode() + b"\n",
+                capture_output=True, timeout=10
+            )
             if proc.returncode == 0:
                 count += 1
             else:
@@ -5473,6 +6239,7 @@ def api_logician_status():
         return jsonify({"status": "error", "error": str(e)})
 
 
+
 @app.route("/api/logician/rules")
 def api_logician_rules():
     """List Logician rules grouped by category."""
@@ -5682,13 +6449,13 @@ def api_system_restart():
     """Restart OpenClaw gateway via SIGUSR1 (works for TUI and service modes)."""
     import signal
     try:
-        # Find gateway process (node process on configured port)
+        # Find gateway process (node process on port 18789)
         result = subprocess.run(
-            ["lsof", "-ti", f"tcp:{GW_PORT}"], capture_output=True, text=True
+            ["lsof", "-ti", "tcp:18789"], capture_output=True, text=True
         )
         pids = result.stdout.strip().split('\n')
         if not pids or not pids[0]:
-            return jsonify({"ok": False, "error": f"Gateway process not found on port {GW_PORT}"}), 404
+            return jsonify({"ok": False, "error": "Gateway process not found on port 18789"}), 404
         # Send SIGUSR1 to trigger graceful restart
         pid = int(pids[0])
         os.kill(pid, signal.SIGUSR1)
@@ -5778,6 +6545,82 @@ def api_projects_list():
     for p in projects:
         _compute_metrics(p)
     return jsonify({"projects": projects})
+
+@app.route("/api/projects/graph")
+def api_projects_graph():
+    """Return all projects as graph data (nodes + edges) for Cytoscape.js."""
+    projects = _load_projects()
+    nodes = []
+    edges = []
+    tag_set = {}
+
+    for p in projects:
+        _compute_metrics(p)
+        m = p.get("metrics", {})
+        nodes.append({
+            "data": {
+                "id": p["id"],
+                "label": p["name"],
+                "type": "project",
+                "status": p.get("status", "planning"),
+                "priority": p.get("priority", "medium"),
+                "icon": p.get("icon", ""),
+                "color": p.get("color", "#6C5CE7"),
+                "progress": m.get("completionPercent", 0),
+                "totalTasks": m.get("totalTasks", 0),
+                "doneTasks": m.get("completedTasks", 0),
+                "description": (p.get("description") or "")[:120],
+            }
+        })
+        for t in p.get("tasks", []):
+            tid = f"{p['id']}:{t['id']}"
+            nodes.append({
+                "data": {
+                    "id": tid,
+                    "label": t["title"],
+                    "type": "task",
+                    "status": t.get("status", "todo"),
+                    "priority": t.get("priority", "medium"),
+                    "parent_project": p["id"],
+                    "deadline": t.get("deadline"),
+                    "assignee": t.get("assignee"),
+                    "blockedBy": t.get("blockedBy"),
+                    "createdAt": t.get("createdAt"),
+                }
+            })
+            edges.append({
+                "data": {
+                    "id": f"e-{p['id']}-{t['id']}",
+                    "source": p["id"],
+                    "target": tid,
+                    "type": "has_task",
+                }
+            })
+        for tag in p.get("tags", []):
+            tag_set.setdefault(tag, []).append(p["id"])
+
+    for tag, pids in tag_set.items():
+        tag_id = f"tag:{tag}"
+        nodes.append({
+            "data": {
+                "id": tag_id,
+                "label": tag,
+                "type": "tag",
+                "count": len(pids),
+            }
+        })
+        for pid in pids:
+            edges.append({
+                "data": {
+                    "id": f"e-tag-{tag}-{pid}",
+                    "source": pid,
+                    "target": tag_id,
+                    "type": "tagged",
+                }
+            })
+
+    return jsonify({"nodes": nodes, "edges": edges})
+
 
 @app.route("/api/projects/<project_id>")
 def api_project_get(project_id):
@@ -6069,6 +6912,7 @@ def main():
     print(f"   Auth token: ***{GW_TOKEN[-6:]}" if GW_TOKEN else "   Auth token: (none)")
 
     gw.start()
+    start_auto_update_checker()
 
     # Wait briefly for connection
     time.sleep(1)
