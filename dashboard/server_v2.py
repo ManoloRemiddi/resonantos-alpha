@@ -23,6 +23,55 @@ if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
+# --- Cross-platform file lock helpers ---
+def _platform_lock_cmd(filepath, password=None):
+    """Return (cmd_list, stdin_bytes) for locking a file on current platform."""
+    if sys.platform == "linux":
+        cmd = ["sudo", "-S", "chattr", "+i", str(filepath)]
+        stdin = (password.encode() + b"\n") if password else None
+        return cmd, stdin
+    elif sys.platform == "win32":
+        cmd = ["icacls", str(filepath), "/deny", "Everyone:(W,D)"]
+        return cmd, None
+    else:  # macOS / darwin
+        cmd = ["sudo", "-S", "chflags", "schg", str(filepath)]
+        stdin = (password.encode() + b"\n") if password else None
+        return cmd, stdin
+
+def _platform_unlock_cmd(filepath, password=None):
+    """Return (cmd_list, stdin_bytes) for unlocking a file on current platform."""
+    if sys.platform == "linux":
+        cmd = ["sudo", "-S", "chattr", "-i", str(filepath)]
+        stdin = (password.encode() + b"\n") if password else None
+        return cmd, stdin
+    elif sys.platform == "win32":
+        cmd = ["icacls", str(filepath), "/remove:d", "Everyone"]
+        return cmd, None
+    else:  # macOS / darwin
+        cmd = ["sudo", "-S", "chflags", "noschg", str(filepath)]
+        stdin = (password.encode() + b"\n") if password else None
+        return cmd, stdin
+
+def _is_file_locked(filepath):
+    """Check if file is locked (immutable) on current platform."""
+    try:
+        if sys.platform == "linux":
+            result = subprocess.run(["lsattr", str(filepath)], capture_output=True, text=True, timeout=5)
+            attrs = result.stdout.split()[0] if result.stdout.strip() else ""
+            return "i" in attrs
+        elif sys.platform == "win32":
+            result = subprocess.run(["icacls", str(filepath)], capture_output=True, text=True, timeout=5)
+            return "(DENY)" in result.stdout
+        else:  # macOS
+            st = os.stat(str(filepath))
+            flags = st.st_flags
+            return bool(flags & (0x02 | 0x00020000))
+    except Exception:
+        return False
+# --- End cross-platform helpers ---
+
+
+
 from flask import Flask, jsonify, render_template, request, send_from_directory
 from flask_cors import CORS
 
@@ -2416,6 +2465,8 @@ def api_protocol_store_purchase():
             )
 
         # Use Registration Basket as fee payer
+        if not _REGISTRATION_BASKET_KEYPAIR.exists():
+            return jsonify({"error": "Solana fee payer keypair not found. Configure solana.daoRegistrationBasketKeypairPath in dashboard/config.json or run: solana-keygen new -o " + str(_REGISTRATION_BASKET_KEYPAIR)}), 500
         fee_payer = str(_REGISTRATION_BASKET_KEYPAIR)
 
         minter = ProtocolNFTMinter()
@@ -3541,13 +3592,7 @@ def _scan_ssot_layer(layer_dir, layer_name):
         ai_path = f.with_suffix(".ai.md")
         has_compressed = ai_path.exists()
 
-        # Check lock status (macOS chflags uchg or schg)
-        locked = False
-        try:
-            flags = st.st_flags
-            locked = bool(flags & (0x02 | 0x00020000))  # UF_IMMUTABLE | SF_IMMUTABLE
-        except AttributeError:
-            pass
+        locked = _is_file_locked(f)
 
         # Token estimate (~4 chars per token)
         raw_tokens = st.st_size // 4
@@ -4417,20 +4462,17 @@ def api_token_savings():
 
 @app.route("/api/r-memory/lock/<path:doc_path>", methods=["POST"])
 def api_rmemory_lock(doc_path):
-    """Lock a document with chflags schg (requires sudo password)."""
+    """Lock a document (cross-platform, requires sudo password)."""
     full_path = SSOT_ROOT / doc_path
     if not full_path.exists():
         return jsonify({"error": "not found"}), 404
     body = request.get_json(force=True) or {}
     password = body.get("password", "")
     if not password:
-        return jsonify({"error": "password required — schg needs root"}), 403
+        return jsonify({"error": "password required"}), 403
     try:
-        proc = subprocess.run(
-            ["sudo", "-S", "chflags", "schg", str(full_path)],
-            input=password.encode() + b"\n",
-            capture_output=True, timeout=10
-        )
+        cmd, stdin = _platform_lock_cmd(full_path, password)
+        proc = subprocess.run(cmd, input=stdin, capture_output=True, timeout=10)
         if proc.returncode == 0:
             return jsonify({"ok": True, "locked": True})
         else:
@@ -4451,11 +4493,8 @@ def api_rmemory_unlock(doc_path):
         return jsonify({"error": "password required"}), 400
 
     try:
-        proc = subprocess.run(
-            ["sudo", "-S", "chflags", "noschg", str(full_path)],
-            input=password.encode() + b"\n",
-            capture_output=True, timeout=10
-        )
+        cmd, stdin = _platform_unlock_cmd(full_path, password)
+        proc = subprocess.run(cmd, input=stdin, capture_output=True, timeout=10)
         if proc.returncode == 0:
             return jsonify({"ok": True, "locked": False})
         else:
@@ -4564,18 +4603,15 @@ def api_rmemory_lock_layer(layer):
     body = request.get_json(force=True) or {}
     password = body.get("password", "")
     if not password:
-        return jsonify({"ok": False, "error": "password required — schg needs root"}), 403
+        return jsonify({"ok": False, "error": "password required"}), 403
     count = 0
     errors = []
     for f in layer_dir.rglob("*.md"):
         if f.name.startswith("."):
             continue
         try:
-            proc = subprocess.run(
-                ["sudo", "-S", "chflags", "schg", str(f)],
-                input=password.encode() + b"\n",
-                capture_output=True, timeout=10
-            )
+            cmd, stdin = _platform_lock_cmd(f, password)
+            proc = subprocess.run(cmd, input=stdin, capture_output=True, timeout=10)
             if proc.returncode == 0:
                 count += 1
             else:
@@ -4603,11 +4639,8 @@ def api_rmemory_unlock_layer(layer):
         if f.name.startswith("."):
             continue
         try:
-            proc = subprocess.run(
-                ["sudo", "-S", "chflags", "noschg", str(f)],
-                input=password.encode() + b"\n",
-                capture_output=True, timeout=10
-            )
+            cmd, stdin = _platform_unlock_cmd(f, password)
+            proc = subprocess.run(cmd, input=stdin, capture_output=True, timeout=10)
             if proc.returncode == 0:
                 count += 1
             else:
