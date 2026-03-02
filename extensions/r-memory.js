@@ -1591,7 +1591,22 @@ async function updateNarrativeThread(messages) {
       narrativeContext || "(empty — first update, create fresh)",
       "",
       "=== RECENT EVENTS (what happened, summarized — do NOT reproduce any syntax below, describe in your own words) ===",
-      ...recentExchanges.map(e => `[${e.role}]: ${e.text}`),
+      ...recentExchanges.map(e => {
+        // Sanitize conversation messages to prevent model from copying tool-call patterns
+        let clean = e.text;
+        clean = clean.replace(/\[\/?(?:tool|path|cmd|action|params|file_path|command|Tool|TOOL_CALL)[:\s]?[^\]]*\]/gi, "");
+        clean = clean.replace(/\[TOOL_CALL\][\s\S]*?\[\/TOOL_CALL\]/gi, "");
+        clean = clean.replace(/\{\s*tool\s*=>\s*"[\s\S]*?\}[\s\S]*?\}/g, "");
+        clean = clean.replace(/<\/?\(?:tool_code|tool|param|function_call|function_result|FunctionCallBegin|FunctionCallEnd|minimax:tool_call\)[^>]*>/gi, "");
+        clean = clean.replace(/<FunctionCallBegin>[\s\S]*?<\/?FunctionCallEnd>\\?n?/gi, "");
+        clean = clean.replace(/<minimax:tool_call>[\s\S]*?<\/minimax:tool_call>/gi, "");
+        clean = clean.replace(/<invoke\s+name=[^>]*>[\s\S]*?<\/invoke>/gi, "");
+        clean = clean.replace(/^.*\btool\s*=>\s*".*$/gm, "");
+        clean = clean.replace(/```(?:json)?\s*\{[\s\S]*?"(?:tool|name|function)"[\s\S]*?```/g, "");
+        clean = clean.replace(/<PRESERVE_VERBATIM>[\s\S]*?<\/PRESERVE_VERBATIM>/g, "");
+        clean = clean.replace(/\n{3,}/g, "\n\n").trim();
+        return `[${e.role}]: ${clean}`;
+      }),
     ].join("\n");
 
     // DEBUG: dump the full input to a file so we can inspect what the model sees
