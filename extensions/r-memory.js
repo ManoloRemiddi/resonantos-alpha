@@ -1597,6 +1597,17 @@ async function updateNarrativeThread(messages) {
     sanitizedNarrative = sanitizedNarrative.replace(/<PRESERVE_VERBATIM>[\s\S]*?<\/PRESERVE_VERBATIM>/g, "");
     sanitizedNarrative = sanitizedNarrative.replace(/\n{3,}/g, "\n\n").trim();
 
+    // Input validation: if previous narrative lacks structure, discard it
+    // This breaks the feedback loop where garbage narrative -> confused model -> more garbage
+    const hasValidStructure = /^##\s+NOW/m.test(sanitizedNarrative);
+    if (sanitizedNarrative && !hasValidStructure) {
+      log("WARN", "Previous narrative has no valid structure — discarding to break feedback loop", {
+        chars: sanitizedNarrative.length,
+        sample: sanitizedNarrative.slice(0, 100),
+      });
+      sanitizedNarrative = "";
+    }
+
     const narrativeContext = sanitizedNarrative.length > 4000
       ? sanitizedNarrative.slice(-4000)
       : sanitizedNarrative;
@@ -1779,6 +1790,17 @@ If a topic in the previous narrative no longer appears in recent events, mark it
     }
     if (narrative.length < 100) {
       log("WARN", "Narrative REJECTED: too short (likely empty template).", { chars: narrative.length, model: narrativeModelStr });
+      return;
+    }
+    // Structural validation: a valid narrative MUST contain "## NOW" section
+    // Without this, the model is roleplaying/confused, not producing narrative
+    const hasStructure = /^##\s+NOW/m.test(narrative);
+    if (!hasStructure) {
+      log("WARN", "Narrative REJECTED: missing '## NOW' section — model confused or roleplaying.", {
+        chars: narrative.length,
+        model: narrativeModelStr,
+        sample: narrative.slice(0, 150),
+      });
       return;
     }
     // === END VALIDATION GATE ===
