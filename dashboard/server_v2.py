@@ -2374,6 +2374,80 @@ def api_bounties_list():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/bounties", methods=["POST"])
+def api_bounties_create():
+    """Create a new bounty."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        
+        # Required fields
+        title = data.get("title")
+        description = data.get("description")
+        category = data.get("category", "community")
+        priority = data.get("priority", "P2")
+        size = data.get("size", "small")
+        reward_rct = data.get("rewardRCT", 0)
+        reward_res = data.get("rewardRES", 0)
+        
+        if not title or not description:
+            return jsonify({"error": "title and description required"}), 400
+        
+        bounties = _load_bounties()
+        
+        # Generate ID
+        max_id = 0
+        for b in bounties:
+            bid = b.get("id", "")
+            if bid.startswith("BOUNTY-"):
+                try:
+                    max_id = max(max_id, int(bid.split("-")[1]))
+                except:
+                    pass
+        
+        new_id = f"BOUNTY-{max_id + 1:03d}"
+        now = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        
+        new_bounty = {
+            "id": new_id,
+            "title": title,
+            "description": description,
+            "category": category,
+            "macroGoal": data.get("macroGoal", 1),
+            "priority": priority,
+            "size": size,
+            "status": "open",
+            "rewardRCT": reward_rct,
+            "rewardRES": reward_res,
+            "acceptanceCriteria": data.get("acceptanceCriteria", []),
+            "requiredSkills": data.get("requiredSkills", []),
+            "teamMinSize": data.get("teamMinSize", 1),
+            "teamMaxSize": data.get("teamMaxSize", 6),
+            "createdAt": now,
+            "deadline": data.get("deadline"),
+            "claimedBy": [],
+            "reviews": [],
+            "qualityGate": {
+                "status": "pending",
+                "reviewers": [],
+                "score": None,
+                "verificationMethod": "peer-reviewed"
+            },
+            "workspaceUrl": data.get("workspaceUrl"),
+            "githubBranch": data.get("githubBranch"),
+            "tribeId": data.get("tribeId"),
+        }
+        
+        bounties.append(new_bounty)
+        _save_bounties(bounties)
+        
+        return jsonify({"bounty": new_bounty, "id": new_id}), 201
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/bounties/<bounty_id>", methods=["GET"])
 def api_bounty_detail(bounty_id):
     try:
