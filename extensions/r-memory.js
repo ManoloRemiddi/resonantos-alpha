@@ -941,36 +941,60 @@ async function compressSingleBlock(rawText) {
   try {
     const response = await completeSimple(model, {
       systemPrompt: `You are a high-fidelity conversation compressor.
+TARGET: Reduce content by approximately ${"" + Math.round((config.compressionTarget || 0.5) * 100)}%. Keep ${"" + Math.round((1 - (config.compressionTarget || 0.5)) * 100)}% of the original content.
 RULES:
 - Preserve ALL decisions, facts, parameters, code snippets, file paths, error messages
 - Preserve temporal markers and speaker labels ([Human], [AI])
+- CRITICALLY IMPORTANT: Preserve reasoning chains, causal paths, and the WHY behind decisions — not just WHAT was decided
+- Preserve trial-and-error sequences that led to conclusions (the journey matters, not just the destination)
 - Redact any API keys, tokens, or secrets — replace with [REDACTED]
 - Use tables instead of prose where possible
 - Remove filler, pleasantries, redundancy
-- Preserve reasoning behind key decisions (WHY something was chosen, not just WHAT)
 - Remove routine reasoning and intermediate steps that led to obvious conclusions
 - DISCARD entirely: heartbeat check-ins (HEARTBEAT_OK), post-compaction audit responses, system bookkeeping, NO_REPLY exchanges. These have zero long-term value.
 - Focus on: human-AI interaction, decisions, plans, implementations, errors, and actionable information.
 - Content inside <PRESERVE_VERBATIM> tags must be kept EXACTLY as-is
 - This is compression, NOT summarization. Minimize information loss.
-- Output must be significantly shorter than input`,
+- Do NOT over-compress. Keeping 40-60% of original is better than stripping to 10%.`,
       messages: [{ role: "user", content: [{ type: "text", text: `Compress this conversation block:\n\n${rawText}` }], timestamp: Date.now() }],
     }, { maxTokens: Math.ceil(rawTokens * 0.8), apiKey });
     if (response.stopReason === "error") { log("ERROR", "Compression model error", { error: response.errorMessage, provider: routing.provider }); return null; }
-    const compressed = response.content.filter(c => c.type === "text").map(c => c.text).join("\n");
-    const compressedTokens = estimateTokens(compressed);
+    let compressed = response.content.filter(c => c.type === "text").map(c => c.text).join("\n");
+    let compressedTokens = estimateTokens(compressed);
     if (compressedTokens >= rawTokens * 0.95) {
       return { compressed: rawText, tokensRaw: rawTokens, tokensCompressed: rawTokens };
     }
+    // Floor guard: retry once if over-compressed (more than 15 points beyond target)
+    const target = config.compressionTarget || 0.5;
+    const actualReduction = 1 - (compressedTokens / rawTokens);
+    const floorThreshold = target + 0.15;
+    if (actualReduction > floorThreshold) {
+      log("WARN", "Compression too aggressive, retrying", { actual: `${(actualReduction * 100).toFixed(1)}%`, target: `${(target * 100).toFixed(0)}%`, threshold: `${(floorThreshold * 100).toFixed(0)}%` });
+      try {
+        const retryResponse = await completeSimple(model, {
+          systemPrompt: `You are a high-fidelity conversation compressor. Your previous compression was TOO AGGRESSIVE — you removed too much content. This time, keep MORE of the original. Target: keep approximately ${Math.round((1 - target) * 100)}% of the content. Preserve reasoning chains, decision rationale, causal connections, and the WHY behind actions. This is compression, NOT summarization.`,
+          messages: [{ role: "user", content: [{ type: "text", text: `Compress this conversation block (keep more detail than last time):\n\n${rawText}` }], timestamp: Date.now() }],
+        }, { maxTokens: Math.ceil(rawTokens * 0.8), apiKey });
+        if (retryResponse.stopReason !== "error") {
+          const retryCompressed = retryResponse.content.filter(c => c.type === "text").map(c => c.text).join("\n");
+          const retryTokens = estimateTokens(retryCompressed);
+          if (retryTokens > compressedTokens) {
+            compressed = retryCompressed;
+            compressedTokens = retryTokens;
+            log("INFO", "Floor guard retry produced richer output", { retryTokens, originalTokens: compressedTokens });
+          }
+        }
+      } catch (retryErr) { log("WARN", "Floor guard retry failed", { error: retryErr.message }); }
+    }
     const saving = ((1 - compressedTokens / rawTokens) * 100).toFixed(1);
-    log("DEBUG", "Block compressed", { rawTokens, compressedTokens, saving: `${saving}%` });
+    log("DEBUG", "Block compressed", { rawTokens, compressedTokens, saving: `${saving}%`, target: `${(target * 100).toFixed(0)}%` });
     trackUsage("compression", rawTokens, compressedTokens);
     // Training data collection
     try {
       const tdDir = path.join(workspaceDir, config.storageDir, "training-data", "compression");
       ensureDir(tdDir);
       const ts = Date.now();
-      fs.appendFileSync(path.join(tdDir, "pairs.jsonl"), JSON.stringify({ ts, input: rawText, output: compressed, inputTokens: rawTokens, outputTokens: compressedTokens }) + "\n");
+      fs.appendFileSync(path.join(tdDir, "pairs.jsonl"), JSON.stringify({ ts, input: rawText, output: compressed, inputTokens: rawTokens, outputTokens: compressedTokens, compressionTarget: config.compressionTarget || 0.5 }) + "\n");
     } catch (e) { /* non-fatal */ }
     return { compressed, tokensRaw: rawTokens, tokensCompressed: compressedTokens };
   } catch (e) { log("ERROR", "Compression error", { error: e.message }); trackUsage("compression", rawTokens, 0, true); return null; }
