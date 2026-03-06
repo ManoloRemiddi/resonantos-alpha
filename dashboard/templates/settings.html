@@ -46,6 +46,207 @@
 .update-last-meta p:last-child {
     margin-bottom: 0;
 }
+
+/* Cron Calendar */
+.cron-calendar { background: var(--card-bg, #1a1a2e); border-radius: 12px; border: 1px solid var(--border-color, #2a2a4a); padding: 20px; overflow-x: auto; }
+.cron-grid { display: grid; grid-template-columns: 60px repeat(7, 1fr); gap: 0; min-width: 600px; }
+.cron-grid .cron-header { font-size: 11px; font-weight: 600; color: var(--text-secondary, #aaa); text-align: center; padding: 8px 4px; border-bottom: 1px solid var(--border-color, #2a2a4a); }
+.cron-grid .cron-hour-label { font-size: 10px; color: var(--text-muted, #666); padding: 2px 8px 2px 0; text-align: right; line-height: 20px; }
+.cron-grid .cron-cell { display: flex; flex-direction: column; justify-content: center; min-height: 20px; height: auto; border-bottom: 1px solid rgba(255,255,255,0.03); padding: 1px 0; }
+.cron-block { display: block; width: calc(100% - 4px); box-sizing: border-box; padding: 1px 4px; border-radius: 3px; font-size: 9px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; margin: 1px 2px; line-height: 14px; min-height: 14px; transition: opacity 0.15s; }
+.cron-block:hover { opacity: 0.8; }
+.cron-block.status-ok { background: var(--success, #4ade80); color: #000; }
+.cron-block.status-error { background: var(--error, #ef4444); }
+.cron-block.status-disabled { background: var(--text-muted, #666); opacity: 0.5; }
+.cron-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.cron-modal { position: relative; background: var(--card-bg, #1a1a2e); border: 1px solid var(--border-color, #2a2a4a); border-radius: 12px; padding: 24px; max-width: 400px; width: 90%; }
+.cron-modal h3 { margin: 0 0 16px; color: var(--text-primary); }
+.cron-modal .cron-detail-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
+.cron-modal .cron-detail-label { color: var(--text-muted); }
+.cron-modal .cron-detail-value { color: var(--text-primary); text-align: right; word-break: break-word; }
+.cron-modal-close { position: absolute; top: 12px; right: 16px; background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; }
+.cron-infrequent h3 { font-size: 14px; color: var(--text-secondary); margin-bottom: 12px; }
+.cron-infrequent-list { display: flex; flex-direction: column; gap: 8px; }
+.cron-infrequent-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: var(--card-bg, #1a1a2e); border-radius: 8px; border: 1px solid var(--border-color, #2a2a4a); font-size: 13px; }
+.cron-infrequent-item .cron-name { font-weight: 500; }
+.cron-infrequent-item .cron-schedule { color: var(--text-muted); font-size: 11px; }
+.cron-infrequent-item .cron-status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.cron-infrequent-item .cron-status-dot.status-ok { background: var(--success); }
+.cron-infrequent-item .cron-status-dot.status-error { background: var(--error); }
+.cron-infrequent-item .cron-status-dot.status-disabled { background: var(--text-muted); opacity: 0.5; }
+
+/* Knowledge Base */
+.knowledge-folders { display: flex; flex-direction: column; gap: 14px; }
+.knowledge-divider { border: 0; border-top: 1px solid var(--border-color, #2a2a4a); margin: 4px 0 2px; }
+.knowledge-folder { background: var(--card-bg, #1a1a2e); border: 1px solid var(--border-color, #2a2a4a); border-radius: 12px; padding: 18px; }
+.knowledge-folder.common { border-color: rgba(74, 222, 128, 0.45); box-shadow: inset 0 0 0 1px rgba(74, 222, 128, 0.16); }
+.knowledge-folder-header { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 10px; }
+.knowledge-folder-header-left { min-width: 0; flex: 1; }
+.knowledge-folder-name { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 3px; }
+.knowledge-folder-meta { font-size: 12px; color: var(--text-muted); }
+.knowledge-folder-header-right { display: flex; align-items: center; gap: 8px; }
+.knowledge-upload-input { display: none; }
+.knowledge-upload-btn { white-space: nowrap; padding: 6px 10px; font-size: 12px; }
+.knowledge-expand-btn { background: transparent; color: var(--text-secondary); border: 1px solid var(--border-color, #2a2a4a); border-radius: 8px; padding: 6px 10px; font-size: 12px; cursor: pointer; }
+.knowledge-expand-btn:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.2); }
+.knowledge-expand-btn.expanded { color: var(--accent, #4ade80); border-color: rgba(74, 222, 128, 0.5); }
+.knowledge-folder-files { display: none; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px; }
+.knowledge-folder-files.expanded { display: block; }
+.knowledge-file-btn { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 10px; text-align: left; background: transparent; border: 0; border-radius: 8px; color: var(--text-secondary); padding: 7px 8px; cursor: pointer; }
+.knowledge-file-btn:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); }
+.knowledge-file-size { color: var(--text-muted); font-size: 12px; flex-shrink: 0; }
+.knowledge-empty { color: var(--text-muted); font-style: italic; font-size: 13px; padding: 8px 4px; }
+.knowledge-common-toggles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin: 10px 0 2px; }
+.knowledge-toggle-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; padding: 8px 10px; }
+.knowledge-toggle-item-label { font-size: 13px; color: var(--text-secondary); }
+.knowledge-ssot-card { margin-top: 12px; background: var(--card-bg, #1a1a2e); border: 1px solid var(--border-color, #2a2a4a); border-radius: 12px; padding: 18px; }
+.knowledge-ssot-access { margin-top: 10px; }
+.knowledge-ssot-grid { display: flex; flex-direction: column; gap: 8px; }
+.knowledge-ssot-row { display: grid; grid-template-columns: minmax(140px, 1fr) repeat(3, 80px); align-items: center; gap: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; padding: 8px 10px; }
+.knowledge-ssot-row.header { background: transparent; border: 0; border-radius: 0; padding: 0 4px; gap: 10px; }
+.knowledge-ssot-agent { font-size: 13px; color: var(--text-secondary); }
+.knowledge-ssot-level-heading { text-align: center; font-size: 12px; color: var(--text-muted); letter-spacing: 0.3px; }
+.knowledge-ssot-level-heading.missing { opacity: 0.55; }
+.knowledge-ssot-cell { display: flex; justify-content: center; }
+.knowledge-ssot-meta { margin-top: 4px; font-size: 12px; color: var(--text-muted); word-break: break-all; }
+.knowledge-unified-grid { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.ku-common-card {
+    background: var(--card-bg, #1a1a2e);
+    border: 1px solid rgba(74, 222, 128, 0.45);
+    box-shadow: inset 0 0 0 1px rgba(74, 222, 128, 0.16);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 8px;
+}
+.ku-common-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+.ku-common-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 8px;
+    padding: 8px 10px;
+}
+.ku-header,
+.ku-row {
+    display: grid;
+    grid-template-columns: minmax(120px, 1.3fr) repeat(4, 84px) minmax(180px, 1fr);
+    align-items: center;
+    gap: 10px;
+}
+.ku-header {
+    padding: 0 6px;
+    color: var(--text-muted);
+    font-size: 12px;
+    letter-spacing: 0.3px;
+}
+.ku-row {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 8px;
+    padding: 8px 10px;
+}
+.ku-agent { color: var(--text-secondary); font-size: 13px; }
+.ku-toggle { display: flex; justify-content: center; }
+.ku-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    flex-wrap: wrap;
+}
+.ku-files-count { color: var(--text-muted); }
+.ku-show-btn,
+.ku-upload-btn {
+    white-space: nowrap;
+    padding: 5px 8px;
+    font-size: 12px;
+}
+.ku-upload-input { display: none; }
+.ku-files-list {
+    grid-column: 1 / -1;
+    display: none;
+    margin-top: 6px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding-top: 8px;
+}
+.ku-files-list.expanded { display: block; }
+.ku-file-row {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    border-radius: 8px;
+}
+.ku-file-checkbox {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+.ku-file-btn {
+    width: 100%;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    padding: 7px 8px;
+    cursor: pointer;
+}
+.ku-file-btn:hover {
+    background: rgba(255,255,255,0.04);
+    color: var(--text-primary);
+}
+.ku-file-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ku-file-size {
+    color: var(--text-muted);
+    font-size: 12px;
+    flex-shrink: 0;
+}
+.ku-delete-btn {
+    display: none;
+    white-space: nowrap;
+    padding: 5px 8px;
+    font-size: 12px;
+}
+.ku-delete-btn.visible {
+    display: inline-flex;
+}
+.knowledge-preview-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.62); z-index: 1200; display: none; align-items: center; justify-content: center; padding: 16px; }
+.knowledge-preview-overlay.active { display: flex; }
+.knowledge-preview-modal { width: min(900px, 100%); max-height: min(80vh, 760px); display: flex; flex-direction: column; background: var(--card-bg, #1a1a2e); border: 1px solid var(--border-color, #2a2a4a); border-radius: 12px; overflow: hidden; }
+.knowledge-preview-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.knowledge-preview-title { color: var(--text-primary); font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.knowledge-preview-close { border: 0; background: transparent; color: var(--text-muted); font-size: 21px; cursor: pointer; line-height: 1; padding: 0; }
+.knowledge-preview-close:hover { color: var(--text-primary); }
+.knowledge-preview-content { flex: 1; overflow: auto; padding: 14px 16px; white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 13px; line-height: 1.5; color: var(--text-secondary); }
+	@media (max-width: 720px) {
+	    .knowledge-folder-header { flex-direction: column; }
+	    .knowledge-folder-header-right { width: 100%; justify-content: flex-start; }
+	    .knowledge-ssot-row { grid-template-columns: minmax(96px, 1fr) repeat(3, 66px); gap: 8px; }
+	    .knowledge-ssot-level-heading { font-size: 11px; }
+        .ku-header,
+        .ku-row { grid-template-columns: minmax(96px, 1fr) repeat(4, 62px) minmax(120px, 1fr); gap: 8px; }
+        .ku-header { font-size: 11px; }
+        .ku-actions { font-size: 12px; justify-content: flex-start; }
+	}
 </style>
 <div class="settings-layout">
     <!-- Settings Navigation -->
@@ -73,6 +274,14 @@
         <a href="#advanced" class="settings-nav-item" onclick="showSection('advanced')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
             Advanced
+        </a>
+        <a href="#cron" class="settings-nav-item" onclick="showSection('cron')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Cron Scheduler
+        </a>
+        <a href="#knowledge" class="settings-nav-item" onclick="showSection('knowledge')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/><path d="M6 4.5A11 11 0 0 1 12 3a11 11 0 0 1 6 1.5"/></svg>
+            Knowledge Base
         </a>
         <a href="#updates" class="settings-nav-item" onclick="showSection('updates')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
@@ -498,6 +707,32 @@
                 </div>
             </div>
         </section>
+
+        <section class="settings-section" id="cronSection">
+            <h2 class="section-title">Cron Scheduler</h2>
+            <p class="section-description">Visual overview of all scheduled cron jobs. Colors: <span style="color:var(--success)">active &amp; OK</span>, <span style="color:var(--error)">active &amp; error</span>, <span style="color:var(--text-muted)">disabled</span>.</p>
+            <div id="cronCalendar" class="cron-calendar"><div class="muted">Loading cron schedule...</div></div>
+            <div id="cronInfrequent" class="cron-infrequent" style="margin-top:20px;"></div>
+        </section>
+
+	        <section class="settings-section" id="knowledgeSection">
+	            <h2 class="section-title">Knowledge Base</h2>
+	            <p class="section-description">Manage user-uploaded knowledge folders that extend the RAG index. Files in these folders are embedded and searchable via memory_search.</p>
+
+	            <div id="knowledgeFolders" class="knowledge-folders">
+	                <div class="muted">Loading knowledge base...</div>
+	            </div>
+	        </section>
+	    </div>
+	</div>
+
+<div id="knowledgePreviewOverlay" class="knowledge-preview-overlay">
+    <div class="knowledge-preview-modal">
+        <div class="knowledge-preview-header">
+            <div id="knowledgePreviewTitle" class="knowledge-preview-title">File preview</div>
+            <button type="button" id="knowledgePreviewClose" class="knowledge-preview-close" aria-label="Close preview">&times;</button>
+        </div>
+        <div id="knowledgePreviewContent" class="knowledge-preview-content"></div>
     </div>
 </div>
 
@@ -547,21 +782,29 @@ document.addEventListener('DOMContentLoaded', function() {
     loadSettings();
     loadRules();
     loadUpdateConfig();
-    // Auto-select section from URL hash
-    var hash = window.location.hash.replace('#', '');
-    if (hash && document.getElementById(hash + 'Section')) {
-        showSection(hash);
-    }
+    loadCronCalendar();
+    loadKnowledgeBase();
+    syncSectionWithHash();
+    window.addEventListener('hashchange', syncSectionWithHash);
 });
 
 function showSection(section) {
+    var sec = document.getElementById(section + 'Section');
+    if (!sec) return;
+
     document.querySelectorAll('.settings-nav-item').forEach(function(i) { i.classList.remove('active'); });
     document.querySelectorAll('.settings-section').forEach(function(s) { s.classList.remove('active'); });
     
     var navLink = document.querySelector('a[href="#' + section + '"]');
     if (navLink) navLink.classList.add('active');
-    var sec = document.getElementById(section + 'Section');
-    if (sec) sec.classList.add('active');
+    sec.classList.add('active');
+}
+
+function syncSectionWithHash() {
+    var section = window.location.hash.replace('#', '').trim();
+    if (section && document.getElementById(section + 'Section')) {
+        showSection(section);
+    }
 }
 
 async function loadSettings() {
@@ -754,6 +997,644 @@ function renderCategories(categories) {
             (cat.locked ? '<div class="category-locked-badge">&#x1F512;</div>' : '') +
         '</div>';
     }).join('');
+}
+
+function getKnowledgeFolderEntry(folders, folderId) {
+    if (!folders || typeof folders !== 'object') return { name: folderId, info: null };
+    const lookup = String(folderId || '').toLowerCase();
+    for (const [name, info] of Object.entries(folders)) {
+        if (String(name).toLowerCase() === lookup) return { name, info: info || null };
+    }
+    return { name: folderId, info: null };
+}
+
+function formatAgentName(agentId) {
+    const value = String(agentId || '').trim();
+    if (!value) return 'Agent';
+    return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function renderKnowledgeFolderBlock(folderId, title, folderEntry, options) {
+    const opts = options || {};
+    const info = folderEntry && folderEntry.info ? folderEntry.info : null;
+    const folderName = (folderEntry && folderEntry.name) ? folderEntry.name : folderId;
+    const files = info && Array.isArray(info.files) ? info.files : [];
+    const totalFiles = info && typeof info.totalFiles === 'number' ? info.totalFiles : files.length;
+    const fileCountLabel = totalFiles + ' file' + (totalFiles === 1 ? '' : 's');
+    const folderSlug = String(folderId || folderName || 'folder').replace(/[^a-zA-Z0-9_-]+/g, '_');
+    const filesId = 'knowledge_files_' + folderSlug;
+
+    let html = '';
+    html += '<div class="knowledge-folder' + (opts.isCommon ? ' common' : '') + '">';
+    html += '<div class="knowledge-folder-header">';
+    html += '<div class="knowledge-folder-header-left">';
+    html += '<div class="knowledge-folder-name">' + escapeHtml(title) + '</div>';
+    html += '<div class="knowledge-folder-meta">' + escapeHtml(fileCountLabel) + '</div>';
+    html += '</div>';
+    html += '<div class="knowledge-folder-header-right">';
+    html += '<input type="file" class="knowledge-upload-input" data-folder="' + escapeAttr(folderName) + '">';
+    html += '<button type="button" class="btn-secondary knowledge-upload-btn" data-folder="' + escapeAttr(folderName) + '">Upload file</button>';
+    html += '<button type="button" class="knowledge-expand-btn" data-files-target="' + escapeAttr(filesId) + '">Show files</button>';
+    html += '</div>';
+    html += '</div>';
+
+    if (opts.isCommon) {
+        const agentOrder = Array.isArray(opts.agentOrder) ? opts.agentOrder : [];
+        const commonAccess = (opts.commonAccess && typeof opts.commonAccess === 'object') ? opts.commonAccess : {};
+        if (agentOrder.length > 0) {
+            html += '<div class="knowledge-common-toggles">';
+            for (const agentId of agentOrder) {
+                const enabled = !!commonAccess[agentId];
+                html += '<div class="knowledge-toggle-item">';
+                html += '<span class="knowledge-toggle-item-label">' + escapeHtml(formatAgentName(agentId)) + '</span>';
+                html += '<label class="toggle-switch">';
+                html += '<input type="checkbox" class="knowledge-common-toggle" data-agent-id="' + escapeAttr(agentId) + '"' + (enabled ? ' checked' : '') + '>';
+                html += '<span class="slider"></span>';
+                html += '</label>';
+                html += '</div>';
+            }
+            html += '</div>';
+        }
+    }
+
+    html += '<div id="' + escapeAttr(filesId) + '" class="knowledge-folder-files">';
+    if (files.length > 0) {
+        for (const file of files) {
+            const filePath = file.path || (folderName + '/' + (file.name || ''));
+            html += '<button type="button" class="knowledge-file-btn" data-file-path="' + escapeAttr(filePath) + '">';
+            html += '<span>' + escapeHtml(file.name || filePath) + '</span>';
+            html += '<span class="knowledge-file-size">' + formatBytes(file.size || 0) + '</span>';
+            html += '</button>';
+        }
+    } else {
+        html += '<div class="knowledge-empty">No files in this folder</div>';
+    }
+    html += '</div>';
+    html += '</div>';
+    return html;
+}
+
+function renderKnowledgeSsotAccess(data) {
+    const levelOrder = ['L0', 'L1', 'L2'];
+    const levels = (data && data.levels && typeof data.levels === 'object') ? data.levels : {};
+    const ssotAccess = (data && data.ssotAccess && typeof data.ssotAccess === 'object') ? data.ssotAccess : {};
+    const rootPath = (data && data.ssotRoot) ? String(data.ssotRoot) : '';
+    const agentOrder = (data && Array.isArray(data.agentOrder) && data.agentOrder.length > 0)
+        ? data.agentOrder
+        : ['main', 'voice', 'coder'];
+
+    if (agentOrder.length === 0) {
+        return '<div class="knowledge-empty">No agents found in openclaw.json</div>';
+    }
+
+    let html = '';
+    if (rootPath) {
+        html += '<div class="knowledge-ssot-meta">Root: ' + escapeHtml(rootPath) + '</div>';
+    }
+
+    html += '<div class="knowledge-ssot-grid">';
+    html += '<div class="knowledge-ssot-row header">';
+    html += '<div class="knowledge-ssot-agent">Agent</div>';
+    for (const level of levelOrder) {
+        const info = levels[level] || {};
+        const exists = !!info.exists;
+        const label = exists ? level : (level + ' (missing)');
+        const cls = exists ? 'knowledge-ssot-level-heading' : 'knowledge-ssot-level-heading missing';
+        html += '<div class="' + cls + '" title="' + escapeAttr(info.path || '') + '">' + escapeHtml(label) + '</div>';
+    }
+    html += '</div>';
+
+    for (const agentId of agentOrder) {
+        const access = (ssotAccess[agentId] && typeof ssotAccess[agentId] === 'object') ? ssotAccess[agentId] : {};
+        html += '<div class="knowledge-ssot-row">';
+        html += '<div class="knowledge-ssot-agent">' + escapeHtml(formatAgentName(agentId)) + '</div>';
+        for (const level of levelOrder) {
+            const info = levels[level] || {};
+            const exists = !!info.exists;
+            const enabled = !!access[level];
+            html += '<div class="knowledge-ssot-cell">';
+            html += '<label class="toggle-switch">';
+            html += '<input type="checkbox" class="knowledge-ssot-toggle" data-agent-id="' + escapeAttr(agentId) + '" data-level="' + escapeAttr(level) + '"' + (enabled ? ' checked' : '') + (exists ? '' : ' disabled') + '>';
+            html += '<span class="slider"></span>';
+            html += '</label>';
+            html += '</div>';
+        }
+        html += '</div>';
+    }
+
+    html += '</div>';
+    return html;
+}
+
+// Unified knowledge grid: one row per agent with all controls
+function renderUnifiedKnowledgeGrid(baseData, ssotData) {
+    const levelOrder = ['L0', 'L1', 'L2'];
+    const agentOrder = (baseData && Array.isArray(baseData.agentOrder) && baseData.agentOrder.length > 0)
+        ? baseData.agentOrder
+        : ['main', 'voice', 'coder'];
+    const ssotAccess = (ssotData && ssotData.ssotAccess && typeof ssotData.ssotAccess === 'object')
+        ? ssotData.ssotAccess
+        : {};
+    const commonAccess = (baseData && baseData.commonAccess && typeof baseData.commonAccess === 'object')
+        ? baseData.commonAccess
+        : {};
+    const folders = (baseData && baseData.folders && typeof baseData.folders === 'object')
+        ? baseData.folders
+        : {};
+
+    let html = '';
+    html += '<div class="ku-common-card">';
+    html += '<div class="knowledge-folder-name">Common KB</div>';
+    html += '<div class="knowledge-folder-meta">Shared folder access for each agent</div>';
+    if (agentOrder.length > 0) {
+        html += '<div class="ku-common-grid">';
+        for (const agentId of agentOrder) {
+            const ca = !!commonAccess[agentId];
+            html += '<div class="ku-common-item">';
+            html += '<span class="knowledge-toggle-item-label">' + escapeHtml(formatAgentName(agentId)) + '</span>';
+            html += '<label class="toggle-switch">';
+            html += '<input type="checkbox" class="ku-common-toggle" data-agent-id="' + escapeAttr(agentId) + '"' + (ca ? ' checked' : '') + '>';
+            html += '<span class="slider"></span>';
+            html += '</label>';
+            html += '</div>';
+        }
+        html += '</div>';
+    } else {
+        html += '<div class="knowledge-empty">No agents found in openclaw.json</div>';
+    }
+    html += '</div>';
+
+    html += '<div class="knowledge-unified-grid">';
+    html += '<div class="ku-header">';
+    html += '<div class="ku-agent">Agent</div>';
+    html += '<div class="ku-toggle">L0</div>';
+    html += '<div class="ku-toggle">L1</div>';
+    html += '<div class="ku-toggle">L2</div>';
+    html += '<div class="ku-toggle">Memory Log</div>';
+    html += '<div class="ku-actions">Files</div>';
+    html += '</div>';
+
+    for (const agentId of agentOrder) {
+        const sa = (ssotAccess[agentId] && typeof ssotAccess[agentId] === 'object') ? ssotAccess[agentId] : {};
+        const ca = !!commonAccess[agentId];
+        const folderEntry = getKnowledgeFolderEntry(folders, agentId);
+        const folderName = folderEntry && folderEntry.name ? folderEntry.name : agentId;
+        const info = folderEntry && folderEntry.info ? folderEntry.info : {};
+        const files = Array.isArray(info.files) ? info.files : [];
+        const fileCount = (typeof info.totalFiles === 'number') ? info.totalFiles : files.length;
+        const filesPanelId = 'ku_files_' + String(agentId).replace(/[^a-zA-Z0-9_-]/g, '_');
+
+        html += '<div class="ku-row">';
+        html += '<div class="ku-agent">' + escapeHtml(formatAgentName(agentId)) + '</div>';
+        for (const level of levelOrder) {
+            html += '<div class="ku-toggle">';
+            html += '<label class="toggle-switch">';
+            html += '<input type="checkbox" class="ku-ssot-toggle" data-agent-id="' + escapeAttr(agentId) + '" data-level="' + escapeAttr(level) + '"' + (sa[level] ? ' checked' : '') + '>';
+            html += '<span class="slider"></span>';
+            html += '</label>';
+            html += '</div>';
+        }
+        html += '<div class="ku-toggle">';
+        html += '<label class="toggle-switch">';
+        html += '<input type="checkbox" class="ku-memory-toggle" data-agent-id="' + escapeAttr(agentId) + '"' + (ca ? ' checked' : '') + '>';
+        html += '<span class="slider"></span>';
+        html += '</label>';
+        html += '</div>';
+        html += '<div class="ku-actions">';
+        html += '<span class="ku-files-count">' + fileCount + ' file' + (fileCount !== 1 ? 's' : '') + '</span>';
+        html += '<button type="button" class="btn-secondary ku-show-btn" data-files-target="' + escapeAttr(filesPanelId) + '">Show files</button>';
+        html += '<button type="button" class="btn-danger ku-delete-btn" data-folder="' + escapeAttr(folderName) + '">Delete selected</button>';
+        html += '<input type="file" class="ku-upload-input" data-folder="' + escapeAttr(folderName) + '">';
+        html += '<button type="button" class="btn-secondary ku-upload-btn" data-folder="' + escapeAttr(folderName) + '">Upload</button>';
+        html += '</div>';
+        html += '<div id="' + escapeAttr(filesPanelId) + '" class="ku-files-list">';
+        if (files.length > 0) {
+            for (const file of files) {
+                const filePath = file.path || (folderName + '/' + (file.name || ''));
+                const fileLabel = file.name || file.path || 'Unnamed file';
+                html += '<div class="ku-file-row">';
+                html += '<input type="checkbox" class="ku-file-checkbox" data-file-path="' + escapeAttr(filePath) + '" data-folder="' + escapeAttr(folderName) + '">';
+                html += '<button type="button" class="ku-file-btn" data-file-path="' + escapeAttr(filePath) + '">';
+                html += '<span class="ku-file-name">' + escapeHtml(fileLabel) + '</span>';
+                html += '<span class="ku-file-size">' + formatBytes(file.size || 0) + '</span>';
+                html += '</button>';
+                html += '</div>';
+            }
+        } else {
+            html += '<div class="knowledge-empty">No files in this folder</div>';
+        }
+        html += '</div>';
+        html += '</div>';
+    }
+
+    html += '</div>';
+    return html;
+}
+
+
+function initSsotToggles() {
+    document.querySelectorAll('.knowledge-ssot-toggle').forEach(toggle => {
+        toggle.addEventListener('change', async function() {
+            const agentId = this.dataset.agentId;
+            const level = this.dataset.level;
+            const enabled = this.checked;
+            try {
+                const resp = await fetch('/api/knowledge/ssot-access', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({agentId, level, enabled})
+                });
+                if (!resp.ok) throw new Error('Failed');
+            } catch(e) {
+                this.checked = !enabled; // revert
+                alert('Failed to save: ' + e.message);
+            }
+        });
+    });
+}
+
+function initUnifiedToggles(container) {
+    if (!container) return;
+    container.querySelectorAll('.ku-ssot-toggle').forEach(function(toggle) {
+        toggle.addEventListener('change', async function() {
+            const agentId = toggle.dataset.agentId || '';
+            const level = toggle.dataset.level || '';
+            const enabled = toggle.checked;
+            toggle.disabled = true;
+            try {
+                const response = await fetch('/api/knowledge/ssot-access', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agentId: agentId, level: level, enabled: enabled })
+                });
+                const data = await response.json();
+                if (!response.ok || data.error) throw new Error(data.error || 'Failed to update access');
+            } catch (error) {
+                toggle.checked = !enabled;
+                showToast('Failed to update SSoT access: ' + error.message, 'error');
+            } finally {
+                toggle.disabled = false;
+            }
+        });
+    });
+
+    container.querySelectorAll('.ku-common-toggle').forEach(function(toggle) {
+        toggle.addEventListener('change', async function() {
+            const agentId = toggle.dataset.agentId || '';
+            const enabled = toggle.checked;
+            toggle.disabled = true;
+            try {
+                const response = await fetch('/api/knowledge/common-access', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agentId: agentId, enabled: enabled })
+                });
+                const data = await response.json();
+                if (!response.ok || data.error) throw new Error(data.error || 'Failed to update access');
+                showToast('Common KB ' + (enabled ? 'enabled' : 'disabled') + ' for ' + formatAgentName(agentId));
+            } catch (error) {
+                toggle.checked = !enabled;
+                showToast('Failed to update common access: ' + error.message, 'error');
+            } finally {
+                toggle.disabled = false;
+            }
+        });
+    });
+
+    container.querySelectorAll('.ku-memory-toggle').forEach(function(toggle) {
+        toggle.addEventListener('change', async function() {
+            const agentId = toggle.dataset.agentId || '';
+            const enabled = toggle.checked;
+            toggle.disabled = true;
+            try {
+                const response = await fetch('/api/knowledge/common-access', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agentId: agentId, enabled: enabled })
+                });
+                const data = await response.json();
+                if (!response.ok || data.error) throw new Error(data.error || 'Failed to update access');
+                showToast('Memory access ' + (enabled ? 'enabled' : 'disabled') + ' for ' + formatAgentName(agentId));
+            } catch (error) {
+                toggle.checked = !enabled;
+                showToast('Failed to update memory access: ' + error.message, 'error');
+            } finally {
+                toggle.disabled = false;
+            }
+        });
+    });
+
+    container.querySelectorAll('.ku-show-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const targetId = button.getAttribute('data-files-target');
+            const filesEl = targetId ? document.getElementById(targetId) : null;
+            if (!filesEl) return;
+            const expanded = filesEl.classList.toggle('expanded');
+            button.textContent = expanded ? 'Hide files' : 'Show files';
+        });
+    });
+
+    container.querySelectorAll('.ku-file-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const filePath = button.getAttribute('data-file-path');
+            if (!filePath) return;
+            previewKnowledgeFile(filePath);
+        });
+    });
+
+    container.querySelectorAll('.ku-upload-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const row = button.closest('.ku-row');
+            const input = row ? row.querySelector('.ku-upload-input') : null;
+            if (input) input.click();
+        });
+    });
+
+    container.querySelectorAll('.ku-upload-input').forEach(function(input) {
+        input.addEventListener('change', async function() {
+            const file = input.files && input.files[0];
+            if (!file) return;
+            const folder = input.getAttribute('data-folder') || '';
+            const row = input.closest('.ku-row');
+            const uploadBtn = row ? row.querySelector('.ku-upload-btn') : null;
+            const originalText = uploadBtn ? uploadBtn.textContent : '';
+
+            if (uploadBtn) {
+                uploadBtn.disabled = true;
+                uploadBtn.textContent = 'Uploading...';
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('folder', folder);
+                formData.append('file', file);
+
+                const response = await fetch('/api/knowledge/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (!response.ok || data.error) throw new Error(data.error || 'Upload failed');
+                showToast('Uploaded ' + file.name + ' to ' + folder);
+                await loadKnowledgeBase();
+            } catch (error) {
+                showToast('Upload failed: ' + error.message, 'error');
+            } finally {
+                input.value = '';
+                if (uploadBtn) {
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = originalText;
+                }
+            }
+        });
+    });
+}
+
+function initKnowledgePreview() {
+    const overlay = document.getElementById('knowledgePreviewOverlay');
+    if (!overlay || overlay.dataset.initialized === '1') return;
+    const closeBtn = document.getElementById('knowledgePreviewClose');
+
+    const close = function() {
+        overlay.classList.remove('active');
+    };
+
+    if (closeBtn) closeBtn.addEventListener('click', close);
+    overlay.addEventListener('click', function(event) {
+        if (event.target === overlay) close();
+    });
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape' && overlay.classList.contains('active')) close();
+    });
+
+    overlay.dataset.initialized = '1';
+}
+
+function openKnowledgePreview(title, content) {
+    initKnowledgePreview();
+    const overlay = document.getElementById('knowledgePreviewOverlay');
+    const titleEl = document.getElementById('knowledgePreviewTitle');
+    const contentEl = document.getElementById('knowledgePreviewContent');
+    if (!overlay || !titleEl || !contentEl) return;
+    titleEl.textContent = title || 'File preview';
+    contentEl.textContent = content || '';
+    overlay.classList.add('active');
+}
+
+async function previewKnowledgeFile(filePath) {
+    try {
+        const response = await fetch('/api/knowledge/file?path=' + encodeURIComponent(filePath));
+        const data = await response.json();
+        if (!response.ok || data.error) throw new Error(data.error || 'Failed to load file');
+        openKnowledgePreview(data.path || data.name || filePath, data.content || '');
+    } catch (error) {
+        showToast('Failed to preview file: ' + error.message, 'error');
+    }
+}
+
+function bindKnowledgeBaseEvents(container) {
+    container.querySelectorAll('.knowledge-expand-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const targetId = button.getAttribute('data-files-target');
+            const filesEl = targetId ? document.getElementById(targetId) : null;
+            if (!filesEl) return;
+            const expanded = filesEl.classList.toggle('expanded');
+            button.classList.toggle('expanded', expanded);
+            button.textContent = expanded ? 'Hide files' : 'Show files';
+        });
+    });
+
+    container.querySelectorAll('.knowledge-file-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const filePath = button.getAttribute('data-file-path');
+            if (!filePath) return;
+            previewKnowledgeFile(filePath);
+        });
+    });
+
+    container.querySelectorAll('.knowledge-upload-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const input = button.parentElement ? button.parentElement.querySelector('.knowledge-upload-input') : null;
+            if (input) input.click();
+        });
+    });
+
+    container.querySelectorAll('.knowledge-upload-input').forEach(function(input) {
+        input.addEventListener('change', async function() {
+            const file = input.files && input.files[0];
+            if (!file) return;
+            const folder = input.getAttribute('data-folder') || '';
+            const uploadBtn = input.parentElement ? input.parentElement.querySelector('.knowledge-upload-btn') : null;
+            const originalText = uploadBtn ? uploadBtn.textContent : '';
+
+            if (uploadBtn) {
+                uploadBtn.disabled = true;
+                uploadBtn.textContent = 'Uploading...';
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('folder', folder);
+                formData.append('file', file);
+
+                const response = await fetch('/api/knowledge/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (!response.ok || data.error) throw new Error(data.error || 'Upload failed');
+                showToast('Uploaded ' + file.name + ' to ' + folder);
+                await loadKnowledgeBase();
+            } catch (error) {
+                showToast('Upload failed: ' + error.message, 'error');
+            } finally {
+                input.value = '';
+                if (uploadBtn) {
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = originalText;
+                }
+            }
+        });
+    });
+
+    container.querySelectorAll('.knowledge-common-toggle').forEach(function(input) {
+        input.addEventListener('change', async function() {
+            const agentId = input.getAttribute('data-agent-id') || '';
+            const enabled = input.checked;
+            input.disabled = true;
+            try {
+                const response = await fetch('/api/knowledge/common-access', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agentId: agentId, enabled: enabled })
+                });
+                const data = await response.json();
+                if (!response.ok || data.error) throw new Error(data.error || 'Failed to update access');
+                showToast('Common KB ' + (enabled ? 'enabled' : 'disabled') + ' for ' + formatAgentName(agentId));
+            } catch (error) {
+                input.checked = !enabled;
+                showToast('Failed to update common access: ' + error.message, 'error');
+            } finally {
+                input.disabled = false;
+            }
+        });
+    });
+}
+
+async function loadKnowledgeBase() {
+    const container = document.getElementById('knowledgeFolders');
+    if (!container) return;
+    initKnowledgePreview();
+    container.innerHTML = '<div class="muted">Loading knowledge base...</div>';
+
+    try {
+        const responses = await Promise.all([
+            fetch('/api/knowledge/base'),
+            fetch('/api/knowledge/ssot')
+        ]);
+        const baseResponse = responses[0];
+        const ssotResponse = responses[1];
+        const baseData = await baseResponse.json();
+        const ssotData = await ssotResponse.json();
+
+        if (!baseResponse.ok || baseData.error) throw new Error(baseData.error || 'Failed to load base knowledge');
+        if (!ssotResponse.ok || ssotData.error) throw new Error(ssotData.error || 'Failed to load SSoT access');
+
+        container.innerHTML = renderUnifiedKnowledgeGrid(baseData, ssotData);
+        initUnifiedToggles(container);
+    } catch (error) {
+        container.innerHTML = '<div class="error-state">Failed to load knowledge base: ' + error.message + '</div>';
+    }
+}
+
+function escapeHtml(text) {
+    return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function escapeAttr(text) {
+    return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function formatBytes(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+
+const CRON_WEEK_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+let cronModalOverlay = null;
+function escapeCronHtml(v) { return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function formatCronDate(ms) { if (!ms) return '\u2014'; var d = new Date(ms); return isNaN(d.getTime()) ? '\u2014' : d.toLocaleString(); }
+function closeCronModal() { if (!cronModalOverlay) return; cronModalOverlay.remove(); cronModalOverlay = null; document.removeEventListener('keydown', handleCronModalKeydown); }
+function handleCronModalKeydown(e) { if (e.key === 'Escape') closeCronModal(); }
+function cronDetailRow(l, v) { return '<div class="cron-detail-row"><span class="cron-detail-label">'+escapeCronHtml(l)+'</span><span class="cron-detail-value">'+escapeCronHtml(v)+'</span></div>'; }
+function showCronModal(job) {
+    closeCronModal();
+    var st = (job.enabled ? 'enabled' : 'disabled') + ' / ' + (job.lastStatus || 'unknown');
+    var rows = [cronDetailRow('Cron expression', job.cronExpr||'\u2014'), cronDetailRow('Timezone', job.tz||'UTC'), cronDetailRow('Status', st), cronDetailRow('Last run', formatCronDate(job.lastRunAtMs)), cronDetailRow('Next run', formatCronDate(job.nextRunAtMs)), cronDetailRow('Model', job.model||'\u2014')];
+    if ((job.consecutiveErrors||0) > 0) rows.push(cronDetailRow('Consecutive errors', String(job.consecutiveErrors)));
+    var overlay = document.createElement('div'); overlay.className = 'cron-modal-overlay';
+    overlay.innerHTML = '<div class="cron-modal"><button type="button" class="cron-modal-close">&times;</button><h3>'+escapeCronHtml(job.name||'Unnamed')+'</h3>'+rows.join('')+'</div>';
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) closeCronModal(); });
+    overlay.querySelector('.cron-modal-close').addEventListener('click', closeCronModal);
+    document.body.appendChild(overlay); cronModalOverlay = overlay;
+    document.addEventListener('keydown', handleCronModalKeydown);
+}
+function parseCronField(field, min, max, opts) {
+    var ws = !!(opts&&opts.wrapSunday), t = String(field||'').trim(), vals = new Set(), any = false;
+    function add(n) { if (!Number.isInteger(n)) return; if (ws && n===7) n=0; if (n>=min && n<=max) vals.add(n); }
+    if (!t || t==='*') { any=true; for (var i=min;i<=max;i++) add(i); return {any:any,values:vals}; }
+    t.split(',').forEach(function(seg) { seg=seg.trim(); if (!seg) return; var sp=seg.split('/'), base=sp[0], step=sp[1]?parseInt(sp[1],10):1; if (!Number.isInteger(step)||step<=0) return; var s=min,e=max; if (base&&base!=='*') { if (base.indexOf('-')>=0) { var r=base.split('-'); s=parseInt(r[0],10); e=parseInt(r[1],10); } else { s=parseInt(base,10); e=s; } } for (var n=s;n<=e;n+=step) add(n); });
+    return {any:any,values:vals};
+}
+function parseCronExpression(expr) {
+    var p = String(expr||'').trim().split(/\s+/); if (p.length!==5) return null;
+    var m=parseCronField(p[0],0,59), h=parseCronField(p[1],0,23), dom=parseCronField(p[2],1,31), mo=parseCronField(p[3],1,12), dow=parseCronField(p[4],0,6,{wrapSunday:true});
+    if (!m.values.size||!h.values.size||!dom.values.size||!mo.values.size||!dow.values.size) return null;
+    return {minute:m,hour:h,dayOfMonth:dom,month:mo,dayOfWeek:dow, minuteValues:Array.from(m.values).sort(function(a,b){return a-b;}), hourValues:Array.from(h.values).sort(function(a,b){return a-b;})};
+}
+function cronDayMatches(d, p) { var dm=p.dayOfMonth.values.has(d.getUTCDate()), dw=p.dayOfWeek.values.has(d.getUTCDay()); if (p.dayOfMonth.any&&p.dayOfWeek.any) return true; if (p.dayOfMonth.any) return dw; if (p.dayOfWeek.any) return dm; return dm||dw; }
+function cronMatchesDate(d, p) { return p.month.values.has(d.getUTCMonth()+1) && p.hour.values.has(d.getUTCHours()) && p.minute.values.has(d.getUTCMinutes()) && cronDayMatches(d,p); }
+function estimateCronRuns(p, days) { var now=new Date(), start=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()), total=0; for (var d=0;d<days;d++) { var dd=new Date(start+(d*86400000)); if (!p.month.values.has(dd.getUTCMonth()+1)) continue; if (!cronDayMatches(dd,p)) continue; total+=p.hourValues.length*p.minuteValues.length; } return total; }
+function buildWeeklySlots(p) {
+    var slots=[], now=new Date(), utc=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate())), dow=utc.getUTCDay(), off=(dow+6)%7; utc.setUTCDate(utc.getUTCDate()-off); var ws=utc.getTime();
+    for (var day=0;day<7;day++) for (var h=0;h<p.hourValues.length;h++) { var hr=p.hourValues[h], hit=false; for (var m=0;m<p.minuteValues.length;m++) { var ts=ws+((((day*24)+hr)*60+p.minuteValues[m])*60000); if (cronMatchesDate(new Date(ts),p)) { hit=true; break; } } if (hit) slots.push({day:day,hour:hr}); }
+    return slots;
+}
+function cronStatusClass(j) { if (!j.enabled) return 'status-disabled'; return j.lastStatus==='error'?'status-error':'status-ok'; }
+function renderCronCalendar(weeklyJobs) {
+    var el = document.getElementById('cronCalendar'); if (!el) return;
+    if (!weeklyJobs.length) { el.innerHTML='<div class="muted">No weekly jobs.</div>'; return; }
+    var cellMap = new Map();
+    weeklyJobs.forEach(function(j) { buildWeeklySlots(j._parsed).forEach(function(s) { var k=s.day+'-'+s.hour; var l=cellMap.get(k)||[]; l.push(j); cellMap.set(k,l); }); });
+    el.innerHTML=''; var grid=document.createElement('div'); grid.className='cron-grid';
+    var blank=document.createElement('div'); blank.className='cron-header'; grid.appendChild(blank);
+    CRON_WEEK_DAYS.forEach(function(d) { var h=document.createElement('div'); h.className='cron-header'; h.textContent=d; grid.appendChild(h); });
+    for (var hour=0;hour<24;hour++) { var label=document.createElement('div'); label.className='cron-hour-label'; label.textContent=String(hour).padStart(2,'0')+':00'; grid.appendChild(label);
+        for (var day=0;day<7;day++) { var cell=document.createElement('div'); cell.className='cron-cell'; var jobs=cellMap.get(day+'-'+hour)||[];
+            jobs.forEach(function(j) { var block=document.createElement('div'); block.className='cron-block '+cronStatusClass(j); block.textContent=j.name||'Unnamed'; block.title=j.name||'Unnamed'; block.addEventListener('click',function(){showCronModal(j);}); cell.appendChild(block); });
+            grid.appendChild(cell); } }
+    el.appendChild(grid);
+}
+function renderCronInfrequent(jobs) {
+    var el=document.getElementById('cronInfrequent'); if (!el) return;
+    if (!jobs.length) { el.innerHTML='<h3>Infrequent Jobs</h3><div class="muted">None.</div>'; return; }
+    var rows=jobs.map(function(j) { var meta=escapeCronHtml(j.cronExpr||'No schedule')+' \u00b7 Last: '+escapeCronHtml(formatCronDate(j.lastRunAtMs))+' \u00b7 Next: '+escapeCronHtml(formatCronDate(j.nextRunAtMs)); return '<div class="cron-infrequent-item"><span class="cron-status-dot '+cronStatusClass(j)+'"></span><div><div class="cron-name">'+escapeCronHtml(j.name||'Unnamed')+'</div><div class="cron-schedule">'+meta+'</div></div></div>'; }).join('');
+    el.innerHTML='<h3>Infrequent Jobs</h3><div class="cron-infrequent-list">'+rows+'</div>';
+}
+async function loadCronCalendar() {
+    var cal=document.getElementById('cronCalendar'), inf=document.getElementById('cronInfrequent'); if (!cal||!inf) return;
+    cal.innerHTML='<div class="muted">Loading...</div>'; inf.innerHTML='';
+    try { var r=await fetch('/api/cron/jobs'); var data=await r.json(); var jobs=Array.isArray(data.jobs)?data.jobs:[];
+        var weekly=[], infrequent=[];
+        jobs.forEach(function(j) { var p=parseCronExpression(j.cronExpr||''); if (!p) { infrequent.push(j); return; } if (estimateCronRuns(p,28)>=4) weekly.push(Object.assign({},j,{_parsed:p})); else infrequent.push(j); });
+        renderCronCalendar(weekly); renderCronInfrequent(infrequent);
+    } catch(e) { cal.innerHTML='<div class="muted">Unable to load cron jobs.</div>'; console.error(e); }
 }
 
 // ============================================

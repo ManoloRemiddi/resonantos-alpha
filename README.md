@@ -35,7 +35,7 @@ It gives your AI collaborator:
 
 | Component | What It Does |
 |-----------|-------------|
-| 🧠 **R-Memory** | Conversation compression — your AI remembers everything, forever |
+| 📚 **Knowledge Base** | Per-agent RAG — vector search with SQLite + Ollama embeddings |
 | 🎯 **R-Awareness** | Contextual knowledge injection — the right docs at the right time |
 | 📊 **Dashboard** | Mission Control at `localhost:19100` |
 | 💰 **Symbiotic Wallet** | Three-wallet Solana architecture (Human + AI + Symbiotic PDA) |
@@ -43,8 +43,20 @@ It gives your AI collaborator:
 | 🪙 **Token Economy** | $RCT (soulbound governance) + $RES (transferable currency) + REX sub-tokens |
 | 🛒 **Protocol Store** | Buy, sell, and trade AI protocol NFTs on-chain |
 | 🛡️ **Shield** | File protection & security governance *(in development)* |
-| ⚖️ **Logician** | Cost & policy validation *(spec phase)* |
+| ⚖️ **Logician** | Cost & policy validation *(in development)* |
 | 🔄 **Guardian** | Self-healing & incident recovery *(in development)* |
+
+---
+
+## 📝 Memory System Update (March 2026)
+
+**R-Memory has been temporarily removed** as it is not compatible with the latest OpenClaw version. We are working on a improved implementation that will be compatible with OpenClaw's native compaction system.
+
+**Knowledge Base (RAG)** has been added as the new memory layer:
+- Per-agent SQLite databases with vector embeddings
+- Local Ollama embedding model (nomic-embed-text)
+- Configurable SSoT access per agent (L0/L1/L2)
+- Common KB for shared knowledge across agents
 
 ---
 
