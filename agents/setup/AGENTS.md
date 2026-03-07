@@ -115,6 +115,12 @@ Distinguish between **current architecture** and **legacy artifacts**:
 6. SSoT: Does the ssot/ directory have user content beyond templates?
 7. Solana: Is the Python SDK installed? (pip3 list | grep solana). CLI binary is NOT needed.
 8. LaunchAgents: Scan ~/Library/LaunchAgents/com.resonantos.* — categorize each as CURRENT or LEGACY based on whether paths reference ~/clawd/ or other nonexistent directories.
+9. Memory Archivist Cron: Run `openclaw cron list` to verify Memory Archivist job exists (runs daily at 05:30 to create Memory Logs)
+```
+
+If Memory Archivist cron is missing, add it:
+```
+openclaw cron add --name "Memory Archivist" --cron "30 5 * * *" --tz "Europe/Rome" --session isolated --model MiniMax-M2.5-Lightning --message "Run Memory Archivist V2: (1) Scan SSoT hierarchy L1-L4, (2) Generate drift detection report, (3) Extract key decisions from last 24h sessions into memory/shared-log/YYYY-MM-DD.md, (4) Report findings. Read archivist.py for details."
 ```
 
 Report findings in three sections:
@@ -290,6 +296,58 @@ Use the templates in `~/resonantos-alpha/logician/rules/templates/` as starting 
 Map the user's SSoT documents to trigger keywords:
 - Read what's in their ssot/ directory
 - Create keyword mappings so relevant docs auto-inject when topics come up
+- **CRITICAL: Keywords must be minimal (1-2 per SSoT) and 2+ words each**
+  - Good: "System Architecture", "Memory Log", "Creative DNA", "Token Economy"
+  - Bad: "System", "Memory", "Token" (too vague)
+- Maximum 2 keywords per SSoT document to avoid context bloat
+
+#### Memory Archivist Cron
+Set up daily Memory Log generation:
+1. Check if cron exists: `openclaw cron list | grep Memory Archivist`
+2. If missing, add it:
+```
+openclaw cron add --name "Memory Archivist" --cron "30 5 * * *" --tz "Europe/Rome" --session isolated --model MiniMax-M2.5-Lightning --message "Run Memory Archivist V2: (1) Scan SSoT hierarchy L1-L4, (2) Generate drift detection report, (3) Extract key decisions from last 24h sessions into memory/shared-log/YYYY-MM-DD.md, (4) Report findings."
+```
+3. This creates daily Memory Logs in `memory/shared-log/` at 05:30
+
+#### DAO Registration
+Help user join the ResonantOS DAO step by step:
+
+**Step 1: Download Phantom Wallet**
+- Guide user to: https://phantom.com/
+- Install browser extension
+
+**Step 2: Save Recovery Phrase (CRITICAL)**
+- ⚠️ WARNING: Write down the 12-word recovery phrase
+- ⚠️ NOT RECOVERABLE - LOST FOREVER - If lost, cannot be recovered
+- Store in a secure physical location (safe, locked drawer)
+
+**Step 3: Get Free SOL on DevNet**
+- Guide user to: https://faucet.solana.com/
+- Get DevNet SOL for testing
+
+**Step 4: Create AI Agent's Own Wallet**
+- The AI creates its own Solana wallet
+- This is separate from the user's wallet
+- Note: The AI wallet is also non-custodial
+
+**Step 5: Save AI Recovery Phrase (CRITICAL)**
+- ⚠️ WARNING: Write down the AI wallet's 12-word recovery phrase
+- ⚠️ NOT RECOVERABLE - LOST FOREVER
+- Store securely - the AI cannot access funds without it
+
+**Step 6: Create Symbiotic Wallet & NFTs via Dashboard**
+- Guide user to Dashboard → Wallet section
+- Create Symbiotic Wallet (uses both user + AI wallets)
+- Generate NFTs:
+  - Identity NFT (user's on-chain identity)
+  - Symbiotic License NFT (grants AI authority)
+  - Augmentatism Manifesto NFT (philosophy acceptance)
+  - Pioneer Alpha Tester NFT (current testing badge - will be replaced)
+
+**Step 7: Daily Reward**
+- After registration, user receives daily $RES tokens
+- Check Dashboard for reward status
 
 #### R-Memory Config
 - Default parameters are usually fine
