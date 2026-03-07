@@ -265,3 +265,48 @@ should_escalate(coder, Task) :-
     fix_attempts(coder, Task, N),
     max_fix_attempts(Max),
     N >= Max.
+
+% ----------------------------------------------------------------------------
+% ESCALATION PROTOCOL - Prevent Infinite Loops
+% Added 2026-03-07
+% ----------------------------------------------------------------------------
+
+% Max attempts before escalation
+max_direct_attempts(5).
+max_research_attempts(5).
+max_total_attempts(10).
+
+% Track attempts
+attempt_number(coder, Task, N) :-
+    attempt(coder, Task, N).
+
+% Rule: After 5 failed attempts, require research before next attempt
+requires_research(coder, Task) :-
+    attempt(coder, Task, N),
+    N > 5,
+    \+ research_performed(Task).
+
+% Rule: Escalate after 10 total attempts
+must_escalate(coder, Task) :-
+    attempt(coder, Task, N),
+    N >= 10,
+    \+ task_resolved(Task).
+
+% Escalation message format
+escalation_message(coder, Task, Msg) :-
+    format(Msg, "Codex failed ~w attempts on task: ~w. Stopping. Need human intervention.", [N, Task]).
+
+% On escalation: stop, tell human, don't continue
+on_escalation(coder, Task, [
+    stop_coder,
+    inform_human("Task failed after 10 attempts. Need human intervention."),
+    provide_context(Task),
+    wait_for_human_decision
+]).
+
+% Research flow after 5 attempts
+research_required_flow([
+    perform_deep_research(Task),
+    give_research_to_coder(Task, ResearchResults),
+    allow_next_attempt
+]).
