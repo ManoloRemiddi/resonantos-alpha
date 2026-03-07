@@ -175,3 +175,29 @@ suggest_downgrade(Query, perplexity) :-
 
 suggest_downgrade(Query, brave_api) :-
     research_outcome(Query, perplexity, _, excessive).
+
+% ----------------------------------------------------------------------------
+% RESEARCH ENFORCEMENT RULE
+% Added 2026-03-07
+% ----------------------------------------------------------------------------
+
+% Rule: Deep research must use Perplexity - never do it yourself
+violation(orchestrator, manual_deep_research) :-
+    research_type(Deep),
+    \+ perplexity_used(Deep).
+
+% Rule: Perplexity fails → MUST alert human immediately
+violation(orchestrator, no_alert_on_perplexity_fail) :-
+    perplexity_failed(Error),
+    \+ human_informed(perplexity_failed, Error).
+
+% Rule: Must use Deep Search mode unless explicitly told "quick"
+research_mode(default, deep).
+violation(orchestrator, wrong_search_mode) :-
+    research_type(Research),
+    \+ search_mode(Research, Mode),
+    Mode \= deep,
+    \+ human_approved(quick_mode).
+
+% What to say when Perplexity fails
+perplexity_fail_message("Perplexity unavailable: [error]. Should I try again, or can you fix the access?").
