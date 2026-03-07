@@ -1,237 +1,193 @@
-# DELEGATION_PROTOCOL.md — Orchestrator → Coder Handoff
+# DELEGATION_PROTOCOL.md — Orchestrator → Agent Handoff (V2)
 
-**Read this before EVERY delegation to Codex or any coding agent.**
+**Version:** 2.0  
+**Based on:** Research + Self-Debate (2026-03-07)  
+**Read this before EVERY delegation to Codex or Perplexity.**
 
-## The Failure Mode (Why This Exists)
+---
 
-On 2026-02-24, the orchestrator delegated a dashboard fix to Codex twice. Both times:
-- TASK.md was vague on data formats and architecture
-- No SSoT docs were referenced or included
-- No data flow analysis was done before delegation
-- Codex made 341 lines of speculative changes, broke the feature worse
-- The orchestrator treated delegation as "throw task over the wall"
+## Core Philosophy
 
-**Root cause:** Orchestrator was lazy. Delegation is not "write a TASK.md and hope." It's a structured handoff requiring the orchestrator to do the architectural work first.
+Delegation is NOT "throw a task over the wall and hope." It's a structured handoff requiring the orchestrator to do the architectural work first, then guide the agent through Plan → Execute → Verify.
 
-## Task Tiers
+---
 
-Every delegation uses TASK.md. The required sections scale with task scope:
+## The Two Checkpoints (Mandatory)
 
-| Tier | Scope | Required Sections |
-|---|---|---|
-| **Small** | ≤3 files, ≤100 lines, simple fix | Root Cause, Fix, Files to Modify, Test Command (4 sections) |
-| **Mid** | >3 files OR >100 lines | Small + Acceptance Criteria, Out of Scope, Data Context, Preferences, Escalation Triggers (9 sections) |
-| **Large/Design** | New system, protocol, architecture, new extension | Mid + Constraints, Context (11 sections) |
+Every task MUST have these two checkpoints:
 
-**Tier detection is automatic.** The Delegation Gate reads TASK.md and detects scope from:
-1. Explicit declaration: `## Scope: mid` (highest priority)
-2. Keywords in title: "new system", "architecture", "new protocol" → large
-3. File count in Files to Modify: >3 files → mid
-4. Line count hints: >100 lines mentioned → mid
+| Checkpoint | What Agent Does | Human Does |
+|------------|----------------|-----------|
+| **1. Plan** | Inspect files, confirm understanding, show implementation plan | Review plan, approve or correct |
+| **2. Verify** | Run tests, verify no regressions, prove it works | Final approval |
 
-**Default on ambiguity: mid** (safer to over-validate than under-validate).
+**No task proceeds past Checkpoint 1 without human approval.**
 
-## Mandatory Pre-Delegation Checklist
-
-Before spawning Codex, complete ALL of these:
-
-### 1. UNDERSTAND THE SYSTEM (5-10 min)
-- [ ] Read the relevant source code (not just grep — read the function)
-- [ ] Trace the complete data flow (input → processing → output → UI)
-- [ ] Identify the root cause with evidence (not assumption)
-- [ ] Read the relevant SSoT doc (L1 for architecture, L2 for project context)
-
-### 2. SPECIFY THE FIX (5 min)
-- [ ] Document the exact root cause (not symptoms)
-- [ ] Specify the exact fix approach (not "investigate and fix")
-- [ ] List the exact files to modify and what changes are needed
-- [ ] Define acceptance criteria with testable commands
-- [ ] Include sample data (actual values, not descriptions)
-
-### 3. PREPARE THE CONTEXT (5 min)
-- [ ] Write TASK.md in the working directory with all required sections for the tier
-- [ ] If the fix needs data format knowledge, include actual data samples
-- [ ] If the fix touches config, include the current config values
-- [ ] Reference specific line numbers in source files
-- [ ] Include the test command that validates the fix
-
-### 4. SCOPE CONTROL
-- [ ] Task changes ≤3 files for small tier (if more, it's mid or break into subtasks)
-- [ ] Task adds/modifies ≤100 lines for small tier (if more, it's mid)
-- [ ] No architectural decisions delegated (those stay with orchestrator)
-- [ ] No speculative "improvements" — fix exactly what's broken
+---
 
 ## TASK.md Templates
 
-### Small Tier (≤3 files, ≤100 lines)
+### For Codex (Coding Tasks)
 
 ```markdown
-# TASK: [Brief title]
+# Task Overview
+- Type: [bugfix / feature / refactor / docs]
+- Goal: [single-sentence outcome]
 
-## Root Cause
-[Exact technical explanation of why it's broken, with evidence]
+# Problem Statement (WHY)
+- What problem are we solving: [description]
+- Why it matters: [business/technical reason]
+- Success looks like: [what good outcome means]
 
-## Fix
-[Exact description of what to change]
+# Context
+- Codebase: ResonantOS (Python/Flask backend, JS frontend, OpenClaw, SQLite, Ollama)
+- Relevant areas: [specific file paths - max 5 files]
+- Architecture: [how this component works, any data flows]
 
-## Files to Modify
-- `path/to/file.py` line ~N: [what to change]
+# Current Behavior
+- What happens now: [description with error messages/logs if bug]
+- Expected behavior: [description]
+- Reproduction steps (for bugs):
+  1. [CLI/UI step]
+  2. [...]
 
-## Test Command
-\`\`\`bash
-[Exact command that validates the fix]
-\`\`\`
+# Constraints
+- Keep: [APIs/routes/DB schema that must remain compatible]
+- Do NOT: [e.g., new dependencies, change existing behavior]
+- Performance: [e.g., <200ms query time]
+- Security: [rules from Logician]
+
+# Checkpoints
+## Checkpoint 1: Plan
+- [ ] Inspect relevant files
+- [ ] Confirm understanding of problem
+- [ ] Show implementation plan:
+  1. [first step]
+  2. [second step]
+  3. [third step]
+- [ ] WAIT for human approval before proceeding
+
+## Checkpoint 2: Verify
+- [ ] Run existing tests: `COMMAND`
+- [ ] Run new tests: `COMMAND`
+- [ ] Manual verification: [UI/action to check]
+- [ ] Show test output
+- [ ] Confirm no regressions
+
+# Acceptance Criteria
+- [ ] Test `X` passes
+- [ ] Test `Y` passes  
+- [ ] Manual check: [specific UI behavior]
+- [ ] No regressions in [existing tests]
 ```
 
-### Mid Tier (>3 files OR >100 lines)
+### For Perplexity (Research Tasks)
 
 ```markdown
-# TASK: [Brief title]
+# Research Context
+- Decision this informs: [what decision this research supports]
+- Current status: [what we've already tried/implemented]
+- Why we need this: [problem we're solving]
 
-## Root Cause
-[Exact technical explanation with evidence]
+# Question
+[Precise research question - one sentence]
 
-## Fix
-[Exact description of what to change]
+# Scope
+- Focus: [topic]
+- Stack: [Python/Flask/OpenClaw/SQLite/Ollama]
+- Timeframe: [e.g., as of 2026]
+- Non-goals: [what to explicitly ignore]
 
-## Files to Modify
-- `path/to/file1.py` line ~N: [what to change]
-- `path/to/file2.py` line ~N: [what to change]
-- `path/to/file3.py` line ~N: [what to change]
-- `path/to/file4.py` line ~N: [what to change]
+# Evidence Rules
+- Prefer: [official docs, technical blogs, academic papers]
+- Min sources: [2 per major claim]
+- Must cite: [each claim with source]
 
-## Data Context
-[Actual data samples, config values, API response examples — real values, not descriptions.
-The coding agent should be able to understand the data format without reading source files.]
+# Checkpoints
+## Checkpoint 1: Plan
+- [ ] Show search/coverage plan
+- [ ] List sources to consult
+- [ ] WAIT for human approval
 
-## Test Command
-\`\`\`bash
-[Exact command that validates the fix]
-\`\`\`
+## Checkpoint 2: Verify
+- [ ] Summarize findings
+- [ ] Show sources cited
+- [ ] Address gaps/uncertainties
 
-## Acceptance Criteria
-1. [Specific, testable condition]
-2. [Specific, testable condition]
-3. [Specific, testable condition]
-
-## Preferences
-- [When multiple valid approaches exist, which to favour and why]
-- [Performance vs readability trade-off preference]
-- [Library vs custom implementation preference]
-
-## Escalation Triggers
-- Stop and report back if: [you find more than 1 possible root cause]
-- Stop and report back if: [changes would exceed the scoped files]
-- Stop and report back if: [tests fail in unexpected ways]
-
-## Out of Scope
-- [Things NOT to touch]
-- [Existing features to preserve]
+# Output Format
+1) 5-7 bullet key takeaways
+2) Table: Claim | Evidence | Source | Confidence
+3) Best practices / patterns
+4) Open questions
 ```
 
-### Large/Design Tier (new system, protocol, architecture)
+---
 
-```markdown
-# TASK: [Brief title]
-## Scope: large
+## Tier System (Unchanged)
 
-## Root Cause
-[Exact technical explanation with evidence]
+| Tier | Scope | Checkpoints |
+|------|-------|-------------|
+| Small | ≤3 files, ≤100 lines | 2 (Plan + Verify) |
+| Mid | >3 files OR >100 lines | 2 (Plan + Verify) |
+| Large | New system/architecture | 2 + more detailed Plan |
 
-## Context
-[Architecture overview, data flow, environment details, relevant SSoT references.
-Must be self-contained — the coding agent should not need to ask clarifying questions.]
+---
 
-## Fix
-[Exact description of what to change]
+## Pre-Delegation Checklist
 
-## Data Context
-[Actual data samples, config values, API response examples — real values, not descriptions.
-Include current state AND expected state after fix.]
+Before spawning the agent, complete ALL of these:
 
-## Files to Modify
-- `path/to/file1.py` line ~N: [what to change]
-- `path/to/file2.py` line ~N: [what to change]
+### 1. Understand (5-10 min)
+- [ ] Read the relevant source code (not just grep)
+- [ ] Trace data flow (input → processing → output → UI)
+- [ ] Identify root cause with evidence
+- [ ] Read relevant SSoT docs
 
-## Test Command
-\`\`\`bash
-[Exact command that validates the fix]
-\`\`\`
+### 2. Specify (5 min)
+- [ ] Write Problem Statement (why this matters)
+- [ ] Document exact fix approach
+- [ ] List files + line numbers
+- [ ] Define acceptance criteria
 
-## Acceptance Criteria
-1. [Specific, testable condition]
-2. [Specific, testable condition]
-3. [Specific, testable condition]
+### 3. Prepare TASK.md
+- [ ] Use the template above
+- [ ] Include exact commands for testing
+- [ ] Set Checkpoint 1: Plan phase
+- [ ] Set Checkpoint 2: Verify phase
 
-## Preferences
-- [When multiple valid approaches exist, which to favour and why]
-- [Architectural style preferences (functional vs OOP, etc.)]
-- [Performance vs readability vs maintainability hierarchy]
+### 4. Verify (Post-Delegation)
+- [ ] Review Checkpoint 1 plan before approving
+- [ ] Run test commands yourself after Checkpoint 2
+- [ ] Never tell human "done" without running verification
 
-## Escalation Triggers
-- Stop and report back if: [you discover the root cause differs from what's specified]
-- Stop and report back if: [changes would exceed the scoped files]
-- Stop and report back if: [you need to modify shared infrastructure]
-- Stop and report back if: [tests fail in unexpected ways]
+---
 
-## Constraints
-- [Must-not rules — hard boundaries]
-- [Performance limits — max response time, max memory]
-- [Compatibility requirements — what must not break]
+## Anti-Patterns (Auto-Blocked)
 
-## Out of Scope
-- [Things NOT to touch]
-- [Architectural decisions NOT to make]
-```
+| ❌ Bad | ✅ Good |
+|--------|---------|
+| "Investigate and fix" | Do investigation yourself, specify exact fix |
+| "Likely cause" | 1 confirmed cause + evidence |
+| No checkpoints | Plan → Verify always |
+| Codex reports "done" without test output | Must show test results |
+| Missing "why" | Problem Statement section |
 
-## Section Requirements (Enforced by Delegation Gate)
+---
 
-| Section | Tier | Min Chars | What It Must Contain |
-|---|---|---|---|
-| Root Cause | all | 50 | Technical explanation with evidence, not symptoms |
-| Fix | all | 30 | Exact change description, not "investigate and fix" |
-| Files to Modify | all | 10 | Explicit file list, max 5 files |
-| Test Command | all | 20 | Runnable command in code block |
-| Acceptance Criteria | mid+ | 30 | ≥3 verifiable conditions |
-| Out of Scope | mid+ | 15 | Explicit exclusions |
-| Data Context | mid+ | 40 | Real data samples, config values, API responses |
-| Preferences | mid+ | 20 | Approach priority when multiple valid options exist |
-| Escalation Triggers | mid+ | 20 | Conditions to stop and report back |
-| Constraints | large | 20 | Hard limits and must-not rules |
-| Context | large | 50 | Self-contained architecture/environment description |
+## Vague Language Detection
 
-## Anti-Patterns (What NOT to Do)
-
-| Anti-Pattern | Correct Approach |
-|---|---|
-| "Investigate and fix" | Do the investigation yourself, specify the fix |
-| "Likely root causes to investigate" | Find the root cause, document it |
-| "The numbers should be stable" | "Bug: `usage-stats.json` is cumulative (693 calls), not windowed. Fix: filter `pairs.jsonl` by timestamp" |
-| TASK.md with 5 possible causes | TASK.md with 1 confirmed cause + exact fix |
-| 4-file, 300-line change scope | Break into 2-3 focused tasks |
-| "Don't break existing functionality" | "Run this test command to verify no regressions" |
-| Missing Out of Scope for mid task | Explicitly list what to preserve |
-| No Constraints for large task | Define hard limits before the agent starts |
-
-## Vague Language Detection (Enforced by Gate)
-
-The following phrases in Root Cause are auto-blocked:
+Blocked phrases:
 - "investigate and fix"
-- "likely cause" / "probably the"
-- "might be caused" / "should be fixed"
-- "look into" / "check if"
+- "likely cause" / "probably"
+- "might be" / "should be fixed"
 - "try to fix" / "not sure"
 - "somehow" / "maybe"
 
-## Post-Delegation
+---
 
-1. Monitor Codex output (first 2 minutes)
-2. If it starts exploring files it shouldn't → steer or kill
-3. When it reports done → verify test output independently
-4. Never forward "done" to Manolo without running the test yourself
+## Enforcement
 
-## Logician Enforcement
-
-These rules are defined in `logician/rules/coder_rules.mg` and `preparation_rules.mg`.
-The orchestrator must satisfy `preparation_rules.mg` before the coder is invoked.
-Violations: delegating without root cause analysis, delegating without test criteria, claiming "fixed" without running tests.
+These rules are enforced by Logician:
+- `coder_rules.mg` - Codex behavior rules
+- `preparation_rules.mg` - Pre-delegation requirements
+- Violations block delegation until fixed
