@@ -116,6 +116,11 @@ Distinguish between **current architecture** and **legacy artifacts**:
 7. Solana: Is the Python SDK installed? (pip3 list | grep solana). CLI binary is NOT needed.
 8. LaunchAgents: Scan ~/Library/LaunchAgents/com.resonantos.* — categorize each as CURRENT or LEGACY based on whether paths reference ~/clawd/ or other nonexistent directories.
 9. Memory Archivist Cron: Run `openclaw cron list` to verify Memory Archivist job exists (runs daily at 05:30 to create Memory Logs)
+10. LCM Plugin: Run `openclaw plugins list` — is `lossless-claw` loaded as contextEngine?
+11. Memory directories: Do `~/.openclaw/workspace/memory/headers/` and `memory/shared-log/` exist?
+12. FIFO script: Does `~/.openclaw/scripts/rebuild-recent-headers.sh` exist and is it executable?
+13. Ollama: Is Ollama running? Is nomic-embed-text model available? (`ollama list | grep nomic-embed-text`)
+14. Intraday cron: Run `openclaw cron list | grep intraday-memory-log` — is the 3h memory check registered?
 ```
 
 If Memory Archivist cron is missing, add it:
@@ -500,41 +505,165 @@ Help user set up their AI model providers and allocation strategy:
    - Example: Opus → Sonnet → Haiku → local model
    - Document in user's TOOLS.md
 
-#### Memory System (LCM)
-Install and configure Lossless Context Management — the plugin that replaces OpenClaw's lossy compaction with a DAG-based summary system. Nothing is lost; raw messages stay in SQLite and can be drilled into on demand.
+#### Memory System (4-Layer Stack)
 
-1. **Install LCM plugin:**
+The memory system has 4 layers that work together. Each layer covers what the others miss — like L1/L2/L3 cache in a CPU. Set them up in order.
+
+**Important:** If the old R-Memory extension (r-memory.js) is enabled, **disable it first**. LCM replaces R-Memory entirely. Check openclaw.json for `r-memory` in plugins entries and set `enabled: false`. When LCM is set as `contextEngine`, OpenClaw's default compaction is automatically replaced — no manual disable needed.
+
+##### Layer 1: MEMORY.md (OpenClaw built-in)
+
+This is the agent's curated long-term memory — loaded every session automatically.
+
+1. **Check:** Does `~/.openclaw/workspace/MEMORY.md` exist?
+2. If not, create it from template:
+   ```markdown
+   # MEMORY.md - Long-Term Memory
+
+   ## Core Identity
+   - **Human:** [Name from USER.md]
+   - **First session:** [Today's date]
+
+   ## Key Lessons
+   [To be filled as the agent learns]
+
+   ## Projects
+   [To be filled as projects are discussed]
+
+   ## Preferences
+   [To be filled as preferences are discovered]
+   ```
+3. This layer requires no plugins or configuration — it's native to OpenClaw.
+
+##### Layer 2: LCM (Lossless Context Management)
+
+Third-party plugin by Martian Engineering. Replaces OpenClaw's lossy compaction with a DAG-based summary system. Nothing is lost; raw messages stay in SQLite and can be drilled into on demand.
+
+1. **Install:**
    ```bash
    openclaw plugins install @martian-engineering/lossless-claw
    ```
 
-2. **Configure with optimal defaults:**
-   Add to `plugins.entries.lossless-claw` in openclaw.json:
+2. **Configure** in openclaw.json:
    ```json
    {
-     "enabled": true,
-     "config": {
-       "freshTailCount": 32,
-       "contextThreshold": 0.75,
-       "incrementalMaxDepth": -1
+     "plugins": {
+       "entries": {
+         "lossless-claw": {
+           "enabled": true,
+           "config": {
+             "freshTailCount": 32,
+             "contextThreshold": 0.75,
+             "incrementalMaxDepth": -1
+           }
+         }
+       },
+       "slots": {
+         "contextEngine": "lossless-claw"
+       }
      }
    }
    ```
    - `freshTailCount: 32` — last 32 messages always in context (protected from compaction)
    - `contextThreshold: 0.75` — compact when context hits 75% of window
-   - **`incrementalMaxDepth: -1`** — CRITICAL: enables unlimited condensation cascade. Default (0) means summaries pile up at depth 0 and never get merged into higher-level summaries, wasting context space.
+   - **`incrementalMaxDepth: -1`** — CRITICAL: enables unlimited condensation cascade. Without this, summaries pile up at depth 0 and waste context space.
 
-3. **Set as context engine:**
-   Ensure `plugins.slots.contextEngine` is set to `"lossless-claw"` in openclaw.json.
+3. **Verify:** `openclaw plugins list` should show lossless-claw as loaded.
+4. **Restart gateway** to activate.
 
-4. **Verify:**
+##### Layer 3: Session Headers + R-Awareness (ResonantOS)
+
+After each work session, a compressed 500-800 token "header" captures key decisions, corrections, and context. R-Awareness auto-injects the 20 most recent headers when a new session starts. A FIFO script prunes older ones.
+
+1. **Create directories:**
    ```bash
-   openclaw plugins list  # Should show "lossless-claw" as loaded
+   mkdir -p ~/.openclaw/workspace/memory/headers
+   mkdir -p ~/.openclaw/workspace/memory/shared-log
+   mkdir -p ~/.openclaw/scripts
    ```
 
-5. **Restart gateway** to load the plugin.
+2. **Install FIFO script:** Copy `scripts/rebuild-recent-headers.sh` from the ResonantOS repo to `~/.openclaw/scripts/rebuild-recent-headers.sh` and make it executable:
+   ```bash
+   cp ~/resonantos-alpha/scripts/rebuild-recent-headers.sh ~/.openclaw/scripts/
+   chmod +x ~/.openclaw/scripts/rebuild-recent-headers.sh
+   ```
+   This script keeps the 20 most recent headers and rebuilds `RECENT-HEADERS.md`.
 
-Reference: See `ssot/L1/SSOT-L1-LCM.md` for full architecture documentation.
+3. **Copy templates:**
+   ```bash
+   cp ~/resonantos-alpha/templates/memory/header-template.md ~/.openclaw/workspace/memory/headers/
+   cp ~/resonantos-alpha/templates/memory/memory-log-template.md ~/.openclaw/workspace/memory/shared-log/0000-PREAMBLE.md
+   ```
+   (Skip 0000-PREAMBLE.md if it already exists — don't overwrite user's customized version.)
+
+4. **Configure R-Awareness coldStartDocs:** Edit `r-awareness/config.json` to include `RECENT-HEADERS.md` in the `coldStartDocs` array:
+   ```json
+   "coldStartDocs": ["L1/RECENT-HEADERS.md"]
+   ```
+   The `ssotRoot` in this config must point to where the user's SSOT lives.
+
+5. **Create initial RECENT-HEADERS.md:**
+   ```bash
+   ~/.openclaw/scripts/rebuild-recent-headers.sh
+   ```
+   Also create it at the ssotRoot path: `[ssotRoot]/L1/RECENT-HEADERS.md`
+
+6. **Create breadcrumb tracking files:**
+   ```bash
+   echo '{"lastChecks":{},"lastMemoryLog":0}' > ~/.openclaw/workspace/memory/heartbeat-state.json
+   touch ~/.openclaw/workspace/memory/breadcrumbs.jsonl
+   ```
+
+##### Layer 4: RAG / Vector Search (OpenClaw built-in)
+
+Semantic search across all memory files using local embeddings. This is the long tail — finds things from weeks or months ago.
+
+1. **Check Ollama:** `ollama list | grep nomic-embed-text`
+2. If Ollama not installed:
+   - macOS: `brew install ollama`
+   - Linux: `curl -fsSL https://ollama.ai/install.sh | sh`
+3. If model not pulled: `ollama pull nomic-embed-text:latest`
+4. RAG indexes workspace files automatically — no additional config needed beyond having Ollama running.
+
+##### Enforcement Layer (Deterministic Memory Discipline)
+
+AI agents skip memory logging the same way humans skip journaling. These enforcement mechanisms make it impossible to forget:
+
+1. **Intraday memory log cron** (checks every 3 hours):
+   ```
+   openclaw cron add --name "intraday-memory-log" \
+     --cron "0 */3 * * *" --tz "[user_timezone]" \
+     --session isolated --model minimax/MiniMax-M2.5 \
+     --timeout 120 \
+     --message "Check if a memory log is due. Read ~/.openclaw/workspace/memory/heartbeat-state.json for lastMemoryLog timestamp and ~/.openclaw/workspace/memory/breadcrumbs.jsonl for accumulated entries. If breadcrumbs has 3+ entries AND lastMemoryLog is more than 2 hours ago, write a memory log following the template in memory/shared-log/0000-PREAMBLE.md. Save to memory/shared-log/MEMORY-LOG-YYYY-MM-DD-partN.md. Then update heartbeat-state.json lastMemoryLog and clear processed breadcrumbs. If conditions aren't met, do nothing."
+   ```
+   This only writes logs when there's actual work to log (checks breadcrumbs) — no empty logs, no noise.
+
+2. **Daily memory archivist** (comprehensive daily summary):
+   ```
+   openclaw cron add --name "daily-memory-log" \
+     --cron "30 5 * * *" --tz "[user_timezone]" \
+     --session isolated --model minimax/MiniMax-M2.5 \
+     --message "Run Memory Archivist: Generate comprehensive memory log from last 24h sessions. Save to memory/shared-log/MEMORY-LOG-YYYY-MM-DD.md following template in 0000-PREAMBLE.md. Then run ~/.openclaw/scripts/rebuild-recent-headers.sh to rebuild RECENT-HEADERS.md with latest headers."
+   ```
+
+3. **Replace** `[user_timezone]` with the user's timezone from USER.md (e.g., `Europe/Rome`, `America/New_York`).
+
+##### Memory System Verification Checklist
+After setup, run ALL of these:
+```
+1. openclaw plugins list                              → lossless-claw loaded as contextEngine ✓
+2. ls ~/.openclaw/workspace/MEMORY.md                  → exists ✓
+3. ls ~/.openclaw/workspace/memory/headers/             → directory exists ✓
+4. ls ~/.openclaw/scripts/rebuild-recent-headers.sh     → exists + executable ✓
+5. ollama list | grep nomic-embed-text                  → model available ✓
+6. openclaw cron list | grep intraday-memory-log        → cron registered ✓
+7. openclaw cron list | grep daily-memory-log           → cron registered ✓
+8. ls ~/.openclaw/workspace/memory/shared-log/          → directory exists ✓
+9. cat r-awareness/config.json | grep RECENT-HEADERS    → in coldStartDocs ✓
+10. R-Memory extension disabled (if it existed)          → confirmed ✓
+```
+Report any failures to the user before proceeding.
 
 #### Nightly System Update
 Set up automatic nightly updates for all system components:
@@ -661,19 +790,23 @@ After configuration, run these checks and score:
 5. TOOLS.md has environment-specific notes
 6. HEARTBEAT.md configured (or explicitly disabled)
 
-### Component Readiness (6 checks)
-1. R-Memory extension installed and config present
+### Component Readiness (10 checks)
+1. LCM plugin installed and set as contextEngine
 2. R-Awareness extension installed and config present
 3. Logician rules loaded (production_rules.mg exists and is customized)
 4. Logician service running (mangle-server process or socket)
 5. Shield components present (file_guard.py, data_leak_scanner.py)
 6. Dashboard accessible (if installed)
+7. Memory headers directory exists with FIFO script executable
+8. Memory crons registered (intraday-memory-log + daily-memory-log)
+9. Ollama running with nomic-embed-text embedding model
+10. R-Memory extension disabled (replaced by LCM)
 
-**Scoring:** Each check = 1 point. Total = /18.
-- 15-18: Excellent — system is well-aligned
-- 10-14: Good — functional but gaps exist
-- 5-9: Needs work — significant alignment gaps
-- <5: Not ready — major configuration needed
+**Scoring:** Each check = 1 point. Total = /22.
+- 19-22: Excellent — system is well-aligned
+- 14-18: Good — functional but gaps exist
+- 8-13: Needs work — significant alignment gaps
+- <8: Not ready — major configuration needed
 
 ## File Templates
 
