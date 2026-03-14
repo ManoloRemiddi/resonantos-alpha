@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.5.0-7c3aed?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.5.1-7c3aed?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/platform-macOS_%7C_Linux_%7C_Windows-333?style=for-the-badge" alt="Platform">
   <img src="https://img.shields.io/badge/license-RC--SL_v1.0-green?style=for-the-badge" alt="License">
   <img src="https://img.shields.io/badge/OpenClaw-compatible-blue?style=for-the-badge" alt="OpenClaw">
@@ -49,15 +49,16 @@ It gives your AI collaborator:
 
 ---
 
-## 📝 Memory System
+## 📝 Memory System (4-Layer Stack)
 
-**Knowledge Base (RAG)** is the primary memory layer:
-- Per-agent SQLite databases with vector embeddings
-- Local Ollama embedding model (nomic-embed-text)
-- Configurable SSoT access per agent (L0/L1/L2)
-- Common KB for shared knowledge across agents
+| Layer | What It Does |
+|-------|-------------|
+| 📄 **MEMORY.md** | Curated long-term memory — always in context |
+| 🧠 **LCM** | Lossless Context Management — DAG-based session compaction (via [Martian Engineering](https://github.com/Martian-Engineering/lossless-claw)) |
+| 📋 **R-Awareness Headers** | 20-header FIFO — days/weeks of key decisions injected on session start |
+| 🔍 **RAG** | Per-agent vector search with local Ollama embeddings (nomic-embed-text) |
 
-*R-Memory (compression pipeline) is temporarily disabled while being redesigned for compatibility with OpenClaw's native LCM compaction system.*
+Enforcement: intraday cron checks every 3h for unlogged work, Shield gate blocks heartbeats when memory logs are overdue.
 
 ---
 
