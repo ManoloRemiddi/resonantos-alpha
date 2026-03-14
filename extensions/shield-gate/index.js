@@ -713,6 +713,8 @@ function checkExecCodeWrite(command) {
 const COMPACTION_STATE_FILE = "/tmp/openclaw_compaction_recovery.json";
 const COMPACTION_RECOVERY_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes max
 const RECOVERY_REQUIRED_FILES = ["WORKFLOW_AUTO.md", /memory\/\d{4}-\d{2}-\d{2}\.md/];
+const MEMORY_HEARTBEAT_STATE_FILE = path.join(HOME, ".openclaw/workspace/memory/heartbeat-state.json");
+const MEMORY_BREADCRUMBS_FILE = path.join(HOME, ".openclaw/workspace/memory/breadcrumbs.jsonl");
 
 function getCompactionState() {
   try {
@@ -733,6 +735,63 @@ function updateCompactionState(state) {
 
 function clearCompactionState() {
   try { if (fs.existsSync(COMPACTION_STATE_FILE)) fs.unlinkSync(COMPACTION_STATE_FILE); } catch (_) {}
+}
+
+function getRomeHour() {
+  const hour = new Date().toLocaleString("en-US", {
+    timeZone: "Europe/Rome",
+    hour: "numeric",
+    hour12: false
+  });
+  return parseInt(hour, 10);
+}
+
+function formatHoursAgo(hoursAgo) {
+  const rounded = Math.round(hoursAgo * 10) / 10;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1).replace(/\.0$/, "");
+}
+
+function checkMemoryLogGate(content) {
+  const trimmed = String(content || "").trim();
+  if (!trimmed.startsWith("HEARTBEAT_OK")) {
+    return { block: false };
+  }
+
+  try {
+    const heartbeatState = JSON.parse(fs.readFileSync(MEMORY_HEARTBEAT_STATE_FILE, "utf8"));
+    const breadcrumbsRaw = fs.readFileSync(MEMORY_BREADCRUMBS_FILE, "utf8");
+    const breadcrumbCount = breadcrumbsRaw
+      .split("\n")
+      .filter((line) => line.trim().length > 0)
+      .length;
+
+    if (breadcrumbCount < 3) {
+      return { block: false };
+    }
+
+    const lastMemoryLog = Date.parse(heartbeatState?.lastMemoryLog || "");
+    if (Number.isNaN(lastMemoryLog)) {
+      return { block: false };
+    }
+
+    const hoursAgo = (Date.now() - lastMemoryLog) / (60 * 60 * 1000);
+    if (hoursAgo <= 2) {
+      return { block: false };
+    }
+
+    const romeHour = getRomeHour();
+    if (Number.isNaN(romeHour) || romeHour < 8 || romeHour > 23) {
+      return { block: false };
+    }
+
+    const hoursAgoText = formatHoursAgo(hoursAgo);
+    return {
+      block: true,
+      blockReason: `[Memory Log Gate] Breadcrumbs accumulated (${breadcrumbCount} entries) and last memory log was ${hoursAgoText}h ago. Write a memory log to memory/shared-log/ before dismissing heartbeat.`
+    };
+  } catch (_) {
+    return { block: false };
+  }
 }
 
 // --- Extension Entry ---
@@ -1501,6 +1560,17 @@ module.exports = function shieldGateExtension(api) {
         log("INFO", "Autonomous Development Gate — debate evidence found ✅", {
           sessionKey: sessionKey.slice(0, 30)
         });
+      }
+
+      // --- Layer 6i: Memory Log Gate ---
+      const memoryLogGateResult = checkMemoryLogGate(content);
+      if (memoryLogGateResult.block) {
+        log("BLOCK", "Memory Log Gate — blocked HEARTBEAT_OK", {
+          breadcrumbsFile: MEMORY_BREADCRUMBS_FILE,
+          heartbeatFile: MEMORY_HEARTBEAT_STATE_FILE,
+          contentPreview: content.slice(0, 40)
+        });
+        return memoryLogGateResult;
       }
 
       // --- Layer 6e: Research Gate — Force Perplexity via browser ---
