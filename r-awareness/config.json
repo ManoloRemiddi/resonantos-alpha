@@ -1,0 +1,14 @@
+{
+  "// R-Awareness V1.0 Configuration": "",
+  "enabled": true,
+  "ssotRoot": "/Users/augmentor/resonantos-augmentor/ssot",
+  "maxDocsPerTurn": 10,
+  "tokenBudget": 15000,
+  "ttlTurns": 15,
+  "commandPrefix": "/R",
+  "logFile": "r-awareness/r-awareness.log",
+  "storageDir": "r-awareness",
+  "keywordsFile": "r-awareness/keywords.json",
+  "coldStartDocs": ["L1/SSOT-L1-SYSTEM-OVERVIEW.ai.md", "L1/RECENT-HEADERS.md"],
+  "coldStartOnly": true
+}
