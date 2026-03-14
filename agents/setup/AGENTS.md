@@ -500,6 +500,63 @@ Help user set up their AI model providers and allocation strategy:
    - Example: Opus → Sonnet → Haiku → local model
    - Document in user's TOOLS.md
 
+#### Memory System (LCM)
+Install and configure Lossless Context Management — the plugin that replaces OpenClaw's lossy compaction with a DAG-based summary system. Nothing is lost; raw messages stay in SQLite and can be drilled into on demand.
+
+1. **Install LCM plugin:**
+   ```bash
+   openclaw plugins install @martian-engineering/lossless-claw
+   ```
+
+2. **Configure with optimal defaults:**
+   Add to `plugins.entries.lossless-claw` in openclaw.json:
+   ```json
+   {
+     "enabled": true,
+     "config": {
+       "freshTailCount": 32,
+       "contextThreshold": 0.75,
+       "incrementalMaxDepth": -1
+     }
+   }
+   ```
+   - `freshTailCount: 32` — last 32 messages always in context (protected from compaction)
+   - `contextThreshold: 0.75` — compact when context hits 75% of window
+   - **`incrementalMaxDepth: -1`** — CRITICAL: enables unlimited condensation cascade. Default (0) means summaries pile up at depth 0 and never get merged into higher-level summaries, wasting context space.
+
+3. **Set as context engine:**
+   Ensure `plugins.slots.contextEngine` is set to `"lossless-claw"` in openclaw.json.
+
+4. **Verify:**
+   ```bash
+   openclaw plugins list  # Should show "lossless-claw" as loaded
+   ```
+
+5. **Restart gateway** to load the plugin.
+
+Reference: See `ssot/L1/SSOT-L1-LCM.md` for full architecture documentation.
+
+#### Nightly System Update
+Set up automatic nightly updates for all system components:
+
+```bash
+openclaw cron add --name "nightly-system-update" \
+  --cron "0 2 * * *" --tz "[user_tz]" \
+  --session isolated --model MiniMax-M2.5-Lightning \
+  --message "Nightly full system update. Run in order:
+1. BACKUP: cp ~/.openclaw/openclaw.json ~/.openclaw/openclaw.json.pre-update
+2. OPENCLAW: Run 'openclaw update --yes' if update available.
+3. CODEX: Run 'npm install -g @openai/codex@latest' if using Codex CLI.
+4. LCM: Check 'npm view @martian-engineering/lossless-claw version' vs installed. If newer: remove old extension, reinstall via 'openclaw plugins install'.
+5. HOMEBREW: Run 'brew update && brew upgrade' (macOS only).
+6. OLLAMA: Update with 'brew upgrade ollama' if available.
+7. POST-UPDATE: Run 'openclaw status' and 'openclaw doctor' to verify health.
+8. If ANY update applied, restart gateway.
+9. Report changes via Telegram. If nothing updated, reply NO_REPLY."
+```
+
+Components tracked: OpenClaw, Codex CLI, LCM plugin, Homebrew packages, Ollama, Node.js.
+
 #### Channel Configuration
 Help user set up their primary communication channel:
 
