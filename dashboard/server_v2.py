@@ -4193,6 +4193,89 @@ def api_put_update_config():
     saved = _write_updates_config(updates)
     return jsonify(saved)
 
+# ---------------------------------------------------------------------------
+# Memory Logs settings
+# ---------------------------------------------------------------------------
+_MEMORY_CRON_IDS = {
+    "daily": "cc9b58f8-9039-4f68-95ca-25148bd34be5",
+    "intraday": "3c4fc129-c78d-476f-a45b-e04ee07ebe73",
+}
+
+
+def _parse_cron_json():
+    """Run openclaw cron list --all --json and return parsed dict keyed by job id."""
+    try:
+        res = subprocess.run(
+            ["openclaw", "cron", "list", "--all", "--json"],
+            capture_output=True, text=True, timeout=15,
+        )
+        raw = res.stdout
+        idx = raw.find("{")
+        if idx == -1:
+            return {}
+        payload = json.loads(raw[idx:])
+        return {j["id"]: j for j in payload.get("jobs", [])}
+    except Exception:
+        return {}
+
+
+def _get_orchestrator_model():
+    try:
+        cfg = json.loads(OPENCLAW_CONFIG.read_text())
+        return cfg.get("defaultModel", "anthropic/claude-opus-4-6")
+    except Exception:
+        return "anthropic/claude-opus-4-6"
+
+
+def _memory_log_state():
+    jobs = _parse_cron_json()
+    result = {"orchestratorModel": _get_orchestrator_model()}
+    for key, cron_id in _MEMORY_CRON_IDS.items():
+        job = jobs.get(cron_id)
+        if job:
+            state = job.get("state", {})
+            last_ms = state.get("lastRunAtMs")
+            result[key] = {
+                "enabled": job.get("enabled", False),
+                "model": (job.get("payload") or {}).get("model", ""),
+                "lastRun": datetime.fromtimestamp(last_ms / 1000, tz=timezone.utc).isoformat() if last_ms else None,
+                "lastStatus": state.get("lastStatus", "idle"),
+                "schedule": (job.get("schedule") or {}).get("expr", ""),
+            }
+        else:
+            result[key] = {"enabled": False, "model": "", "lastRun": None, "lastStatus": "idle", "schedule": ""}
+    return result
+
+
+@app.route("/api/settings/memory-logs")
+def api_memory_logs_get():
+    return jsonify(_memory_log_state())
+
+
+@app.route("/api/settings/memory-logs", methods=["PUT"])
+def api_memory_logs_put():
+    body = request.get_json(force=True)
+    errors = []
+    for key, cron_id in _MEMORY_CRON_IDS.items():
+        sub = body.get(key)
+        if isinstance(sub, dict) and "enabled" in sub:
+            cmd = "enable" if sub["enabled"] else "disable"
+            try:
+                subprocess.run(["openclaw", "cron", cmd, cron_id], capture_output=True, text=True, timeout=15)
+            except Exception as e:
+                errors.append(f"{key} toggle: {e}")
+    model = body.get("model")
+    if model:
+        for key, cron_id in _MEMORY_CRON_IDS.items():
+            try:
+                subprocess.run(["openclaw", "cron", "edit", cron_id, "--model", model], capture_output=True, text=True, timeout=15)
+            except Exception as e:
+                errors.append(f"{key} model: {e}")
+    result = _memory_log_state()
+    if errors:
+        result["errors"] = errors
+    return jsonify(result)
+
 @app.route("/api/settings/check-update")
 def api_check_update():
     """Check if a newer version is available on origin/main."""
