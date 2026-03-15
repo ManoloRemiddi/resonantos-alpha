@@ -291,6 +291,10 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
             Memory Bridge
         </a>
+        <a href="#memorylogs" class="settings-nav-item" onclick="showSection('memorylogs')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Memory Logs
+        </a>
         <a href="#updates" class="settings-nav-item" onclick="showSection('updates')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
             <span>Updates</span>
@@ -834,6 +838,57 @@
             </script>
         </section>
 
+        <section class="settings-section" id="memorylogsSection">
+            <div class="settings-card">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Memory Logs</h3>
+                        <p>Configure automated memory log generation. DNA Sequencing requires a reasoning-capable model (Opus/Gemini Pro).</p>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Daily Log <span id="mlDailyBadge" style="font-size:0.75rem;padding:2px 8px;border-radius:6px;margin-left:8px;background:rgba(255,255,255,0.06);color:var(--text-secondary)">idle</span></h3>
+                        <p>Full session summary at 04:30 Rome time</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="mlDailyEnabled" onchange="saveMemoryLogs()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Intraday Log <span id="mlIntradayBadge" style="font-size:0.75rem;padding:2px 8px;border-radius:6px;margin-left:8px;background:rgba(255,255,255,0.06);color:var(--text-secondary)">idle</span></h3>
+                        <p>Incremental log every 3 hours (skips quiet windows)</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="mlIntradayEnabled" onchange="saveMemoryLogs()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Model</h3>
+                        <p>Model used for DNA Sequencing in memory logs</p>
+                    </div>
+                    <div class="setting-control">
+                        <select id="mlModel" onchange="saveMemoryLogs()" style="background:var(--card-bg);color:var(--text-primary);border:1px solid var(--border-color);border-radius:8px;padding:6px 10px;font-size:0.85rem;">
+                            <option value="">Same as orchestrator</option>
+                            <option value="anthropic/claude-opus-4-6">anthropic/claude-opus-4-6</option>
+                            <option value="google/gemini-2.5-pro">google/gemini-2.5-pro</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </section>
+
 
 	    </div>
 	</div>
@@ -893,6 +948,7 @@ let pendingPermission = null;
 document.addEventListener('DOMContentLoaded', function() {
     loadSettings();
     loadRules();
+    loadMemoryLogs();
     loadUpdateConfig();
     loadCronCalendar();
     loadKnowledgeBase();
@@ -1922,6 +1978,46 @@ function updateAutoApplyState() {
     if (!autoCheck || !autoApply) return;
     autoApply.disabled = !autoCheck.checked;
     autoApply.closest('.toggle-switch').style.opacity = autoCheck.checked ? '1' : '0.6';
+}
+
+async function loadMemoryLogs() {
+    try {
+        const res = await fetch('/api/settings/memory-logs');
+        const d = await res.json();
+        document.getElementById('mlDailyEnabled').checked = d.daily && d.daily.enabled;
+        document.getElementById('mlIntradayEnabled').checked = d.intraday && d.intraday.enabled;
+        const sel = document.getElementById('mlModel');
+        const model = (d.daily && d.daily.model) || '';
+        sel.value = model;
+        if (sel.value !== model && model) {
+            const opt = document.createElement('option');
+            opt.value = model; opt.textContent = model;
+            sel.appendChild(opt); sel.value = model;
+        }
+        function badge(id, status) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.textContent = status || 'idle';
+            el.style.background = status === 'ok' ? 'rgba(74,222,128,0.15)' : status === 'error' ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.06)';
+            el.style.color = status === 'ok' ? '#4ade80' : status === 'error' ? '#ef4444' : 'var(--text-secondary)';
+        }
+        badge('mlDailyBadge', d.daily && d.daily.lastStatus);
+        badge('mlIntradayBadge', d.intraday && d.intraday.lastStatus);
+    } catch(e) { console.error('loadMemoryLogs', e); }
+}
+
+async function saveMemoryLogs() {
+    try {
+        const body = {
+            daily: { enabled: document.getElementById('mlDailyEnabled').checked },
+            intraday: { enabled: document.getElementById('mlIntradayEnabled').checked },
+        };
+        const model = document.getElementById('mlModel').value;
+        if (model) body.model = model;
+        await fetch('/api/settings/memory-logs', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        showToast('Memory log settings saved');
+        loadMemoryLogs();
+    } catch(e) { showToast('Failed to save memory log settings', 'error'); }
 }
 
 async function loadUpdateConfig() {
