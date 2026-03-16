@@ -4692,6 +4692,108 @@ def api_settings_skills_put():
     })
 
 
+@app.route("/api/settings/plugins")
+def api_settings_plugins():
+    """Return plugin information from extensions directory and config."""
+    import json as _json
+
+    plugins = []
+    cfg = {}
+    config_entries = {}
+    plugins_allow = []
+
+    try:
+        with open(OPENCLAW_CONFIG) as f:
+            cfg = _json.load(f)
+        plugins_cfg = cfg.get("plugins", {}) if isinstance(cfg, dict) else {}
+        entries = plugins_cfg.get("entries", {}) if isinstance(plugins_cfg, dict) else {}
+        allow = plugins_cfg.get("allow", []) if isinstance(plugins_cfg, dict) else []
+        config_entries = entries if isinstance(entries, dict) else {}
+        if isinstance(allow, list):
+            plugins_allow = [str(item).strip() for item in allow if str(item).strip()]
+    except Exception:
+        pass
+
+    ext_dirs = [
+        (Path("/opt/homebrew/lib/node_modules/openclaw/extensions"), "stock"),
+        (EXTENSIONS_DIR, "custom"),
+    ]
+
+    for ext_dir, source in ext_dirs:
+        if not ext_dir.is_dir():
+            continue
+        try:
+            entries = sorted(ext_dir.iterdir(), key=lambda item: item.name.lower())
+        except Exception:
+            continue
+
+        for entry in entries:
+            if not entry.is_dir():
+                continue
+            name = entry.name
+            if name.startswith("."):
+                continue
+
+            plugin_id = name[:-9] if name.endswith(".DISABLED") else name
+            config_entry = config_entries.get(name)
+            if config_entry is None:
+                config_entry = config_entries.get(plugin_id)
+
+            plugin = {
+                "id": plugin_id,
+                "source": source,
+                "path": str(entry),
+                "name": name,
+                "description": "",
+                "version": "",
+                "enabled": False,
+                "configuredInEntries": name in config_entries or plugin_id in config_entries,
+                "inAllowList": name in plugins_allow or plugin_id in plugins_allow,
+            }
+
+            manifest = entry / "openclaw.plugin.json"
+            if manifest.exists():
+                try:
+                    with open(manifest) as f:
+                        manifest_data = _json.load(f)
+                    plugin["name"] = manifest_data.get("name", name)
+                    plugin["description"] = manifest_data.get("description", "")
+                    plugin["version"] = manifest_data.get("version", "")
+                except Exception:
+                    pass
+
+            pkg = entry / "package.json"
+            if pkg.exists() and not plugin["description"]:
+                try:
+                    with open(pkg) as f:
+                        package_data = _json.load(f)
+                    if not plugin["name"] or plugin["name"] == name:
+                        plugin["name"] = package_data.get("name", name)
+                    plugin["description"] = package_data.get("description", "")
+                    plugin["version"] = package_data.get("version", plugin["version"])
+                except Exception:
+                    pass
+
+            if name.endswith(".DISABLED"):
+                plugin["enabled"] = False
+            elif isinstance(config_entry, dict):
+                plugin["enabled"] = config_entry.get("enabled", True)
+            elif config_entry is not None:
+                plugin["enabled"] = True
+            elif source == "stock":
+                plugin["enabled"] = None
+
+            plugins.append(plugin)
+
+    return jsonify({
+        "plugins": plugins,
+        "allow": plugins_allow,
+        "contextEngineSlot": ((cfg.get("plugins", {}) or {}).get("slots", {}) or {}).get("contextEngine", ""),
+        "totalCustom": sum(1 for plugin in plugins if plugin["source"] == "custom"),
+        "totalStock": sum(1 for plugin in plugins if plugin["source"] == "stock"),
+    })
+
+
 @app.route("/api/skills/setup-request", methods=["POST"])
 def api_skills_setup_request():
     body = request.get_json(silent=True) or {}
