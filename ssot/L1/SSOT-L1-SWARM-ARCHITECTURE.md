@@ -1,4 +1,5 @@
 # SSOT-L1-SWARM-ARCHITECTURE — Node Network Architecture
+Updated: 2026-03-16
 
 > **Level:** L1 (Architecture)
 > **Created:** 2026-02-28
@@ -161,7 +162,75 @@ This is a **professional/power-user feature** — the foundation for AI-managed 
 ### Critical lesson: Network topology awareness
 The orchestrator MUST know its own network topology — which IPs are reachable from which interfaces. Attempting connections via Wi-Fi IP when the node is on Ethernet wastes significant time. The architecture doc must always document the physical link type and IP assignments.
 
-## 8. Future Expansion
+## 8. Node Security & Permissions
+
+### Principle: Least Privilege by Default
+
+Every node starts with **zero** exec permissions. Commands are whitelisted explicitly per node via `exec-approvals.json` on the node host.
+
+### BeeAMD Permission Policy
+
+| Category | Allowed Commands | Rationale |
+|----------|-----------------|-----------|
+| System info | `systeminfo`, `hostname`, `whoami`, `ver` | Status monitoring |
+| Disk/health | `wmic diskdrive`, `Get-Volume`, `Get-Process` | Resource monitoring |
+| Network | `ipconfig`, `netstat`, `ping` | Connectivity checks |
+| Git | `git status`, `git pull`, `git log` | Code sync |
+| Node.js | `node --version`, `npm --version` | Version checks |
+| OpenClaw | `openclaw status`, `openclaw --version` | Self-monitoring |
+
+**Explicitly DENIED (never whitelist):**
+- `rm`, `del`, `Remove-Item` — destructive file operations
+- `reg`, `regedit` — registry modification
+- `net user`, `net localgroup` — user/group changes
+- `schtasks /Create` — scheduled task creation
+- `Invoke-WebRequest`, `curl`, `wget` — arbitrary network fetches
+- `powershell -EncodedCommand` — encoded command execution
+- Any command writing to `C:\Windows\` or `C:\Program Files\`
+
+### Applying Permissions (when BeeAMD reconnects)
+
+On the **Mac Mini (gateway):**
+```bash
+# Set node exec to allowlist mode
+openclaw approvals allowlist add --node BeeAMD "systeminfo"
+openclaw approvals allowlist add --node BeeAMD "hostname"
+openclaw approvals allowlist add --node BeeAMD "ipconfig"
+openclaw approvals allowlist add --node BeeAMD "openclaw status"
+openclaw approvals allowlist add --node BeeAMD "git status"
+# ... etc for each allowed command
+```
+
+On the **BeeAMD node host** (`~/.openclaw/exec-approvals.json`):
+```json
+{
+  "version": 1,
+  "defaults": {
+    "security": "allowlist",
+    "ask": "on-miss",
+    "askFallback": "deny"
+  }
+}
+```
+
+### Cross-Node Agent Restrictions
+
+| Agent | Can target BeeAMD? | Rationale |
+|-------|-------------------|-----------|
+| main | Yes | Orchestrator needs full visibility |
+| deputy | Yes | Mirrors main permissions |
+| researcher | **No** | External content risk — no node access |
+| creative | **No** | No reason to touch remote nodes |
+| setup | Yes | Node provisioning and health checks |
+| All others | **No** | No legitimate use case |
+
+### Monitoring
+
+- Watchdog on BeeAMD runs health checks every 5 min via SSH
+- All node exec commands logged to `/tmp/node-exec.log` on the node host
+- Gateway logs node command requests in standard session history
+
+## 9. Future Expansion
 
 - **Ubuntu VM on BeeAMD:** Planned, deferred until base Windows connectivity is solid and proven through a reboot cycle
 - **Cloud nodes:** Same SSH tunnel pattern, but tunnel direction reverses (cloud → orchestrator via reverse SSH or Tailscale)
@@ -182,7 +251,7 @@ The orchestrator MUST know its own network topology — which IPs are reachable 
 | Cloud worker | VPS/cloud instance | N/A (always running) | No |
 | Test node | Multi-OS testing (our BeeAMD) | Required | No |
 
-## 9. Troubleshooting
+## 10. Troubleshooting
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
