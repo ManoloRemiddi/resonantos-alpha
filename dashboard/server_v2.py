@@ -4561,9 +4561,13 @@ def _get_agent_skill_allow(cfg, agent_name):
             name = str(item.get("id") or item.get("name") or item.get("agentId") or "").strip()
             if name != agent_name:
                 continue
-            allow = ((item.get("skills") or {}).get("allow"))
-            if isinstance(allow, list):
-                return [str(skill).strip() for skill in allow if str(skill).strip()]
+            skills_val = item.get("skills")
+            if isinstance(skills_val, list):
+                return [str(skill).strip() for skill in skills_val if str(skill).strip()]
+            if isinstance(skills_val, dict):
+                allow = skills_val.get("allow")
+                if isinstance(allow, list):
+                    return [str(skill).strip() for skill in allow if str(skill).strip()]
             return None
 
     legacy_entry = agents_cfg.get(agent_name)
@@ -4775,6 +4779,8 @@ def api_settings_plugins():
                     pass
 
             if name.endswith(".DISABLED"):
+                plugin["note"] = "Retired — replaced by LCM (Lossless Context Management)"
+                plugin["retired"] = True
                 plugin["enabled"] = False
             elif isinstance(config_entry, dict):
                 plugin["enabled"] = config_entry.get("enabled", True)

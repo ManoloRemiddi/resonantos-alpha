@@ -1515,6 +1515,9 @@ function renderPluginsTable() {
         if (p.enabled === true) { statusIcon = '■'; statusColor = '#34d399'; }
         else if (p.enabled === false) { statusIcon = '■'; statusColor = '#ef4444'; }
         else { statusIcon = '◆'; statusColor = '#6b7280'; }
+        const retiredNote = p.retired === true && p.note
+            ? '<span style="color:#888;font-style:italic;font-size:0.85em;margin-left:8px;">' + p.note + '</span>'
+            : '';
 
         const srcBadge = p.source === 'custom'
             ? '<span style="padding:2px 8px;border-radius:6px;font-size:0.7rem;background:rgba(45,212,191,0.12);color:#2dd4bf;border:1px solid rgba(45,212,191,0.3);">custom</span>'
@@ -1526,7 +1529,7 @@ function renderPluginsTable() {
 
         html += '<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">';
         html += '<td style="padding:10px 16px;"><span style="color:' + statusColor + ';font-size:0.9rem;">' + statusIcon + '</span></td>';
-        html += '<td style="padding:10px 16px;font-weight:600;color:var(--text-primary);">' + (p.name || p.id) + '</td>';
+        html += '<td style="padding:10px 16px;font-weight:600;color:var(--text-primary);">' + (p.name || p.id) + retiredNote + '</td>';
         html += '<td style="padding:10px 16px;font-family:monospace;font-size:0.78rem;color:var(--text-secondary);">' + p.id + '</td>';
         html += '<td style="padding:10px 16px;">' + srcBadge + '</td>';
         html += '<td style="padding:10px 16px;color:var(--text-secondary);font-size:0.78rem;">' + (p.version || '-') + '</td>';
