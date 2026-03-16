@@ -7598,6 +7598,50 @@ def api_shield_guard_status():
         return jsonify({"error": str(e)}), 500
 
 
+
+@app.route("/api/shield/guard/summary")
+def api_shield_guard_summary():
+    """File guard summary (no file lists — fast)."""
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "file_guard",
+            os.path.join(os.path.dirname(__file__), "..", "shield", "file_guard.py"),
+        )
+        fg = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(fg)
+        full = fg.get_status()
+        summary = {}
+        for k, v in full.items():
+            summary[k] = {
+                "label": v.get("label", k),
+                "category": v.get("category", ""),
+                "status": v.get("status", "unknown"),
+                "total": v.get("total", 0),
+                "locked_count": v.get("locked_count", 0),
+            }
+        return jsonify(summary)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/shield/guard/group/<group_key>")
+def api_shield_guard_group(group_key):
+    """File list for a single guard group (lazy load)."""
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "file_guard",
+            os.path.join(os.path.dirname(__file__), "..", "shield", "file_guard.py"),
+        )
+        fg = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(fg)
+        full = fg.get_status()
+        if group_key not in full:
+            return jsonify({"error": "Group not found"}), 404
+        return jsonify(full[group_key])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/api/shield/guard/lock", methods=["POST"])
 def api_shield_guard_lock():
     """Lock a file group (requires password for schg). Body: {group: 'group_id', password: '...'} or {file: '/path', password: '...'}"""
@@ -7658,6 +7702,43 @@ def api_shield_guard_unlock():
         return jsonify({"error": "Provide 'group' or 'file'"}), 400
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/shield/doorman/status")
+def api_shield_doorman_status():
+    """Memory Doorman status — process check + recent log entries."""
+    import subprocess
+
+    result = {
+        "running": False,
+        "pid": None,
+        "recent_log": [],
+        "categories": 10,
+        "watched_paths": 2,
+    }
+    try:
+        out = subprocess.run(["launchctl", "list"], capture_output=True, text=True, timeout=5)
+        for line in out.stdout.splitlines():
+            if "memory-doorman" in line:
+                parts = line.split()
+                if parts[0] != "-":
+                    result["running"] = True
+                    result["pid"] = int(parts[0])
+                elif parts[1] == "0":
+                    result["running"] = True
+                break
+    except Exception:
+        pass
+    try:
+        log_path = "/tmp/memory-doorman.log"
+        if os.path.exists(log_path):
+            with open(log_path) as f:
+                lines = f.readlines()
+            result["recent_log"] = [l.strip() for l in lines[-10:]]
+            result["total_sanitized"] = sum(1 for l in lines if "CLEANED" in l)
+    except Exception:
+        pass
+    return jsonify(result)
 
 # ---------------------------------------------------------------------------
 # API: Logician Status

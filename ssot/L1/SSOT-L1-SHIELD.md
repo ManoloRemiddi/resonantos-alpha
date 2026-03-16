@@ -1,15 +1,16 @@
 # SSOT-L1-SHIELD — Shield Security System
+Updated: 2026-03-16
 
 | Field | Value |
 |-------|-------|
-| ID | SSOT-L1-SHIELD-V2 |
+| ID | SSOT-L1-SHIELD-V3 |
 | Created | 2026-02-19 |
-| Updated | 2026-02-19 |
+| Updated | 2026-03-15 |
 | Author | Augmentor |
 | Level | L1 (Architecture) |
 | Type | Truth |
 | Status | Active |
-| Replaces | SSOT-L1-SHIELD-OLD |
+| Replaces | SSOT-L1-SHIELD-V2 |
 | Stale After | 90 days |
 
 ---
@@ -18,11 +19,11 @@
 
 Shield is ResonantOS's security enforcement layer. It operates as a multi-component system that:
 
-1. **Gates git pushes** — blocks pushes containing leaked credentials, unverified code, or Logician-denied repos
-2. **Gates tool execution** — intercepts dangerous shell commands before they run (via OpenClaw extension hook)
+1. **Gates AI behavior** — 14 blocking layers intercept tool calls, messages, and agent spawning (via OpenClaw plugin hooks)
+2. **Gates git pushes** — blocks pushes containing leaked credentials, unverified code, or Logician-denied repos
 3. **Protects files** — locks critical files (cross-platform: macOS `chflags`, Linux `chattr`, POSIX `chmod`)
 4. **Scans for data leaks** — regex-based detection of credentials, private content, business secrets
-5. **Self-heals** — monitors its own enforcement hooks and restores them if tampered with
+5. **Enforces verification** — blocks completion claims without evidence (Layer 6k) and SSoT freshness (Layer 6j)
 
 Shield is **deterministic** — no AI involved in security decisions. Pure regex, pattern matching, and Logician queries.
 
@@ -32,181 +33,181 @@ Shield is **deterministic** — no AI involved in security decisions. Pure regex
 ┌─────────────────────────────────────────────────────────┐
 │                    ENFORCEMENT CHAIN                     │
 │                                                          │
-│  Tool Call ──► shield-gate.js ──► ALLOW / BLOCK          │
-│                    │                                     │
+│  Tool Call ──► shield-gate plugin ──► 14 LAYERS          │
+│                    │    (before_tool_call,                │
+│                    │     message_sending,                 │
+│                    │     subagent_spawning,               │
+│                    │     after_compaction)                │
+│                    ▼                                     │
+│               ALLOW / BLOCK + turnEvidence tracking       │
+│                                                          │
 │  Git Push ──► pre-push hook                              │
 │                 ├── data_leak_scanner.py (scan diff)     │
 │                 ├── Logician query (safe_path + git)     │
-│                 └── verification_gate.py (test evidence) │
+│                 └── pre-push secret scanner (grep)       │
 │                                                          │
 │  Files ──► file_guard.py ──► chflags/chattr/chmod        │
 │                                                          │
 │  Hooks ──► hook_guardian.sh ──► self-healing monitor      │
-│                                                          │
-│  Lock State ──► shield_lock.py ──► password-protected     │
 └─────────────────────────────────────────────────────────┘
          │
          ▼
-    Logician (gRPC :8080) — policy queries
+    Logician (proxy :8081 / Mangle socket)
 ```
 
-## 3. Components
+## 3. Shield Gate Plugin (14 Layers)
 
-### 3.1 Shield Gate Extension (`shield-gate.js`)
+**Type:** OpenClaw plugin (hooks: `before_tool_call`, `message_sending`, `subagent_spawning`, `after_compaction`)
+**Location:** `~/.openclaw/extensions/shield-gate/index.js` (~2,000 lines)
+**Purpose:** Intercept and gate all AI tool calls, outbound messages, and agent spawns
 
-**Type:** OpenClaw extension (before_tool_call hook)
-**Location:** `~/.openclaw/agents/main/agent/extensions/shield-gate.js`
-**Purpose:** Intercept `exec` tool calls before execution
+### 3.1 Layer Registry
 
-**Detection layers:**
-1. **Destructive commands** — `rm -rf`, `DROP TABLE`, `mkfs`, `dd of=/dev/*`, fork bombs, `shutdown`, `reboot`
-2. **Protected file writes** — Any write to `.openclaw/openclaw.json`, `.config/solana/id.json`, `auth-profiles.json`, `.ssh/`, `.env`
-3. **Safe command fast-path** — Whitelisted prefixes: `ls`, `cat`, `grep`, `git status/log/diff`, `curl`, `echo`, etc.
-4. **Pipe/redirect detection** — Commands containing `|` or `>` skip safe-prefix fast-path
+| Layer | Name | Hook | Purpose |
+|-------|------|------|---------|
+| 1 | Destructive Pattern Check | before_tool_call | Blocks `rm -rf`, `DROP TABLE`, `mkfs`, fork bombs, `shutdown` |
+| 2 | Protected File Write | before_tool_call | Blocks writes to `.openclaw/openclaw.json`, `.ssh/`, `.env`, Solana keys |
+| 3 | Safe Command Fast-Path | before_tool_call | Whitelists `ls`, `cat`, `grep`, `git status/log/diff`, `curl`, etc. |
+| 4 | Pipe/Redirect Detection | before_tool_call | Commands with `\|` or `>` skip safe-prefix fast-path |
+| 5 | Coherence Gate | before_tool_call | Cross-checks with coherence-gate plugin |
+| 6a | Direct Coding Gate | before_tool_call | Blocks writes >300 chars to `.js/.sh/.py` files — must delegate to Codex |
+| 6b | Delegation Gate | before_tool_call | Validates TASK.md quality (Root Cause, Fix, Test Command sections, min 100 chars) |
+| 6c | State Claim Gate | before_tool_call | Blocks state/number claims without prior verification commands in tool history |
+| 6f | Config Change Gate | before_tool_call | Intercepts modifications to `openclaw.json` |
+| 6g | Model Selection Hierarchy | before_tool_call | Enforces SOUL.md model preference: free > paid, local > remote |
+| 6h | Autonomous Development Gate | before_tool_call | Requires self-debate for design-level work |
+| 6i | Memory Log Gate | before_tool_call | Enforces intraday memory log writing |
+| 6j | SSoT Freshness Gate | before_tool_call, message_sending | Blocks completion claims when SSoT-significant files were written but no SSoT doc updated |
+| 6k | Completion Verification Gate | before_tool_call, message_sending | Blocks completion claims without verification evidence (exec, browser, or file re-read after writes) |
+| 9a | Injection Protection | message_sending | Filters outbound messages for credential leaks |
 
-**Fail mode:** OPEN (extension error → allow command; opposite of git push which is fail-closed)
-**Test coverage:** 18/18 test cases passing
+### 3.2 Turn Evidence Tracking
 
-### 3.2 Data Leak Scanner (`data_leak_scanner.py`)
+Shield tracks per-session state via `turnEvidence` Map:
+- `writes[]` — all file writes with timestamps + sequence numbers
+- `execCalls[]`, `toolCalls[]`, `readFiles[]` — tool usage history
+- `eventSeq` — monotonic counter for ordering (avoids timestamp collisions)
+- `lastWritePath`, `lastSsotRelevantWrite`, `lastSsotDocWrite` — for staleness checks
+- `ssotRequiredDocs` Set — which SSoT docs need updating based on file paths changed
+
+**SSoT-Significant Path Mapping:**
+
+| Path Pattern | Required SSoT Doc |
+|---|---|
+| logician/ | SSOT-L1-LOGICIAN.ai.md |
+| shield/, shield-gate/ | SSOT-L1-SHIELD.ai.md |
+| extensions/ | SSOT-L1-SYSTEM-OVERVIEW.ai.md |
+| dashboard/ | SSOT-L1-DASHBOARD.ai.md |
+| openclaw.json, agents/ | SSOT-L1-SYSTEM-OVERVIEW.ai.md |
+
+### 3.3 Completion Claim Detection
+
+Scans outbound messages for patterns: "fixed", "done", "completed", "deployed", "updated", "resolved", "implemented".
+Exempt patterns: questions, future tense, planning language, partial claims.
+
+**All gates default to BLOCKING.** Downgrading to advisory requires Manolo's written approval.
+
+## 4. Memory Doorman (Filesystem Sanitizer)
+
+**Purpose:** Structural enforcement at the filesystem level — sanitizes all `.md` files written to memory directories, regardless of source.
+
+**Architecture:** `fswatch` daemon → `sanitize-memory-write.py` → clean file in-place
+
+```
+Any process (cron, AI, manual) ──► writes .md to memory/ ──► fswatch detects ──► sanitizer runs ──► clean file
+```
+
+**Attack vector blocked:** Malicious content in Telegram message → session history → memory log cron → RAG index → future session injection. The doorman breaks this chain at the filesystem write point.
+
+**Components:**
+
+| File | Purpose |
+|------|---------|
+| `scripts/sanitize-memory-write.py` | 10-category regex sanitizer (HTML injection, tool XML, base64, prompt injection, R-Memory noise) |
+| `scripts/memory-doorman.sh` | fswatch wrapper, watches memory dirs, triggers sanitizer |
+| `com.resonantos.memory-doorman.plist` | LaunchAgent (KeepAlive, RunAtLoad) |
+
+**Watched paths:**
+- `~/.openclaw/workspace/memory/shared-log/` (memory logs)
+- `~/.openclaw/workspace/memory/` (daily notes, breadcrumbs excluded by extension filter)
+
+**Sanitizer categories (10):**
+1. HTML dangerous tags (script, iframe, style, object, embed, form)
+2. Standalone HTML (link, meta, base)
+3. Event handler attributes (onclick, onerror, etc.)
+4. JavaScript/data URLs
+5. Claude tool XML blocks
+6. Tool result XML
+7. Thinking blocks
+8. Base64 blobs (200+ chars)
+9. R-Memory noise (PRESERVE_VERBATIM, padding)
+10. Prompt injection patterns
+
+**Cross-platform:**
+
+| OS | File watcher | Implementation |
+|----|-------------|----------------|
+| macOS | `fswatch` (Homebrew) | Current — LaunchAgent |
+| Linux | `inotifywait` (inotify-tools) | Same sanitizer, systemd unit instead of LaunchAgent |
+| Windows | PowerShell `FileSystemWatcher` | Same sanitizer (Python), scheduled task or service |
+
+The sanitizer script (`sanitize-memory-write.py`) is pure Python with no OS dependencies — only the watcher layer differs per platform.
+
+**Logs:** `/tmp/memory-doorman.log`
+
+## 5. Other Components
+
+### 4.1 Data Leak Scanner (`data_leak_scanner.py`)
 
 **Location:** `~/resonantos-augmentor/shield/data_leak_scanner.py`
 **Purpose:** Scan text, files, and git diffs for credential/secret leaks
 
-**Detection categories:**
+**Detection categories:** Credentials (API keys, PEM, seed phrases), private content (MEMORY.md, USER.md, SOUL.md markers), business-sensitive docs, forbidden files.
 
-| Category | Patterns | Blocking |
-|----------|----------|----------|
-| Credentials | Anthropic (`sk-ant-*`), OpenAI (`sk-proj-*`), GitHub (`ghp_*`, `gho_*`), Slack (`xox*-*`), PEM keys, Solana keypairs, seed phrases, generic secrets | Yes |
-| Private content | MEMORY.md markers, USER.md markers, SOUL.md markers, auth-profiles.json, Cosmodestiny | Yes |
-| Business-sensitive | Internal financial docs, strategic plans, pitch materials | Yes |
-| Warn-only | Augmentatism Manifesto (public philosophy) | No (logged) |
-| Forbidden files | MEMORY.md, USER.md, `.env*`, `id.json`, `.ssh/id_*` (not .pub), `daily_claims.json`, `onboarding.json` | Yes |
+**Logician integration:** Queries `safe_path("<repo>")` and `can_use_tool(/main, /git)`. Fail-closed: Logician unreachable → push denied.
 
-**CLI commands:**
-```bash
-python3 data_leak_scanner.py check <text>          # scan text
-python3 data_leak_scanner.py check-file <path>     # scan file
-python3 data_leak_scanner.py check-diff [repo]     # scan staged diff
-python3 data_leak_scanner.py pre-push [repo]       # full gate
-python3 data_leak_scanner.py install-hook [repo]    # install hook
-python3 data_leak_scanner.py logician-status        # check Logician
-```
+### 4.2 File Guard (`file_guard.py`)
 
-**Logician integration:**
-- Queries `safe_path("<repo>")` — is this repo approved for push?
-- Queries `can_use_tool(/main, /git)` — is main agent allowed git?
-- Fail-closed: if Logician unreachable, push denied
+Cross-platform file locking (macOS `chflags`, Linux `chattr`, POSIX `chmod`). Guard manifest covers agent config, extensions, identity, dashboard, shield, SSoT, GitHub hooks. Status checks use `os.stat()` with `st_flags` bitmask (SF_IMMUTABLE|UF_IMMUTABLE) — zero subprocess overhead. Dashboard exposes summary endpoint (`/api/shield/guard/summary`) for fast page loads, with lazy per-group file loading (`/api/shield/guard/group/<key>`).
 
-**Exit codes:** 0=clean, 1=leak detected, 2=Logician denied, 3=error
+### 4.3 Hook Guardian (`hook_guardian.sh`)
 
-### 3.3 Verification Gate (`verification_gate.py`)
+Monitors pre-push hooks; auto-restores if deleted or tampered. Runs periodically via launchd.
 
-**Location:** `~/resonantos-augmentor/shield/verification_gate.py`
-**Purpose:** Block pushes of code files without test evidence
+### 4.4 SSoT Staleness Script (`scripts/ssot-staleness-check.sh`)
 
-**Rules:**
-- Code extensions tracked: `.py`, `.js`, `.ts`, `.html`, `.css`, `.mg`, `.rs`
-- Non-code files (`.md`, `.json`, `.txt`, etc.) exempt
-- Every code file requires a verification entry with method + result
-- Valid methods: `curl`, `browser`, `unit`, `manual`, `script`, `code-review`, `untestable`
-- Stale threshold: 24 hours (warns but allows)
-- State persisted in `shield/verifications.json`
+Scans L0/L1 `.ai.md` files for `Updated:` headers. Flags files >14 days old or missing headers. Outputs JSON to `shield/logs/ssot-staleness.json`. Runs daily at 07:00 Rome via cron.
 
-**CLI:**
-```bash
-python3 verification_gate.py add <file> <method> <result>
-python3 verification_gate.py check
-python3 verification_gate.py status
-python3 verification_gate.py clear
-```
-
-### 3.4 File Guard (`file_guard.py`)
-
-**Location:** `~/resonantos-augmentor/shield/file_guard.py` (also in `~/resonantos-alpha/shield/`)
-**Purpose:** Lock/unlock critical files to prevent accidental modification
-
-**Cross-platform support:**
-- macOS: `chflags uchg/nouchg`
-- Linux: `chattr +i/-i` (with `chmod` fallback)
-- Generic: POSIX `chmod a-w/u+w`
-
-**Guard manifest:** Groups of files by category (agent config, extensions, identity, dashboard, shield, ssot, github hooks)
-
-**Git hook guard:** Can inject pre-push hooks that block pushes entirely (separate from data_leak_scanner hook)
-
-### 3.5 Hook Guardian (`hook_guardian.sh`)
-
-**Location:** `~/resonantos-augmentor/shield/hook_guardian.sh`
-**Purpose:** Monitor pre-push hooks; restore if deleted or tampered
-
-**Behavior:**
-- Runs periodically (launchd or cron)
-- Checks if pre-push hook exists and contains Shield markers
-- Restores from template if missing
-- Logs all events to `shield/logs/hook_guardian.log`
-
-### 3.6 Shield Lock (`shield_lock.py`)
-
-**Location:** `~/resonantos-augmentor/shield/shield_lock.py`
-**Purpose:** Password-protected lock state for Shield enforcement
-
-**Rules:**
-- AI cannot disable Shield — password required (human-only)
-- Lock state persisted to disk
-- SHA-256 hash-based verification (stdlib only, no bcrypt)
-
-## 4. Pre-Push Hook Chain
-
-The `.git/hooks/pre-push` script executes in order:
+## 6. Pre-Push Hook Chain
 
 ```
 1. Shield lock check (is Shield enabled?)
 2. Data leak scanner (scan diff for credentials/secrets)
 3. Logician approval (safe_path + can_use_tool queries)
-4. Verification gate (test evidence for code files)
+4. Secret grep scanner (20+ char suffix patterns)
 ```
 
 Any step failing → push blocked (exit 1).
 
-## 5. Logician Integration Points
-
-Shield queries Logician for:
-
-| Query | Purpose | Used By |
-|-------|---------|---------|
-| `safe_path("<repo>")` | Is this repo approved for git push? | data_leak_scanner |
-| `can_use_tool(/main, /git)` | Is main agent allowed to use git? | data_leak_scanner |
-| `protected_path("<path>")` | Is this path write-protected? | file_guard, shield-gate |
-| `forbidden_output_type(<type>)` | Should this data type be blocked from output? | data_leak_scanner |
-
-## 6. Deployment
+## 7. Deployment
 
 | Component | Location | Managed By |
 |-----------|----------|------------|
-| shield-gate.js | OpenClaw extensions dir | OpenClaw (loaded at agent start) |
-| data_leak_scanner.py | resonantos-augmentor/shield/ | Pre-push hook |
-| verification_gate.py | resonantos-augmentor/shield/ | Pre-push hook |
-| file_guard.py | resonantos-augmentor/shield/ | CLI / dashboard API |
-| hook_guardian.sh | resonantos-augmentor/shield/ | launchd |
-| shield_lock.py | resonantos-augmentor/shield/ | CLI (human-only) |
-
-**Hooks installed on:**
-- `~/resonantos-augmentor/.git/hooks/pre-push`
-- `~/resonantos-alpha/.git/hooks/pre-push`
-
-## 7. Monitoring
-
-- **Dashboard endpoint:** `/api/shield/status` — returns Shield lock state
-- **Logician endpoint:** `/api/logician/status` — returns Logician health from monitor
-- **Dashboard UI:** Shield indicator in nav bar + Logician indicator
-- **Log files:** `shield/logs/shield-gate.log`, `shield/logs/hook_guardian.log`, `logician/logs/monitor.log`
+| shield-gate plugin | `~/.openclaw/extensions/shield-gate/index.js` | OpenClaw (plugin, loaded at gateway start) |
+| data_leak_scanner.py | `resonantos-augmentor/shield/` | Pre-push hook |
+| file_guard.py | `resonantos-augmentor/shield/` | CLI / dashboard API |
+| hook_guardian.sh | `resonantos-augmentor/shield/` | launchd |
+| shield_lock.py | `resonantos-augmentor/shield/` | CLI (human-only) |
+| ssot-staleness-check.sh | `resonantos-augmentor/scripts/` | OpenClaw cron (daily 07:00) |
+| sanitize-memory-write.py | `resonantos-augmentor/scripts/` | Memory Doorman (fswatch) |
+| memory-doorman.sh | `resonantos-augmentor/scripts/` | LaunchAgent (KeepAlive) |
 
 ## 8. Design Principles
 
 1. **Deterministic** — no AI in the security loop; pure regex + Logician rules
-2. **Fail-closed for git** — if Logician unreachable, push denied
-3. **Fail-open for exec** — extension errors don't block AI from working
+2. **Fail-closed for git** — Logician unreachable → push denied
+3. **Default-to-strict** — all gates blocking; advisory requires human approval
 4. **Self-healing** — hooks auto-restored if tampered
 5. **Human-only unlock** — password required to disable Shield
-6. **No secrets in output** — credentials truncated in logs (`[match[:20]]...`)
+6. **Evidence-based** — completion claims require verification; SSoT changes require doc updates
 7. **Cross-platform** — file locking works on macOS and Linux

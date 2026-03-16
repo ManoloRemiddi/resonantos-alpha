@@ -382,6 +382,27 @@
     <div style="color: var(--text-muted); padding: 20px; text-align: center;">Loading file guard status...</div>
 </div>
 
+<!-- Memory Doorman -->
+<div class="section-header" style="margin-top: 32px;">
+    <h2><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Memory Doorman</h2>
+</div>
+<p style="color: var(--text-muted); margin: 0 0 16px 0; font-size: 0.9em; line-height: 1.5;">
+    Filesystem-level sanitizer. Watches memory directories and automatically strips injection vectors (HTML, tool XML, base64, prompt injection) from any .md file written. <strong>10 sanitizer categories.</strong>
+</p>
+<div id="doormanStatus" style="background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px;">
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+        <span id="doormanIndicator" style="width: 10px; height: 10px; border-radius: 50%; background: var(--text-muted);"></span>
+        <span id="doormanLabel" style="font-weight: 600;">Checking...</span>
+        <span id="doormanPid" style="color: var(--text-muted); font-size: 0.85em;"></span>
+    </div>
+    <div id="doormanStats" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px;">
+        <div style="text-align: center;"><div style="font-size: 24px; font-weight: 700; color: var(--accent);" id="doormanCategories">10</div><div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary);">Categories</div></div>
+        <div style="text-align: center;"><div style="font-size: 24px; font-weight: 700; color: var(--accent);" id="doormanPaths">2</div><div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary);">Watched Paths</div></div>
+        <div style="text-align: center;"><div style="font-size: 24px; font-weight: 700; color: var(--accent);" id="doormanCleaned">-</div><div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary);">Files Sanitized</div></div>
+    </div>
+    <div id="doormanLog" style="background: var(--bg-primary); border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-family: var(--font-mono, monospace); font-size: 0.8em; color: var(--text-secondary); max-height: 200px; overflow-y: auto; white-space: pre-wrap;">Loading log...</div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -390,7 +411,7 @@ const Shield = {
     _pendingAction: null,
 
     async load() {
-        await Promise.all([this.loadBanner(), this.loadGuard()]);
+        await Promise.all([this.loadBanner(), this.loadGuard(), this.loadDoorman()]);
     },
 
     async loadBanner() {
@@ -415,7 +436,7 @@ const Shield = {
 
     async loadGuard() {
         try {
-            const r = await fetch('/api/shield/guard/status');
+            const r = await fetch('/api/shield/guard/summary');
             const groups = await r.json();
             const keys = Object.keys(groups);
 
@@ -450,15 +471,8 @@ const Shield = {
                             <button class="guard-toggle-btn ${statusClass}" onclick="event.stopPropagation(); Shield.action('${k}', '${isLocked ? 'unlock' : 'lock'}')">${g.locked_count === g.total ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Locked' : g.locked_count > 0 ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> ' + g.locked_count + '/' + g.total + ' Locked' : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 5-5 5 5 0 0 1 5 5"/></svg> Unlocked'}</button>
                         </div>
                     </div>
-                    <div class="guard-files">
-                        ${(g.files || []).map(f => `
-                            <div class="guard-file">
-                                <span class="file-icon ${f.locked ? 'locked' : 'unlocked'}">${f.locked ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>'}</span>
-                                <span class="file-path" title="${f.path}">${f.short || f.path}</span>
-                                <span class="file-size">${f.size ? Shield.fmtSize(f.size) : ''}</span>
-                                <button class="file-lock-btn ${f.locked ? 'is-locked' : ''}" onclick="event.stopPropagation(); Shield.fileAction('${f.path.replace(/'/g, "\\'")}', '${f.locked ? 'unlock' : 'lock'}')">${f.locked ? 'Unlock' : 'Lock'}</button>
-                            </div>
-                        `).join('')}
+                    <div class="guard-files" data-loaded="false">
+                        <div style="color:var(--text-muted);padding:12px;text-align:center;font-size:0.85em;">Click to load files...</div>
                     </div>
                 `;
                 container.appendChild(div);
@@ -468,15 +482,61 @@ const Shield = {
         }
     },
 
-    toggle(header) {
+    async loadDoorman() {
+        try {
+            const r = await fetch('/api/shield/doorman/status');
+            const d = await r.json();
+            const indicator = document.getElementById('doormanIndicator');
+            const label = document.getElementById('doormanLabel');
+            const pid = document.getElementById('doormanPid');
+            if (d.running) {
+                indicator.style.background = '#22c55e';
+                label.textContent = 'Active';
+                if (d.pid) pid.textContent = 'PID ' + d.pid;
+            } else {
+                indicator.style.background = 'var(--error)';
+                label.textContent = 'Stopped';
+            }
+            document.getElementById('doormanCleaned').textContent = d.total_sanitized || 0;
+            const logEl = document.getElementById('doormanLog');
+            if (d.recent_log && d.recent_log.length > 0) {
+                logEl.textContent = d.recent_log.join('\n');
+            } else {
+                logEl.textContent = 'No log entries yet.';
+            }
+        } catch(e) {
+            document.getElementById('doormanLabel').textContent = 'Error loading status';
+        }
+    },
+
+    async toggle(header) {
         const group = header.parentElement;
         group.classList.toggle('expanded');
-        // Persist expanded state
         const key = group.dataset.groupKey;
         if (key) {
             const state = JSON.parse(localStorage.getItem('shield_expanded') || '{}');
             state[key] = group.classList.contains('expanded');
             localStorage.setItem('shield_expanded', JSON.stringify(state));
+        }
+        // Lazy-load files on first expand
+        const filesDiv = group.querySelector('.guard-files');
+        if (filesDiv && filesDiv.dataset.loaded === 'false' && group.classList.contains('expanded') && key) {
+            filesDiv.innerHTML = '<div style="color:var(--text-muted);padding:12px;text-align:center;">Loading files...</div>';
+            try {
+                const r = await fetch('/api/shield/guard/group/' + encodeURIComponent(key));
+                const g = await r.json();
+                filesDiv.innerHTML = (g.files || []).map(f => `
+                    <div class="guard-file">
+                        <span class="file-icon ${f.locked ? 'locked' : 'unlocked'}">${f.locked ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>'}</span>
+                        <span class="file-path" title="${f.path}">${f.short || f.path}</span>
+                        <span class="file-size">${f.size ? Shield.fmtSize(f.size) : ''}</span>
+                        <button class="file-lock-btn ${f.locked ? 'is-locked' : ''}" onclick="event.stopPropagation(); Shield.fileAction('${f.path.replace(/'/g, "\\'")}', '${f.locked ? 'unlock' : 'lock'}')">${f.locked ? 'Unlock' : 'Lock'}</button>
+                    </div>
+                `).join('');
+                filesDiv.dataset.loaded = 'true';
+            } catch(e) {
+                filesDiv.innerHTML = '<div style="color:var(--error);padding:12px;">Failed to load files</div>';
+            }
         }
     },
 
