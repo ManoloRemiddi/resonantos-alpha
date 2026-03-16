@@ -5,9 +5,11 @@ Connects to OpenClaw gateway via WebSocket for real-time data.
 No legacy Clawdbot/Watchtower dependencies.
 """
 
+import ast
 import json
 import os
 import re
+import shutil
 import subprocess
 import threading
 import time
@@ -55,6 +57,8 @@ except ImportError:
 
 OPENCLAW_HOME = Path.home() / ".openclaw"
 OPENCLAW_CONFIG = OPENCLAW_HOME / "openclaw.json"
+BUILTIN_SKILLS_DIR = Path("/opt/homebrew/lib/node_modules/openclaw/skills")
+CUSTOM_SKILLS_DIR = OPENCLAW_HOME / "workspace" / "skills"
 SSOT_ACCESS_FILE = Path("~/.openclaw/ssot_access.json").expanduser()
 WORKSPACE = OPENCLAW_HOME / "workspace"
 SSOT_ROOT = WORKSPACE / "resonantos-augmentor" / "ssot"
@@ -4276,6 +4280,433 @@ def api_memory_logs_put():
         result["errors"] = errors
     return jsonify(result)
 
+
+def _read_openclaw_config():
+    if not OPENCLAW_CONFIG.exists():
+        return {}
+    return json.loads(OPENCLAW_CONFIG.read_text())
+
+
+def _write_openclaw_config(cfg):
+    OPENCLAW_CONFIG.parent.mkdir(parents=True, exist_ok=True)
+    OPENCLAW_CONFIG.write_text(json.dumps(cfg, indent=2))
+
+
+def _normalize_skill_location(path_obj):
+    path_str = str(path_obj)
+    home_prefix = str(Path.home())
+    if path_str.startswith(home_prefix):
+        return "~" + path_str[len(home_prefix):]
+    return path_str
+
+
+def _split_skill_frontmatter(text):
+    if not text.startswith("---"):
+        return "", text
+
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return "", text
+
+    for idx in range(1, len(lines)):
+        if lines[idx].strip() == "---":
+            return "\n".join(lines[1:idx]), "\n".join(lines[idx + 1:])
+
+    return "", text
+
+
+def _extract_frontmatter_value(frontmatter, key):
+    lines = frontmatter.splitlines()
+    key_prefix = f"{key}:"
+
+    for idx, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped or line[:1].isspace() or not stripped.startswith(key_prefix):
+            continue
+
+        raw_value = stripped.split(":", 1)[1].strip()
+        if raw_value:
+            return raw_value
+
+        block = []
+        next_idx = idx + 1
+        while next_idx < len(lines):
+            candidate = lines[next_idx]
+            if not candidate.strip():
+                block.append(candidate)
+                next_idx += 1
+                continue
+            if candidate[:1].isspace():
+                block.append(candidate)
+                next_idx += 1
+                continue
+            break
+        return "\n".join(block).strip()
+
+    return ""
+
+
+def _parse_skill_frontmatter_metadata(frontmatter):
+    metadata_raw = _extract_frontmatter_value(frontmatter, "metadata")
+    if not metadata_raw:
+        return {}
+
+    try:
+        parsed = ast.literal_eval(metadata_raw)
+    except (SyntaxError, ValueError):
+        return {}
+
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _normalize_skill_string_list(value):
+    if isinstance(value, str):
+        value = [value]
+    if not isinstance(value, (list, tuple)):
+        return []
+    normalized = []
+    for item in value:
+        item_str = str(item).strip()
+        if item_str:
+            normalized.append(item_str)
+    return normalized
+
+
+def _extract_skill_setup_metadata(skill_file):
+    try:
+        text = skill_file.read_text(errors="replace")
+    except Exception:
+        return {
+            "status": "unknown",
+            "missingBins": [],
+            "installOptions": [],
+        }
+
+    frontmatter, _ = _split_skill_frontmatter(text)
+    metadata = _parse_skill_frontmatter_metadata(frontmatter)
+    openclaw_meta = metadata.get("openclaw") if isinstance(metadata, dict) else {}
+    if not isinstance(openclaw_meta, dict):
+        openclaw_meta = {}
+
+    requires = openclaw_meta.get("requires")
+    if not isinstance(requires, dict):
+        requires = {}
+
+    bins = _normalize_skill_string_list(requires.get("bins"))
+    any_bins = _normalize_skill_string_list(requires.get("anyBins"))
+
+    if not bins and not any_bins:
+        status = "unknown"
+        missing_bins = []
+    else:
+        missing_bins = [bin_name for bin_name in bins if shutil.which(bin_name) is None]
+        any_bins_available = any(shutil.which(bin_name) is not None for bin_name in any_bins) if any_bins else True
+        if any_bins and not any_bins_available:
+            missing_bins.extend([bin_name for bin_name in any_bins if bin_name not in missing_bins])
+        status = "ready" if not missing_bins and any_bins_available else "needs_setup"
+
+    install_options = openclaw_meta.get("install")
+    if not isinstance(install_options, list):
+        install_options = []
+
+    return {
+        "status": status,
+        "missingBins": missing_bins,
+        "installOptions": install_options,
+    }
+
+
+def _extract_skill_description(skill_file):
+    try:
+        text = skill_file.read_text(errors="replace")
+    except Exception:
+        return ""
+
+    frontmatter, body = _split_skill_frontmatter(text)
+
+    if frontmatter:
+        lines = frontmatter.splitlines()
+        for idx, line in enumerate(lines):
+            stripped = line.strip()
+            if not stripped.startswith("description:"):
+                continue
+            raw_value = stripped.split(":", 1)[1].strip()
+            if raw_value and not raw_value.startswith((">", "|")):
+                return raw_value.strip("\"' ")
+
+            block = []
+            next_idx = idx + 1
+            while next_idx < len(lines):
+                candidate = lines[next_idx]
+                if candidate.startswith((" ", "\t")) or not candidate.strip():
+                    block.append(candidate.strip())
+                    next_idx += 1
+                    continue
+                break
+            description = " ".join(part for part in block if part).strip()
+            if description:
+                return description
+
+    paragraphs = []
+    current = []
+    in_code_block = False
+    for line in body.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            in_code_block = not in_code_block
+            continue
+        if in_code_block:
+            continue
+        if not stripped:
+            if current:
+                paragraphs.append(" ".join(current))
+                current = []
+            continue
+        if stripped.startswith("#"):
+            continue
+        current.append(stripped)
+    if current:
+        paragraphs.append(" ".join(current))
+
+    return paragraphs[0].strip() if paragraphs else ""
+
+
+def _discover_settings_skills():
+    skills = []
+    index = {}
+    for root, skill_type in ((BUILTIN_SKILLS_DIR, "builtin"), (CUSTOM_SKILLS_DIR, "custom")):
+        if not root.exists():
+            continue
+        try:
+            entries = sorted(root.iterdir(), key=lambda item: item.name.lower())
+        except Exception:
+            continue
+        for entry in entries:
+            if not entry.is_dir():
+                continue
+            skill_file = entry / "SKILL.md"
+            if not skill_file.exists():
+                continue
+            name = entry.name.strip()
+            if not name:
+                continue
+            record = {
+                "name": name,
+                "description": _extract_skill_description(skill_file),
+                "location": _normalize_skill_location(skill_file),
+                "type": skill_type,
+            }
+            record.update(_extract_skill_setup_metadata(skill_file))
+            if name in index:
+                if skill_type == "custom":
+                    skills[index[name]] = record
+                continue
+            index[name] = len(skills)
+            skills.append(record)
+    skills.sort(key=lambda item: item["name"].lower())
+    return skills
+
+
+def _normalize_agent_model(model_value):
+    if isinstance(model_value, str):
+        return model_value
+    if isinstance(model_value, dict):
+        primary = model_value.get("primary")
+        if primary:
+            return str(primary)
+        fallbacks = model_value.get("fallbacks")
+        if isinstance(fallbacks, list) and fallbacks:
+            return str(fallbacks[0])
+    return ""
+
+
+def _list_skill_agents(cfg):
+    agents_cfg = cfg.get("agents", {}) if isinstance(cfg, dict) else {}
+    default_model = _normalize_agent_model((agents_cfg.get("defaults") or {}).get("model")) or "unknown"
+    agents = []
+    seen = set()
+
+    if isinstance(agents_cfg.get("list"), list):
+        for item in agents_cfg.get("list", []):
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("id") or item.get("name") or item.get("agentId") or "").strip()
+            if not name or name in seen:
+                continue
+            seen.add(name)
+            agents.append({
+                "name": name,
+                "model": _normalize_agent_model(item.get("model")) or default_model,
+            })
+
+    for key, value in agents_cfg.items():
+        if key in {"defaults", "list"} or not isinstance(value, dict) or key in seen:
+            continue
+        seen.add(key)
+        agents.append({
+            "name": key,
+            "model": _normalize_agent_model(value.get("model")) or default_model,
+        })
+
+    return agents
+
+
+def _get_agent_skill_allow(cfg, agent_name):
+    agents_cfg = cfg.get("agents", {}) if isinstance(cfg, dict) else {}
+
+    if isinstance(agents_cfg.get("list"), list):
+        for item in agents_cfg.get("list", []):
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("id") or item.get("name") or item.get("agentId") or "").strip()
+            if name != agent_name:
+                continue
+            allow = ((item.get("skills") or {}).get("allow"))
+            if isinstance(allow, list):
+                return [str(skill).strip() for skill in allow if str(skill).strip()]
+            return None
+
+    legacy_entry = agents_cfg.get(agent_name)
+    if isinstance(legacy_entry, dict):
+        allow = ((legacy_entry.get("skills") or {}).get("allow"))
+        if isinstance(allow, list):
+            return [str(skill).strip() for skill in allow if str(skill).strip()]
+
+    return None
+
+
+def _set_agent_skill_allow(cfg, agent_name, allowed_skills):
+    if "agents" not in cfg or not isinstance(cfg["agents"], dict):
+        cfg["agents"] = {}
+    agents_cfg = cfg["agents"]
+
+    target_entry = None
+    target_style = "list"
+
+    if isinstance(agents_cfg.get("list"), list):
+        for item in agents_cfg.get("list", []):
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("id") or item.get("name") or item.get("agentId") or "").strip()
+            if name == agent_name:
+                target_entry = item
+                break
+
+    if target_entry is None and isinstance(agents_cfg.get(agent_name), dict):
+        target_entry = agents_cfg[agent_name]
+        target_style = "legacy"
+
+    if target_entry is None:
+        if "list" not in agents_cfg or not isinstance(agents_cfg["list"], list):
+            agents_cfg["list"] = []
+        target_entry = {"id": agent_name}
+        agents_cfg["list"].append(target_entry)
+        target_style = "list"
+
+    if allowed_skills is None:
+        if isinstance(target_entry.get("skills"), dict):
+            target_entry["skills"].pop("allow", None)
+            if not target_entry["skills"]:
+                target_entry.pop("skills", None)
+    else:
+        if "skills" not in target_entry or not isinstance(target_entry["skills"], dict):
+            target_entry["skills"] = {}
+        target_entry["skills"]["allow"] = allowed_skills
+
+    if target_style == "legacy":
+        agents_cfg[agent_name] = target_entry
+
+
+@app.route("/api/settings/skills")
+def api_settings_skills_get():
+    try:
+        cfg = _read_openclaw_config()
+    except Exception as e:
+        return jsonify({"error": f"Failed to read openclaw.json: {e}"}), 500
+
+    skills = _discover_settings_skills()
+    skill_names = [skill["name"] for skill in skills]
+    skill_name_set = set(skill_names)
+    agents = _list_skill_agents(cfg)
+    assignments = {}
+
+    for agent in agents:
+        allow = _get_agent_skill_allow(cfg, agent["name"])
+        if allow is None:
+            assignments[agent["name"]] = list(skill_names)
+            continue
+        seen = set()
+        assignments[agent["name"]] = [
+            skill_name for skill_name in allow
+            if skill_name in skill_name_set and skill_name not in seen and not seen.add(skill_name)
+        ]
+
+    return jsonify({
+        "skills": skills,
+        "agents": agents,
+        "assignments": assignments,
+    })
+
+
+@app.route("/api/settings/skills", methods=["PUT"])
+def api_settings_skills_put():
+    body = request.get_json(silent=True) or {}
+    agent_name = str(body.get("agent", "")).strip()
+    requested_skills = body.get("skills")
+
+    if not agent_name:
+        return jsonify({"error": "agent is required"}), 400
+    if not isinstance(requested_skills, list):
+        return jsonify({"error": "skills must be an array"}), 400
+
+    available_skills = _discover_settings_skills()
+    available_names = [skill["name"] for skill in available_skills]
+    available_name_set = set(available_names)
+    requested_set = []
+    seen = set()
+    for skill_name in requested_skills:
+        normalized = str(skill_name).strip()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        requested_set.append(normalized)
+
+    unknown = [skill_name for skill_name in requested_set if skill_name not in available_name_set]
+    if unknown:
+        return jsonify({"error": f"Unknown skills: {', '.join(unknown)}"}), 400
+
+    allowed_skills = [name for name in available_names if name in seen]
+    if len(allowed_skills) == len(available_names):
+        allowed_skills = None
+
+    try:
+        cfg = _read_openclaw_config()
+        _set_agent_skill_allow(cfg, agent_name, allowed_skills)
+        _write_openclaw_config(cfg)
+    except Exception as e:
+        return jsonify({"error": f"Failed to write openclaw.json: {e}"}), 500
+
+    return jsonify({
+        "agent": agent_name,
+        "skills": allowed_skills if allowed_skills is not None else available_names,
+    })
+
+
+@app.route("/api/skills/setup-request", methods=["POST"])
+def api_skills_setup_request():
+    body = request.get_json(silent=True) or {}
+    skill_name = str(body.get("skill", "")).strip()
+
+    if not skill_name:
+        return jsonify({"error": "skill is required"}), 400
+
+    available_skills = {skill["name"] for skill in _discover_settings_skills()}
+    if skill_name not in available_skills:
+        return jsonify({"error": f"Unknown skill: {skill_name}"}), 400
+
+    return jsonify({"message": "Setup request queued"})
+
+
 @app.route("/api/settings/check-update")
 def api_check_update():
     """Check if a newer version is available on origin/main."""
@@ -7301,59 +7732,86 @@ def api_logician_rules():
     })
 
 
-@app.route("/api/logician/rules/<filename>")
-def api_logician_rule_content(filename):
-    """Return content of a specific rule file."""
-    # Security: only allow .mg files, no path traversal
-    if not filename.endswith(".mg") or "/" in filename or "\\" in filename or ".." in filename:
-        return jsonify({"error": "Invalid filename"}), 400
+@app.route("/api/logician/rules/<section_slug>")
+def api_logician_rule_section(section_slug):
+    """Return content of a specific section from production_rules.mg.
 
-    rules_dir = os.path.join(os.path.dirname(__file__), "..", "logician", "rules")
-    filepath = os.path.join(rules_dir, filename)
+    Section slug is lowercase, spaces replaced with hyphens.
+    E.g. "agent-registry" -> AGENT REGISTRY section.
+    """
+    if "/" in section_slug or "\\" in section_slug or ".." in section_slug:
+        return jsonify({"error": "Invalid section slug"}), 400
+
+    rules_file = os.path.join(
+        os.path.dirname(__file__), "..", "logician", "poc", "production_rules.mg"
+    )
 
     try:
-        with open(filepath) as f:
-            content = f.read()
-        return jsonify({"content": content, "filename": filename})
+        with open(rules_file) as f:
+            lines = f.readlines()
     except FileNotFoundError:
-        return jsonify({"error": f"Rule file not found: {filename}"}), 404
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "production_rules.mg not found"}), 404
 
+    # Parse sections using triple-line headers
+    sections = {}
+    i = 0
+    while i < len(lines):
+        line = lines[i].rstrip()
+        if line.startswith("# ===") and line.endswith("===") and i + 2 < len(lines):
+            name_line = lines[i + 1].rstrip()
+            next_line = lines[i + 2].rstrip()
+            if name_line.startswith("# ") and next_line.startswith("# ===") and next_line.endswith("==="):
+                name = name_line[2:].strip()
+                slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+                i += 3
+                content_lines = []
+                while i < len(lines):
+                    cl = lines[i].rstrip()
+                    if cl.startswith("# ===") and cl.endswith("===") and i + 1 < len(lines) and lines[i + 1].rstrip().startswith("# "):
+                        break
+                    content_lines.append(lines[i])
+                    i += 1
+                sections[slug] = {"name": name, "content": "".join(content_lines).strip()}
+                continue
+        if line.startswith("# === ") and line.endswith(" ==="):
+            nxt = lines[min(i+1, len(lines)-1)].rstrip() if i+1 < len(lines) else ""
+            if not nxt.startswith("# ==="):
+                name = line[6:-4].strip()
+                slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+                i += 1
+                content_lines = []
+                while i < len(lines):
+                    cl = lines[i].rstrip()
+                    if cl.startswith("# ===") and cl.endswith("==="):
+                        break
+                    content_lines.append(lines[i])
+                    i += 1
+                sections[slug] = {"name": name, "content": "".join(content_lines).strip()}
+                continue
+        i += 1
 
-@app.route("/api/logician/rules/<filename>/toggle", methods=["POST"])
-def api_logician_rule_toggle(filename):
-    """Toggle a rule file's enabled state."""
-    if not filename.endswith(".mg") or "/" in filename or "\\" in filename or ".." in filename:
-        return jsonify({"error": "Invalid filename"}), 400
+    if section_slug not in sections:
+        available = sorted(sections.keys())
+        return jsonify({"error": f"Section not found: {section_slug}", "available": available}), 404
 
-    # Security/audit rules cannot be toggled
-    if filename in ("security_rules.mg", "audit_rules.mg"):
-        return jsonify({"error": "Cannot toggle locked rules"}), 403
+    sec = sections[section_slug]
+    facts = rules_count = 0
+    for cl in sec["content"].splitlines():
+        stripped = cl.strip()
+        if stripped and not stripped.startswith("#") and not stripped.startswith("//"):
+            if ":-" in stripped:
+                rules_count += 1
+            elif stripped.endswith("."):
+                facts += 1
 
-    config_dir = os.path.join(os.path.dirname(__file__), "..", "config")
-    config_path = os.path.join(config_dir, "logician_rules.json")
-
-    # Load existing state
-    toggle_state = {}
-    try:
-        with open(config_path) as f:
-            toggle_state = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        pass
-
-    # Toggle
-    current = toggle_state.get(filename, {}).get("enabled", True)
-    toggle_state[filename] = {"enabled": not current}
-
-    # Save
-    try:
-        os.makedirs(config_dir, exist_ok=True)
-        with open(config_path, "w") as f:
-            json.dump(toggle_state, f, indent=2)
-        return jsonify({"filename": filename, "enabled": not current})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    return jsonify({
+        "slug": section_slug,
+        "name": sec["name"],
+        "content": sec["content"],
+        "facts": facts,
+        "rules": rules_count,
+        "source": "production_rules.mg"
+    })
 
 
 # ---------------------------------------------------------------------------
