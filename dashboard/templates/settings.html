@@ -241,6 +241,338 @@
 .knowledge-preview-close { border: 0; background: transparent; color: var(--text-muted); font-size: 21px; cursor: pointer; line-height: 1; padding: 0; }
 .knowledge-preview-close:hover { color: var(--text-primary); }
 .knowledge-preview-content { flex: 1; overflow: auto; padding: 14px 16px; white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 13px; line-height: 1.5; color: var(--text-secondary); }
+.skills-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.skills-help {
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: 12px;
+    background: rgba(139, 92, 246, 0.08);
+    overflow: hidden;
+}
+.skills-help-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: transparent;
+    border: 0;
+    color: var(--text-primary);
+    cursor: pointer;
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+.skills-help-toggle:hover {
+    background: rgba(255,255,255,0.03);
+}
+.skills-help-toggle-text {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.skills-help-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(139, 92, 246, 0.22);
+    color: #c4b5fd;
+    font-size: 0.75rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.skills-help-chevron {
+    color: var(--text-secondary);
+    transition: transform 0.2s ease;
+}
+.skills-help-toggle[aria-expanded="true"] .skills-help-chevron {
+    transform: rotate(90deg);
+}
+.skills-help-body {
+    display: none;
+    padding: 0 14px 14px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+.skills-help-body.open {
+    display: block;
+}
+.skills-help-body p {
+    margin: 10px 0 0;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+.skills-help-body strong {
+    color: var(--text-primary);
+}
+.skills-summary {
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+.skills-matrix {
+    overflow: auto;
+    position: relative;
+    max-width: 100%;
+    max-height: 70vh;
+}
+.skills-matrix table {
+    width: max-content;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+.skills-matrix thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+.skills-matrix th {
+    background: #1a1a1a;
+    padding: 4px 8px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 1px 0 var(--border-color);
+}
+.skills-matrix th.skill-col-header {
+    min-width: 220px;
+    vertical-align: bottom;
+    position: sticky;
+    left: 0;
+    top: 0;
+    z-index: 15;
+}
+.skills-matrix th.category-col-header,
+.skills-matrix td:nth-child(2) {
+    width: 120px;
+    min-width: 120px;
+    max-width: 120px;
+}
+.skills-matrix th.agent-col-header {
+    width: 48px;
+    min-width: 48px;
+    max-width: 48px;
+    height: 132px;
+    vertical-align: bottom;
+    text-align: center;
+    padding: 6px 0 8px;
+}
+.agent-header-label {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    white-space: nowrap;
+    margin: 0 auto;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    line-height: 1.1;
+}
+.skills-matrix td:not(:first-child) {
+    text-align: center;
+}
+.skills-matrix td {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+.skills-matrix td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--card-bg);
+    min-width: 220px;
+    font-weight: 500;
+    font-size: 0.84rem;
+    box-shadow: 1px 0 0 var(--border-color);
+}
+.skills-matrix td.agent-skill-cell {
+    width: 48px;
+    min-width: 48px;
+    max-width: 48px;
+    padding: 6px 0;
+}
+.skill-name-cell {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+}
+.skill-status-dot {
+    width: 10px;
+    height: 10px;
+    display: inline-block;
+    flex-shrink: 0;
+}
+.skill-status-ready {
+    background: #34d399;
+    border-radius: 2px;
+}
+.skill-status-needs-setup {
+    width: 0; height: 0; background: none;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 10px solid #fbbf24;
+}
+.skill-status-unknown {
+    width: 8px; height: 8px;
+    background: #6b7280;
+    transform: rotate(45deg);
+}
+.skill-name {
+    min-width: 0;
+    color: var(--text-primary);
+}
+.skill-info-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 0 2px;
+    vertical-align: middle;
+    opacity: 0.5;
+    transition: opacity 0.2s, color 0.2s;
+    flex-shrink: 0;
+}
+.skill-info-btn svg {
+    display: block;
+}
+.skill-info-btn:hover,
+.skill-info-btn[aria-expanded="true"] {
+    opacity: 1;
+    color: #a78bfa;
+}
+.skill-setup-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    background: none;
+    border: none;
+    color: #fbbf24;
+    cursor: pointer;
+    padding: 0;
+    opacity: 0.75;
+    transition: opacity 0.2s, transform 0.2s;
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    line-height: 1;
+}
+.skill-setup-btn:hover,
+.skill-setup-btn[aria-expanded="true"] {
+    opacity: 1;
+    transform: rotate(20deg);
+}
+.skill-info-popover {
+    position: fixed;
+    background: #1e1e2e;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 10px 14px;
+    max-width: 300px;
+    font-size: 0.78rem;
+    color: #ccc;
+    z-index: 9999;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    line-height: 1.4;
+}
+.skill-popover-title {
+    margin: 0 0 6px;
+    color: var(--text-primary, #fff);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+.skill-popover-row {
+    margin: 0 0 8px;
+}
+.skill-popover-row:last-child {
+    margin-bottom: 0;
+}
+.skill-popover-label {
+    color: var(--text-primary, #fff);
+    font-weight: 600;
+}
+.skill-popover-list {
+    margin: 6px 0 0;
+    padding-left: 16px;
+    color: #ccc;
+}
+.skill-popover-list li {
+    margin-bottom: 4px;
+}
+.skill-popover-list li:last-child {
+    margin-bottom: 0;
+}
+.skill-setup-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    background: rgba(251, 191, 36, 0.12);
+    color: #fbbf24;
+    font-size: 0.76rem;
+    cursor: pointer;
+}
+.skill-setup-action:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+.skill-type-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+.skill-type-builtin {
+    background: rgba(156, 163, 175, 0.2);
+    color: #9ca3af;
+}
+.skill-type-custom {
+    background: rgba(147, 51, 234, 0.2);
+    color: #a78bfa;
+}
+.skill-toggle {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.22);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-block;
+    background: transparent;
+    padding: 0;
+    appearance: none;
+}
+.skill-toggle.active {
+    background: #8b5cf6;
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.18);
+}
+.skill-toggle:hover {
+    transform: scale(1.1);
+}
 	@media (max-width: 720px) {
 	    .knowledge-folder-header { flex-direction: column; }
 	    .knowledge-folder-header-right { width: 100%; justify-content: flex-start; }
@@ -251,6 +583,59 @@
         .ku-header { font-size: 11px; }
         .ku-actions { font-size: 12px; justify-content: flex-start; }
 	}
+
+.filter-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+.skills-filter-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-bottom: 8px; }
+.skills-filter-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border: 1px solid #555;
+    border-radius: 12px;
+    background: transparent;
+    color: #aaa;
+    cursor: pointer;
+    font-size: 0.7rem;
+    transition: all 0.2s;
+}
+.skills-filter-btn:hover { border-color: #a78bfa; color: #a78bfa; }
+.skills-filter-btn[data-filter-type="category"].active { background: #a78bfa; color: #1a1a2e; border-color: #a78bfa; }
+.skills-filter-btn[data-filter-type="status"].active { color: var(--text-primary, #fff); }
+.skills-filter-btn[data-filter-type="status"][data-status="ready"].active {
+    border-color: rgba(52, 211, 153, 0.65);
+    background: rgba(52, 211, 153, 0.14);
+}
+.skills-filter-btn[data-filter-type="status"][data-status="needs_setup"].active {
+    border-color: rgba(251, 191, 36, 0.65);
+    background: rgba(251, 191, 36, 0.14);
+}
+.skills-filter-btn[data-filter-type="status"][data-status="unknown"].active {
+    border-color: rgba(156, 163, 175, 0.65);
+    background: rgba(107, 114, 128, 0.16);
+}
+.skills-filter-reset {
+    color: #888;
+    border-color: rgba(255,255,255,0.12);
+}
+.skills-filter-reset:hover {
+    color: var(--text-primary, #fff);
+    border-color: rgba(255,255,255,0.24);
+}
+.skills-filter-divider {
+    width: 1px;
+    height: 20px;
+    background: rgba(255,255,255,0.15);
+    margin: 0 8px;
+    flex-shrink: 0;
+}
+.skills-filter-btn .skill-status-dot {
+    margin-right: 0;
+    align-self: center;
+}
+.agent-count { font-size: 0.6rem; color: #666; display: block; margin-top: 4px; }
+.skill-category-badge { font-size: 0.55rem; padding: 1px 4px; border-radius: 3px; margin-left: 6px; white-space: nowrap; }
 </style>
 <div class="settings-layout">
     <!-- Settings Navigation -->
@@ -287,13 +672,17 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/><path d="M6 4.5A11 11 0 0 1 12 3a11 11 0 0 1 6 1.5"/></svg>
             Knowledge Base
         </a>
-        <a href="#memory-bridge" class="settings-nav-item" onclick="showSection('memory-bridge')">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
-            Memory Bridge
-        </a>
         <a href="#memorylogs" class="settings-nav-item" onclick="showSection('memorylogs')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
             Memory Logs
+        </a>
+        <a href="#skills" class="settings-nav-item" onclick="showSection('skills')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Skills
+        </a>
+        <a href="#memory-bridge" class="settings-nav-item" onclick="showSection('memory-bridge')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+            Memory Bridge
         </a>
         <a href="#updates" class="settings-nav-item" onclick="showSection('updates')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
@@ -889,6 +1278,38 @@
             </div>
         </section>
 
+        <section class="settings-section" id="skillsSection">
+            <h2 class="section-title">Skills</h2>
+            <p class="section-description">Manage which skills each agent can use</p>
+
+            <div class="settings-card skills-panel">
+                <div class="skills-help" id="skillsHelp">
+                    <button
+                        type="button"
+                        class="skills-help-toggle"
+                        aria-expanded="false"
+                        aria-controls="skillsHelpPanel"
+                        onclick="toggleSkillsHelp()">
+                        <span class="skills-help-toggle-text">
+                            <span class="skills-help-icon">?</span>
+                            <span>Help</span>
+                        </span>
+                        <span class="skills-help-chevron">&#9656;</span>
+                    </button>
+                    <div class="skills-help-body" id="skillsHelpPanel">
+                        <p><strong>What are skills?</strong> Skills are capability modules that give agents specific abilities, like GitHub operations, weather lookup, or video editing. Each skill has a `SKILL.md` instruction file.</p>
+                        <p><strong>How it works</strong> When a skill is enabled for an agent, OpenClaw includes that skill's description in the agent's prompt. The agent can then follow the skill's instructions when the task matches. When disabled, the agent doesn't know the skill exists.</p>
+                        <p><strong>How to use</strong> Click a toggle dot to enable or disable a skill for an agent. Purple dot means enabled, an empty circle means disabled. Changes save to `openclaw.json` immediately.</p>
+                        <p><strong>Default behavior</strong> If no skills are explicitly configured for an agent, it has access to all skills. Once you toggle any skill, that agent switches to an explicit allowlist with only the enabled skills.</p>
+                    </div>
+                </div>
+
+                <div id="skillsMatrixContainer">
+                    <p>Loading skills...</p>
+                </div>
+            </div>
+        </section>
+
 
 	    </div>
 	</div>
@@ -966,6 +1387,10 @@ function showSection(section) {
     var navLink = document.querySelector('a[href="#' + section + '"]');
     if (navLink) navLink.classList.add('active');
     sec.classList.add('active');
+
+    if (section === 'skills') {
+        loadSkills();
+    }
 }
 
 function syncSectionWithHash() {
@@ -1143,7 +1568,7 @@ function updateOverviewStats(totals) {
     if (el('totalRules')) el('totalRules').textContent = totals.rules;
     if (el('totalFacts')) el('totalFacts').textContent = totals.facts;
     if (el('totalCategories')) el('totalCategories').textContent = totals.categories;
-    if (el('totalFiles')) el('totalFiles').textContent = totals.files;
+    if (el('totalFiles')) el('totalFiles').textContent = totals.sections || totals.files || 0;
 }
 
 function renderCategories(categories) {
@@ -1160,7 +1585,7 @@ function renderCategories(categories) {
             '<div class="category-stats">' +
                 '<div class="cat-stat"><span class="cat-count">' + cat.ruleCount + '</span><span class="cat-label">rules</span></div>' +
                 '<div class="cat-stat"><span class="cat-count">' + cat.factCount + '</span><span class="cat-label">facts</span></div>' +
-                '<div class="cat-stat"><span class="cat-count">' + cat.fileCount + '</span><span class="cat-label">' + (cat.fileCount === 1 ? 'file' : 'files') + '</span></div>' +
+                '<div class="cat-stat"><span class="cat-count">' + (cat.sectionCount || cat.fileCount || 0) + '</span><span class="cat-label">' + ((cat.sectionCount || cat.fileCount || 0) === 1 ? 'section' : 'sections') + '</span></div>' +
             '</div>' +
             (cat.locked ? '<div class="category-locked-badge">&#x1F512;</div>' : '') +
         '</div>';
@@ -1831,6 +2256,357 @@ async function loadKnowledgeBase() {
     }
 }
 
+async function loadSkills() {
+    const container = document.getElementById('skillsMatrixContainer');
+    if (!container) return;
+
+    closeSkillPopover();
+    container.innerHTML = '<p>Loading skills...</p>';
+
+    try {
+        const response = await fetch('/api/settings/skills');
+        const data = await response.json();
+        if (!response.ok || data.error) {
+            throw new Error(data.error || 'Failed to load skills');
+        }
+
+        const skills = Array.isArray(data.skills) ? data.skills : [];
+        const agents = sortSkillAgents(Array.isArray(data.agents) ? data.agents : []);
+        const assignments = data.assignments && typeof data.assignments === 'object' ? data.assignments : {};
+
+        let html = `
+            <div class="skills-summary">
+            <div class="skills-filter-bar">
+                <button type="button" class="skills-filter-btn skills-filter-reset" onclick="resetSkillFilters()">Reset</button>
+                <button type="button" class="skills-filter-btn" data-filter-type="category" data-category="all" onclick="setSkillCategory('all')">All</button>
+                <button type="button" class="skills-filter-btn" data-filter-type="category" data-category="System & DevOps" onclick="setSkillCategory('System & DevOps')"><span class="filter-dot" style="background:#60a5fa"></span>System & DevOps</button>
+                <button type="button" class="skills-filter-btn" data-filter-type="category" data-category="Coding" onclick="setSkillCategory('Coding')"><span class="filter-dot" style="background:#818cf8"></span>Coding</button>
+                <button type="button" class="skills-filter-btn" data-filter-type="category" data-category="Communication" onclick="setSkillCategory('Communication')"><span class="filter-dot" style="background:#34d399"></span>Communication</button>
+                <button type="button" class="skills-filter-btn" data-filter-type="category" data-category="Productivity" onclick="setSkillCategory('Productivity')"><span class="filter-dot" style="background:#a78bfa"></span>Productivity</button>
+                <button type="button" class="skills-filter-btn" data-filter-type="category" data-category="Media & Creative" onclick="setSkillCategory('Media & Creative')"><span class="filter-dot" style="background:#f472b6"></span>Media & Creative</button>
+                <button type="button" class="skills-filter-btn" data-filter-type="category" data-category="Audio & Voice" onclick="setSkillCategory('Audio & Voice')"><span class="filter-dot" style="background:#fbbf24"></span>Audio & Voice</button>
+                <button type="button" class="skills-filter-btn" data-filter-type="category" data-category="Smart Home" onclick="setSkillCategory('Smart Home')"><span class="filter-dot" style="background:#fb923c"></span>Smart Home</button>
+                <button type="button" class="skills-filter-btn" data-filter-type="category" data-category="Research & Utility" onclick="setSkillCategory('Research & Utility')"><span class="filter-dot" style="background:#94a3b8"></span>Research & Utility</button>
+                <span class="skills-filter-divider" aria-hidden="true"></span>
+                <button type="button" class="skills-filter-btn" data-filter-type="status" data-status="ready" onclick="toggleSkillStatusFilter('ready')"><span class="skill-status-dot skill-status-ready" aria-hidden="true"></span>Ready</button>
+                <button type="button" class="skills-filter-btn" data-filter-type="status" data-status="needs_setup" onclick="toggleSkillStatusFilter('needs_setup')"><span class="skill-status-dot skill-status-needs-setup" aria-hidden="true"></span>Needs Setup</button>
+                <button type="button" class="skills-filter-btn" data-filter-type="status" data-status="unknown" onclick="toggleSkillStatusFilter('unknown')"><span class="skill-status-dot skill-status-unknown" aria-hidden="true"></span>Unknown</button>
+            </div>
+</div><div class="skills-summary">
+                ${skills.length} skills · ${agents.length} agents
+            </div>
+            <div class="skills-matrix">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="skill-col-header">Skill</th><th class="category-col-header">Category</th>
+                            ${agents.map(function(agent, agentIndex) {
+                                const count = Array.isArray(assignments[agent.name]) ? assignments[agent.name].length : 0;
+                                return `<th class="agent-col-header" data-agent-index="${agentIndex}" title="${escapeAttr(agent.model || '')}"><span class="agent-header-label">${escapeHtml(agent.name || '')}<span class="agent-count">(${count}/55)</span></span></th>`;
+                            }).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        skills.forEach(function(skill) {
+            const cat = getSkillCategory(skill.name || '');
+            const catColor = CATEGORY_COLORS[cat] || '#666';
+            const status = skill.status || 'unknown';
+            const statusDot = status === 'ready'
+                ? '<span class="skill-status-dot skill-status-ready" aria-hidden="true"></span>'
+                : (status === 'needs_setup'
+                    ? '<span class="skill-status-dot skill-status-needs-setup" aria-hidden="true"></span>'
+                    : '<span class="skill-status-dot skill-status-unknown" aria-hidden="true"></span>');
+            const setupButton = status === 'needs_setup'
+                ? `<button
+                        type="button"
+                        class="skill-setup-btn"
+                        data-skill-name="${escapeAttr(skill.name || '')}"
+                        data-missing-bins="${escapeAttr(JSON.stringify(Array.isArray(skill.missingBins) ? skill.missingBins : []))}"
+                        data-install-options="${escapeAttr(JSON.stringify(Array.isArray(skill.installOptions) ? skill.installOptions : []))}"
+                        title="Setup"
+                        aria-label="Show setup requirements for ${escapeAttr(skill.name || 'skill')}"
+                        aria-expanded="false">&#9881;</button>`
+                : '';
+            html += `<tr data-skill-name="${escapeAttr(skill.name || '')}" data-skill-category="${escapeAttr(cat)}" data-skill-status="${escapeAttr(status)}">
+                <td>
+                    <div class="skill-name-cell">
+                        ${statusDot}
+                        <span class="skill-name">${escapeHtml(skill.name || '')}</span>
+                        <button
+                            type="button"
+                            class="skill-info-btn"
+                            data-desc="${escapeAttr(skill.description || 'No description available')}"
+                            title="Info"
+                            aria-label="Show description for ${escapeAttr(skill.name || 'skill')}"
+                            aria-expanded="false">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        </button>
+                        ${setupButton}
+                        <span class="skill-type-badge skill-type-${escapeAttr(skill.type || 'builtin')}">${escapeHtml(skill.type || 'builtin')}</span>
+                    </div>
+                </td>
+                <td><span class="skill-category-badge" style="background:${catColor}20;color:${catColor}">${cat}</span></td>`;
+
+            agents.forEach(function(agent, agentIndex) {
+                const assignedSkills = Array.isArray(assignments[agent.name]) ? assignments[agent.name] : [];
+                const isActive = assignedSkills.includes(skill.name);
+                const agentName = agent.name || '';
+                const skillName = skill.name || '';
+                html += `<td class="agent-skill-cell">
+                    <button
+                        type="button"
+                        class="skill-toggle ${isActive ? 'active' : ''}"
+                        data-agent-index="${agentIndex}"
+                        data-agent-name="${escapeAttr(agentName)}"
+                        data-skill-name="${escapeAttr(skillName)}"
+                        title="${escapeAttr((isActive ? 'Disable ' : 'Enable ') + skillName + ' for ' + agentName)}"
+                        aria-label="${escapeAttr((isActive ? 'Disable ' : 'Enable ') + skillName + ' for ' + agentName)}">
+                    </button>
+                </td>`;
+            });
+
+            html += '</tr>';
+        });
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        container.innerHTML = html;
+        bindSkillPopover();
+        container.querySelectorAll('.skill-toggle').forEach(function(toggle) {
+            toggle.addEventListener('click', function() {
+                toggleSkill(toggle.getAttribute('data-agent-name') || '', toggle.getAttribute('data-skill-name') || '');
+            });
+        });
+        filterSkills();
+    } catch (error) {
+        container.innerHTML = '<p style="color: var(--error);">Failed to load skills: ' + escapeHtml(error.message) + '</p>';
+    }
+}
+
+let activeSkillPopover = null;
+let activeSkillPopoverButton = null;
+let skillPopoverBound = false;
+
+function closeSkillPopover() {
+    if (activeSkillPopoverButton) {
+        activeSkillPopoverButton.setAttribute('aria-expanded', 'false');
+    }
+    if (activeSkillPopover) {
+        activeSkillPopover.remove();
+    }
+    activeSkillPopover = null;
+    activeSkillPopoverButton = null;
+}
+
+function positionSkillPopover(button, popover) {
+    const rect = button.getBoundingClientRect();
+    const margin = 10;
+    let left = rect.left;
+    let top = rect.bottom + 8;
+    const maxLeft = window.innerWidth - popover.offsetWidth - margin;
+
+    left = Math.max(margin, Math.min(left, maxLeft));
+    if (top + popover.offsetHeight > window.innerHeight - margin) {
+        top = Math.max(margin, rect.top - popover.offsetHeight - 8);
+    }
+
+    popover.style.left = left + 'px';
+    popover.style.top = top + 'px';
+}
+
+function parseSkillButtonJson(button, attributeName) {
+    try {
+        const rawValue = button.getAttribute(attributeName) || '[]';
+        const parsed = JSON.parse(rawValue);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+        return [];
+    }
+}
+
+function formatInstallOptionLabel(option) {
+    if (!option || typeof option !== 'object') return '';
+    if (typeof option.label === 'string' && option.label.trim()) return option.label.trim();
+    if (typeof option.formula === 'string' && option.formula.trim()) return option.formula.trim();
+    if (typeof option.package === 'string' && option.package.trim()) return option.package.trim();
+    if (typeof option.id === 'string' && option.id.trim()) return option.id.trim();
+    return '';
+}
+
+async function requestSkillSetup(skillName, actionButton) {
+    if (!skillName) return;
+    if (actionButton) {
+        actionButton.disabled = true;
+        actionButton.textContent = 'Queuing...';
+    }
+
+    try {
+        const response = await fetch('/api/skills/setup-request', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ skill: skillName })
+        });
+        const data = await response.json();
+        if (!response.ok || data.error) {
+            throw new Error(data.error || 'Failed to queue setup request');
+        }
+        closeSkillPopover();
+        showToast(data.message || 'Setup request queued', 'success');
+    } catch (error) {
+        if (actionButton) {
+            actionButton.disabled = false;
+            actionButton.textContent = 'Help me set up';
+        }
+        showToast('Failed to queue setup request: ' + error.message, 'error');
+    }
+}
+
+function buildSkillPopoverContent(button, popover) {
+    if (button.classList.contains('skill-info-btn')) {
+        popover.textContent = button.getAttribute('data-desc') || 'No description available';
+        return;
+    }
+
+    const skillName = button.getAttribute('data-skill-name') || 'skill';
+    const missingBins = parseSkillButtonJson(button, 'data-missing-bins');
+    const installOptions = parseSkillButtonJson(button, 'data-install-options')
+        .map(formatInstallOptionLabel)
+        .filter(Boolean);
+
+    popover.innerHTML = `
+        <div class="skill-popover-title">${escapeHtml(skillName)} setup</div>
+        <p class="skill-popover-row"><span class="skill-popover-label">Missing:</span> ${escapeHtml(missingBins.join(', ') || 'Unknown')}</p>
+    `;
+
+    if (installOptions.length) {
+        const installList = installOptions.map(function(option) {
+            return '<li>' + escapeHtml(option) + '</li>';
+        }).join('');
+        popover.innerHTML += `
+            <div class="skill-popover-row">
+                <span class="skill-popover-label">Install:</span>
+                <ul class="skill-popover-list">${installList}</ul>
+            </div>
+        `;
+    }
+
+    const actionButton = document.createElement('button');
+    actionButton.type = 'button';
+    actionButton.className = 'skill-setup-action';
+    actionButton.textContent = 'Help me set up';
+    actionButton.addEventListener('click', function(event) {
+        event.preventDefault();
+        requestSkillSetup(skillName, actionButton);
+    });
+    popover.appendChild(actionButton);
+}
+
+function showSkillPopover(button) {
+    const popover = document.createElement('div');
+    popover.className = 'skill-info-popover';
+    buildSkillPopoverContent(button, popover);
+
+    closeSkillPopover();
+
+    document.body.appendChild(popover);
+    positionSkillPopover(button, popover);
+
+    activeSkillPopover = popover;
+    activeSkillPopoverButton = button;
+    button.setAttribute('aria-expanded', 'true');
+}
+
+function bindSkillPopover() {
+    if (skillPopoverBound) return;
+    skillPopoverBound = true;
+
+    document.addEventListener('click', function(event) {
+        var button = event.target.closest('.skill-info-btn, .skill-setup-btn');
+        if (button) {
+            event.preventDefault();
+            if (button === activeSkillPopoverButton && activeSkillPopover) {
+                closeSkillPopover();
+            } else {
+                showSkillPopover(button);
+            }
+            return;
+        }
+        if (activeSkillPopover) {
+            if (activeSkillPopover.contains(event.target)) return;
+            closeSkillPopover();
+        }
+    });
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') closeSkillPopover();
+    });
+    window.addEventListener('resize', closeSkillPopover);
+}
+
+async function toggleSkill(agentName, skillName) {
+    try {
+        const currentResponse = await fetch('/api/settings/skills');
+        const currentData = await currentResponse.json();
+        if (!currentResponse.ok || currentData.error) {
+            throw new Error(currentData.error || 'Failed to load current skills');
+        }
+
+        const current = Array.isArray(currentData.assignments && currentData.assignments[agentName])
+            ? currentData.assignments[agentName]
+            : [];
+        const newSkills = current.includes(skillName)
+            ? current.filter(function(name) { return name !== skillName; })
+            : current.concat([skillName]);
+
+        const updateResponse = await fetch('/api/settings/skills', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ agent: agentName, skills: newSkills })
+        });
+        const updateData = await updateResponse.json();
+        if (!updateResponse.ok || updateData.error) {
+            throw new Error(updateData.error || 'Failed to update skills');
+        }
+
+        const mx = document.querySelector('.skills-matrix');
+        const sY = mx ? mx.scrollTop : 0;
+        await loadSkills();
+        const mx2 = document.querySelector('.skills-matrix');
+        if (mx2) mx2.scrollTop = sY;
+    } catch (error) {
+        console.error('Toggle failed:', error);
+        showToast('Failed to update skills: ' + error.message, 'error');
+    }
+}
+
+function sortSkillAgents(agents) {
+    const priority = { main: 0, deputy: 1 };
+    return agents.slice().sort(function(a, b) {
+        const aName = String((a && a.name) || '').trim();
+        const bName = String((b && b.name) || '').trim();
+        const aRank = Object.prototype.hasOwnProperty.call(priority, aName) ? priority[aName] : 2;
+        const bRank = Object.prototype.hasOwnProperty.call(priority, bName) ? priority[bName] : 2;
+
+        if (aRank !== bRank) return aRank - bRank;
+        return aName.localeCompare(bName);
+    });
+}
+
+function toggleSkillsHelp() {
+    const button = document.querySelector('.skills-help-toggle');
+    const panel = document.getElementById('skillsHelpPanel');
+    if (!button || !panel) return;
+
+    const isOpen = button.getAttribute('aria-expanded') === 'true';
+    button.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+    panel.classList.toggle('open', !isOpen);
+}
+
 function escapeHtml(text) {
     return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
@@ -1842,6 +2618,99 @@ function escapeAttr(text) {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
 }
+
+// Skills categories for filtering
+const SKILL_CATEGORIES = {
+    "System & DevOps": ["github","gh-issues","healthcheck","node-connect","mcporter","clawhub","skill-creator","tmux"],
+    "Coding": ["coding-agent","gemini"],
+    "Communication": ["discord","slack","himalaya","imsg","bluebubbles","wacli","xurl","voice-call"],
+    "Productivity": ["apple-notes","apple-reminders","bear-notes","things-mac","notion","obsidian","trello","gog"],
+    "Media & Creative": ["video-editor","video-frames","nano-banana-pro","openai-image-gen","gifgrep","songsee","camsnap","nano-pdf"],
+    "Audio & Voice": ["openai-whisper","openai-whisper-api","sherpa-onnx-tts","sag","summarize"],
+    "Smart Home": ["openhue","blucli","sonoscli","eightctl"],
+    "Research & Utility": ["weather","canvas","goplaces","oracle","session-logs","model-usage","blogwatcher","peekaboo","1password","ordercli","spotify-player","self-debate"]
+};
+
+const CATEGORY_COLORS = {
+    "System & DevOps": "#60a5fa", "Communication": "#34d399", "Media & Creative": "#f472b6",
+    "Audio & Voice": "#fbbf24", "Productivity": "#a78bfa", "Smart Home": "#fb923c", "Research & Utility": "#94a3b8", "Coding": "#818cf8"
+};
+
+let currentSkillCategoryFilter = 'all';
+const activeSkillStatusFilters = new Set();
+
+function getSkillCategory(skillName) {
+    for (const [cat, skills] of Object.entries(SKILL_CATEGORIES)) {
+        if (skills.includes(skillName)) return cat;
+    }
+    return 'Other';
+}
+
+function setSkillCategory(category) {
+    currentSkillCategoryFilter = category || 'all';
+    filterSkills();
+}
+
+function toggleSkillStatusFilter(status) {
+    if (!status) return;
+    if (activeSkillStatusFilters.has(status)) {
+        activeSkillStatusFilters.delete(status);
+    } else {
+        activeSkillStatusFilters.add(status);
+    }
+    filterSkills();
+}
+
+function resetSkillFilters() {
+    currentSkillCategoryFilter = 'all';
+    activeSkillStatusFilters.clear();
+    filterSkills();
+}
+
+function updateSkillHeaderCounts() {
+    const rows = Array.from(document.querySelectorAll('#skillsMatrixContainer tbody tr'));
+    const visibleRows = rows.filter(function(row) {
+        return row.style.display !== 'none';
+    });
+
+    document.querySelectorAll('#skillsMatrixContainer .agent-col-header').forEach(function(header) {
+        const agentIndex = header.getAttribute('data-agent-index') || '';
+        const countEl = header.querySelector('.agent-count');
+        if (!countEl) return;
+
+        let visibleCount = 0;
+        visibleRows.forEach(function(row) {
+            const toggle = row.querySelector('.skill-toggle[data-agent-index="' + agentIndex + '"]');
+            if (toggle && toggle.classList.contains('active')) {
+                visibleCount += 1;
+            }
+        });
+
+        countEl.textContent = '(' + visibleCount + '/55)';
+    });
+}
+
+function filterSkills() {
+    const category = currentSkillCategoryFilter || 'all';
+
+    document.querySelectorAll('.skills-filter-btn[data-filter-type="category"]').forEach(function(btn) {
+        btn.classList.toggle('active', btn.getAttribute('data-category') === category);
+    });
+    document.querySelectorAll('.skills-filter-btn[data-filter-type="status"]').forEach(function(btn) {
+        btn.classList.toggle('active', activeSkillStatusFilters.has(btn.getAttribute('data-status') || ''));
+    });
+
+    document.querySelectorAll('#skillsMatrixContainer tbody tr').forEach(function(row) {
+        const rowCategory = row.getAttribute('data-skill-category') || 'Other';
+        const rowStatus = row.getAttribute('data-skill-status') || 'unknown';
+        const matchesCategory = category === 'all' || rowCategory === category;
+        const matchesStatus = activeSkillStatusFilters.size === 0 || activeSkillStatusFilters.has(rowStatus);
+        row.style.display = (matchesCategory && matchesStatus) ? '' : 'none';
+    });
+
+    updateSkillHeaderCounts();
+}
+
 
 function formatBytes(bytes) {
     if (bytes < 1024) return bytes + ' B';
@@ -2162,27 +3031,6 @@ async function applyUpdate() {
     }
 }
 
-async function toggleRule(filename, enabled) {
-    try {
-        const response = await fetch('/api/logician/rules/' + filename + '/toggle', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ enabled })
-        });
-        const data = await response.json();
-        if (data.error) {
-            showToast(data.error, 'error');
-            loadRules();
-            return;
-        }
-        const rule = rulesData.find(r => r.filename === filename);
-        if (rule) rule.enabled = enabled;
-        updateRulesSummary(rulesData);
-        showToast(filename + ' ' + (enabled ? 'enabled' : 'disabled'), 'success');
-    } catch (error) {
-        showToast('Failed to toggle: ' + error.message, 'error');
-        loadRules();
-    }
-}
+// toggleRule removed — all rules always active via production_rules.mg
 </script>
 {% endblock %}
