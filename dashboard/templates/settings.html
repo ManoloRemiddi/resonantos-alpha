@@ -676,13 +676,17 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
             Memory Logs
         </a>
+        <a href="#memory-bridge" class="settings-nav-item" onclick="showSection('memory-bridge')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+            Memory Bridge
+        </a>
         <a href="#skills" class="settings-nav-item" onclick="showSection('skills')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             Skills
         </a>
-        <a href="#memory-bridge" class="settings-nav-item" onclick="showSection('memory-bridge')">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
-            Memory Bridge
+        <a href="#plugins" class="settings-nav-item" onclick="showSection('plugins')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+            Plugins
         </a>
         <a href="#updates" class="settings-nav-item" onclick="showSection('updates')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
@@ -1310,6 +1314,42 @@
             </div>
         </section>
 
+        <section class="settings-section" id="pluginsSection">
+            <h2 class="section-title">Plugins</h2>
+            <p class="section-description">Extensions loaded by the OpenClaw gateway</p>
+
+            <div style="display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap;">
+                <div class="settings-card" style="flex:1;min-width:140px;padding:16px;text-align:center;">
+                    <div style="font-size:1.5rem;font-weight:700;color:var(--accent,#4ade80);" id="pluginCustomCount">-</div>
+                    <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;">Custom Plugins</div>
+                </div>
+                <div class="settings-card" style="flex:1;min-width:140px;padding:16px;text-align:center;">
+                    <div style="font-size:1.5rem;font-weight:700;color:var(--text-primary,#fff);" id="pluginStockCount">-</div>
+                    <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;">Stock Plugins</div>
+                </div>
+                <div class="settings-card" style="flex:1;min-width:140px;padding:16px;text-align:center;">
+                    <div style="font-size:1rem;font-weight:600;color:#a78bfa;" id="pluginContextEngine">-</div>
+                    <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;">Context Engine</div>
+                </div>
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <span style="font-size:0.78rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;">Trusted (plugins.allow):</span>
+                <span id="pluginAllowChips" style="margin-left:8px;"></span>
+            </div>
+
+            <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;">
+                <button class="skills-filter-btn active" data-plugin-filter="all" onclick="filterPlugins('all',this)">All</button>
+                <button class="skills-filter-btn" data-plugin-filter="custom" onclick="filterPlugins('custom',this)">Custom</button>
+                <button class="skills-filter-btn" data-plugin-filter="stock" onclick="filterPlugins('stock',this)">Stock</button>
+                <button class="skills-filter-btn" data-plugin-filter="enabled" onclick="filterPlugins('enabled',this)">Enabled</button>
+            </div>
+
+            <div class="settings-card" style="padding:0;overflow-x:auto;">
+                <div id="pluginsTableContainer"><p style="padding:20px;">Loading plugins...</p></div>
+            </div>
+        </section>
+
 
 	    </div>
 	</div>
@@ -1365,6 +1405,8 @@
 {% block extra_js %}
 <script>
 let pendingPermission = null;
+let _pluginsData = null;
+let _pluginFilter = 'all';
 
 document.addEventListener('DOMContentLoaded', function() {
     loadSettings();
@@ -1391,6 +1433,9 @@ function showSection(section) {
     if (section === 'skills') {
         loadSkills();
     }
+    if (section === 'plugins') {
+        loadPlugins();
+    }
 }
 
 function syncSectionWithHash() {
@@ -1398,6 +1443,100 @@ function syncSectionWithHash() {
     if (section && document.getElementById(section + 'Section')) {
         showSection(section);
     }
+}
+
+async function loadPlugins() {
+    const container = document.getElementById('pluginsTableContainer');
+    if (!container) return;
+    container.innerHTML = '<p style="padding:20px;">Loading plugins...</p>';
+    try {
+        const resp = await fetch('/api/settings/plugins');
+        _pluginsData = await resp.json();
+
+        document.getElementById('pluginCustomCount').textContent = _pluginsData.totalCustom;
+        document.getElementById('pluginStockCount').textContent = _pluginsData.totalStock;
+        document.getElementById('pluginContextEngine').textContent = _pluginsData.contextEngineSlot || 'none';
+
+        const chipsEl = document.getElementById('pluginAllowChips');
+        chipsEl.innerHTML = _pluginsData.allow.map(id =>
+            '<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:0.75rem;background:rgba(74,222,128,0.12);color:#4ade80;border:1px solid rgba(74,222,128,0.3);margin:2px;">' + id + '</span>'
+        ).join('');
+
+        renderPluginsTable();
+    } catch (err) {
+        container.innerHTML = '<p style="padding:20px;color:#ef4444;">Failed to load plugins: ' + err.message + '</p>';
+    }
+}
+
+function filterPlugins(filter, btn) {
+    _pluginFilter = filter;
+    document.querySelectorAll('[data-plugin-filter]').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    renderPluginsTable();
+}
+
+function renderPluginsTable() {
+    if (!_pluginsData) return;
+    const container = document.getElementById('pluginsTableContainer');
+    let plugins = _pluginsData.plugins.slice();
+
+    if (_pluginFilter === 'custom') plugins = plugins.filter(p => p.source === 'custom');
+    else if (_pluginFilter === 'stock') plugins = plugins.filter(p => p.source === 'stock');
+    else if (_pluginFilter === 'enabled') plugins = plugins.filter(p => p.enabled === true);
+
+    plugins.sort((a, b) => {
+        const srcOrder = { custom: 0, stock: 1 };
+        const enabledOrder = (v) => v === true ? 0 : v === null ? 1 : 2;
+        const srcDiff = (srcOrder[a.source] || 1) - (srcOrder[b.source] || 1);
+        if (srcDiff !== 0) return srcDiff;
+        const enDiff = enabledOrder(a.enabled) - enabledOrder(b.enabled);
+        if (enDiff !== 0) return enDiff;
+        return a.id.localeCompare(b.id);
+    });
+
+    if (plugins.length === 0) {
+        container.innerHTML = '<p style="padding:20px;color:var(--text-secondary);">No plugins match the current filter.</p>';
+        return;
+    }
+
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">';
+    html += '<thead><tr style="border-bottom:1px solid var(--border-color,#2a2a4a);text-align:left;">';
+    html += '<th style="padding:12px 16px;color:var(--text-secondary);font-weight:500;font-size:0.75rem;text-transform:uppercase;">Status</th>';
+    html += '<th style="padding:12px 16px;color:var(--text-secondary);font-weight:500;font-size:0.75rem;text-transform:uppercase;">Name</th>';
+    html += '<th style="padding:12px 16px;color:var(--text-secondary);font-weight:500;font-size:0.75rem;text-transform:uppercase;">ID</th>';
+    html += '<th style="padding:12px 16px;color:var(--text-secondary);font-weight:500;font-size:0.75rem;text-transform:uppercase;">Source</th>';
+    html += '<th style="padding:12px 16px;color:var(--text-secondary);font-weight:500;font-size:0.75rem;text-transform:uppercase;">Version</th>';
+    html += '<th style="padding:12px 16px;color:var(--text-secondary);font-weight:500;font-size:0.75rem;text-transform:uppercase;">Description</th>';
+    html += '<th style="padding:12px 16px;color:var(--text-secondary);font-weight:500;font-size:0.75rem;text-transform:uppercase;">Config</th>';
+    html += '</tr></thead><tbody>';
+
+    plugins.forEach(p => {
+        let statusIcon, statusColor;
+        if (p.enabled === true) { statusIcon = '■'; statusColor = '#34d399'; }
+        else if (p.enabled === false) { statusIcon = '■'; statusColor = '#ef4444'; }
+        else { statusIcon = '◆'; statusColor = '#6b7280'; }
+
+        const srcBadge = p.source === 'custom'
+            ? '<span style="padding:2px 8px;border-radius:6px;font-size:0.7rem;background:rgba(45,212,191,0.12);color:#2dd4bf;border:1px solid rgba(45,212,191,0.3);">custom</span>'
+            : '<span style="padding:2px 8px;border-radius:6px;font-size:0.7rem;background:rgba(107,114,128,0.12);color:#9ca3af;border:1px solid rgba(107,114,128,0.3);">stock</span>';
+
+        let configBadges = '';
+        if (p.configuredInEntries) configBadges += '<span style="padding:1px 6px;border-radius:4px;font-size:0.65rem;background:rgba(167,139,250,0.12);color:#a78bfa;border:1px solid rgba(167,139,250,0.3);margin-right:4px;">entries</span>';
+        if (p.inAllowList) configBadges += '<span style="padding:1px 6px;border-radius:4px;font-size:0.65rem;background:rgba(74,222,128,0.12);color:#4ade80;border:1px solid rgba(74,222,128,0.3);">allowed</span>';
+
+        html += '<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">';
+        html += '<td style="padding:10px 16px;"><span style="color:' + statusColor + ';font-size:0.9rem;">' + statusIcon + '</span></td>';
+        html += '<td style="padding:10px 16px;font-weight:600;color:var(--text-primary);">' + (p.name || p.id) + '</td>';
+        html += '<td style="padding:10px 16px;font-family:monospace;font-size:0.78rem;color:var(--text-secondary);">' + p.id + '</td>';
+        html += '<td style="padding:10px 16px;">' + srcBadge + '</td>';
+        html += '<td style="padding:10px 16px;color:var(--text-secondary);font-size:0.78rem;">' + (p.version || '-') + '</td>';
+        html += '<td style="padding:10px 16px;color:var(--text-secondary);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (p.description || '-') + '</td>';
+        html += '<td style="padding:10px 16px;">' + (configBadges || '<span style="color:#555;">-</span>') + '</td>';
+        html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
 }
 
 async function loadSettings() {
