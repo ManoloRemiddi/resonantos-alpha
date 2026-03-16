@@ -1,35 +1,21 @@
 #!/usr/bin/env python3
 """
 Shield File Guard — filesystem-level protection for core system files.
-Cross-platform: macOS (chflags schg/noschg), Linux (chattr +i/-i), Windows (icacls).
-Requires root/admin to modify. The AI agent CANNOT unlock files without the password.
+Uses macOS `chflags schg/noschg` (system immutable) — requires root to modify.
+This means the AI agent CANNOT unlock files; only a human with sudo can.
+Previous version used `uchg` which could be bypassed without root.
 """
 
 import json
-import platform
 import os
 import subprocess
 import sys
 from pathlib import Path
 
-IS_WINDOWS = platform.system() == "Windows"
-IS_LINUX = platform.system() == "Linux"
-
-_REPO_ROOT = Path(__file__).resolve().parent.parent
-_SSOT_ROOT = _REPO_ROOT / "ssot"
-if not _SSOT_ROOT.exists():
-    _SSOT_ROOT = _REPO_ROOT / "ssot-template"
-
 # Core files/dirs that make the agent run
 GUARD_MANIFEST = {
-    "agent_config": {
-        "label": "Agent Configuration",
-        "paths": [
-            "~/.openclaw/agents/main/agent/auth-profiles.json",
-        ],
-        "category": "core",
-        "include_data": True,  # override exclude for .json
-    },
+    # agent_config REMOVED (2026-02-26): auth-profiles.json MUST stay writable.
+    # OpenClaw writes token refresh + usage stats to it. Locking causes EPERM → "agent failed before replying".
     "agent_extensions": {
         "label": "Agent Extensions (backups, old versions)",
         "paths": ["~/.openclaw/agents/main/agent/extensions/"],
@@ -50,25 +36,25 @@ GUARD_MANIFEST = {
     "dashboard": {
         "label": "Dashboard",
         "paths": [
-            str(_REPO_ROOT / "dashboard" / "server_v2.py"),
-            str(_REPO_ROOT / "dashboard" / "templates"),
-            str(_REPO_ROOT / "dashboard" / "static"),
+            "~/resonantos-augmentor/dashboard/server_v2.py",
+            "~/resonantos-augmentor/dashboard/templates/",
+            "~/resonantos-augmentor/dashboard/static/",
         ],
         "category": "core",
     },
     "shield": {
         "label": "Shield",
-        "paths": [str(_REPO_ROOT / "shield")],
+        "paths": ["~/resonantos-augmentor/shield/"],
         "category": "core",
     },
     "ssot_l0": {
         "label": "SSOT L0 — Foundation",
-        "paths": [str(_SSOT_ROOT / "L0")],
+        "paths": ["~/resonantos-augmentor/ssot/L0/"],
         "category": "ssot",
     },
     "ssot_l1": {
         "label": "SSOT L1 — Architecture",
-        "paths": [str(_SSOT_ROOT / "L1")],
+        "paths": ["~/resonantos-augmentor/ssot/L1/"],
         "category": "ssot",
     },
     "github_push": {
@@ -77,7 +63,7 @@ GUARD_MANIFEST = {
         "category": "core",
         "hook_guard": True,  # Special: manages pre-push hook instead of chflags
         "repos": [
-            str(_REPO_ROOT),
+            "~/resonantos-augmentor",
         ],
     },
 }
@@ -110,7 +96,8 @@ def should_exclude(filepath: Path) -> bool:
     return False
 
 
-def collect_files(paths, include_data=False, exclude_names=None):
+def collect_files(paths: list[str], include_data: bool = False,
+                   exclude_names: list[str] | None = None) -> list[Path]:
     """Collect all files from paths (expanding dirs recursively)."""
     result = []
     _excl = set(exclude_names or [])
@@ -128,32 +115,12 @@ def collect_files(paths, include_data=False, exclude_names=None):
 
 def is_locked(filepath: Path) -> bool:
     """Check if file has schg or uchg flag set (either counts as locked)."""
-    if IS_WINDOWS:
-        try:
-            result = subprocess.run(
-                ["icacls", str(filepath)],
-                capture_output=True, text=True, timeout=5
-            )
-            return "(DENY)" in result.stdout and "(W)" in result.stdout
-        except Exception:
-            return False
-    if IS_LINUX:
-        try:
-            result = subprocess.run(
-                ["lsattr", str(filepath)],
-                capture_output=True, text=True, timeout=5
-            )
-            # lsattr output: "----i---------e------- /path/to/file"
-            attrs = result.stdout.split()[0] if result.stdout.strip() else ""
-            return "i" in attrs
-        except Exception:
-            return False
     try:
-        result = subprocess.run(
-            ["ls", "-lO", str(filepath)],
-            capture_output=True, text=True, timeout=5
-        )
-        return "schg" in result.stdout or "uchg" in result.stdout
+        import os, stat
+        st = os.stat(str(filepath))
+        flags = st.st_flags
+        # UF_IMMUTABLE = 0x00000002 (uchg), SF_IMMUTABLE = 0x00020000 (schg)
+        return bool(flags & (0x00000002 | 0x00020000))
     except Exception:
         return False
 
@@ -218,42 +185,6 @@ def _sudo_chflags(flag: str, filepath: str, password: str = None) -> bool:
     return result.returncode == 0
 
 
-def _platform_lock(filepath: str, password: str = None) -> bool:
-    if IS_WINDOWS:
-        try:
-            result = subprocess.run(
-                ["icacls", filepath, "/deny", "Everyone:(W)"],
-                capture_output=True, text=True, timeout=10
-            )
-            return result.returncode == 0
-        except Exception:
-            return False
-    if IS_LINUX:
-        cmd = ["sudo", "-S", "chattr", "+i", filepath] if password else ["sudo", "chattr", "+i", filepath]
-        stdin_data = (password + "\n") if password else None
-        result = subprocess.run(cmd, input=stdin_data, capture_output=True, text=True, timeout=10)
-        return result.returncode == 0
-    return _sudo_chflags("schg", filepath, password)
-
-
-def _platform_unlock(filepath: str, password: str = None) -> bool:
-    if IS_WINDOWS:
-        try:
-            result = subprocess.run(
-                ["icacls", filepath, "/remove:d", "Everyone"],
-                capture_output=True, text=True, timeout=10
-            )
-            return result.returncode == 0
-        except Exception:
-            return False
-    if IS_LINUX:
-        cmd = ["sudo", "-S", "chattr", "-i", filepath] if password else ["sudo", "chattr", "-i", filepath]
-        stdin_data = (password + "\n") if password else None
-        result = subprocess.run(cmd, input=stdin_data, capture_output=True, text=True, timeout=10)
-        return result.returncode == 0
-    return _sudo_chflags("noschg", filepath, password)
-
-
 def lock_group(group_id: str, password: str = None) -> dict:
     """Lock all files in a group using sudo chflags schg (system immutable, root-only)."""
     if group_id not in GUARD_MANIFEST:
@@ -269,7 +200,7 @@ def lock_group(group_id: str, password: str = None) -> dict:
                           exclude_names=group.get("exclude_names"))
     results = []
     for f in files:
-        ok = _platform_lock(str(f), password)
+        ok = _sudo_chflags("schg", str(f), password)
         results.append({"path": str(f), "locked": ok, **({"error": "sudo failed"} if not ok else {})})
     return {"group": group_id, "results": results}
 
@@ -289,7 +220,7 @@ def unlock_group(group_id: str, password: str = None) -> dict:
                           exclude_names=group.get("exclude_names"))
     results = []
     for f in files:
-        ok = _platform_unlock(str(f), password)
+        ok = _sudo_chflags("noschg", str(f), password)
         results.append({"path": str(f), "unlocked": ok, **({"error": "sudo failed"} if not ok else {})})
     return {"group": group_id, "results": results}
 
@@ -312,8 +243,7 @@ def lock_hook(repo_path: Path) -> dict:
     if hook.exists() and "Shield File Guard" not in hook.read_text():
         hook.rename(hook.with_suffix(".pre-shield-backup"))
     hook.write_text(PRE_PUSH_HOOK)
-    if not IS_WINDOWS:
-        hook.chmod(0o755)
+    hook.chmod(0o755)
     return {"path": str(hook), "locked": True}
 
 
@@ -331,7 +261,7 @@ def lock_file(filepath: str, password: str = None) -> dict:
     fp = expand_path(filepath)
     if not fp.exists():
         return {"error": f"File not found: {filepath}"}
-    ok = _platform_lock(str(fp), password)
+    ok = _sudo_chflags("schg", str(fp), password)
     return {"path": str(fp), "locked": ok} if ok else {"error": "sudo failed — root required"}
 
 
@@ -339,7 +269,7 @@ def unlock_file(filepath: str, password: str = None) -> dict:
     fp = expand_path(filepath)
     if not fp.exists():
         return {"error": f"File not found: {filepath}"}
-    ok = _platform_unlock(str(fp), password)
+    ok = _sudo_chflags("noschg", str(fp), password)
     return {"path": str(fp), "unlocked": ok} if ok else {"error": "sudo failed — root required"}
 
 
