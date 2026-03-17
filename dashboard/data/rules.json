@@ -1481,5 +1481,147 @@
         "label": "rejected"
       }
     ]
+  },
+  {
+    "id": "network-allowlist",
+    "name": "Network Allowlist Gate",
+    "category": "security",
+    "description": "Controls which domains agents can fetch via web_fetch. Default-deny with allowlist of trusted domains. Blocklist for known data exfiltration services.",
+    "trigger": "Agent calls web_fetch",
+    "steps": [
+      {
+        "id": "s1",
+        "label": "web_fetch request",
+        "type": "action",
+        "description": "Agent requests to fetch a URL"
+      },
+      {
+        "id": "s2",
+        "label": "On blocklist?",
+        "type": "decision",
+        "description": "Check if domain matches blocklist (pastebin, transfer.sh, file.io, ngrok, etc.)"
+      },
+      {
+        "id": "s3",
+        "label": "On allowlist?",
+        "type": "decision",
+        "description": "Check if domain matches allowlist (31 trusted domains: AI providers, dev tools, docs)"
+      },
+      {
+        "id": "s4",
+        "label": "Allow",
+        "type": "action",
+        "description": "Domain is trusted \u2014 fetch proceeds"
+      },
+      {
+        "id": "s5",
+        "label": "Block (exfil)",
+        "type": "gate",
+        "description": "Domain is on blocklist \u2014 data exfiltration risk"
+      },
+      {
+        "id": "s6",
+        "label": "Block (unknown)",
+        "type": "gate",
+        "description": "Domain not in allowlist \u2014 tell Manolo to add if legitimate"
+      }
+    ],
+    "edges": [
+      {
+        "from": "s1",
+        "to": "s2"
+      },
+      {
+        "from": "s2",
+        "to": "s5",
+        "label": "yes"
+      },
+      {
+        "from": "s2",
+        "to": "s3",
+        "label": "no"
+      },
+      {
+        "from": "s3",
+        "to": "s4",
+        "label": "yes"
+      },
+      {
+        "from": "s3",
+        "to": "s6",
+        "label": "no"
+      }
+    ],
+    "enforced": true,
+    "enforcementLayer": "Shield (shield-gate.js Layer 10)",
+    "enforcementMode": "blocking"
+  },
+  {
+    "id": "sensitive-path",
+    "name": "Sensitive Path Protection Gate",
+    "category": "security",
+    "description": "Blocks sub-agent access to credential and secret paths (.ssh, .gnupg, .aws, .env, openclaw.json, etc.). Main agent is exempt for diagnostics.",
+    "trigger": "Sub-agent reads/writes/execs on sensitive paths",
+    "steps": [
+      {
+        "id": "s1",
+        "label": "File/exec access",
+        "type": "action",
+        "description": "Agent accesses a file path or runs exec with paths"
+      },
+      {
+        "id": "s2",
+        "label": "Is main agent?",
+        "type": "decision",
+        "description": "Check if sessionKey starts with agent:main:main"
+      },
+      {
+        "id": "s3",
+        "label": "Sensitive path?",
+        "type": "decision",
+        "description": "Match against 25 credential path patterns (.ssh, .gnupg, .aws, .env, id_rsa, etc.)"
+      },
+      {
+        "id": "s4",
+        "label": "Allow",
+        "type": "action",
+        "description": "Main agent or non-sensitive path \u2014 access permitted"
+      },
+      {
+        "id": "s5",
+        "label": "Block",
+        "type": "gate",
+        "description": "Sub-agent blocked from credential/secret path"
+      }
+    ],
+    "edges": [
+      {
+        "from": "s1",
+        "to": "s2"
+      },
+      {
+        "from": "s2",
+        "to": "s4",
+        "label": "yes (main)"
+      },
+      {
+        "from": "s2",
+        "to": "s3",
+        "label": "no (sub-agent)"
+      },
+      {
+        "from": "s3",
+        "to": "s5",
+        "label": "yes"
+      },
+      {
+        "from": "s3",
+        "to": "s4",
+        "label": "no"
+      }
+    ],
+    "enforced": true,
+    "enforcementLayer": "Shield (shield-gate.js Layer 11)",
+    "enforcementMode": "blocking"
   }
 ]
