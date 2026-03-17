@@ -112,6 +112,79 @@ const PROTECTED_PATHS = [
   /ssot\/private\//,
 ];
 
+const NETWORK_ALLOWED_DOMAINS = [
+  /anthropic\.com$/,
+  /openai\.com$/,
+  /nvidia\.com$/,
+  /google\.com$/,
+  /googleapis\.com$/,
+  /github\.com$/,
+  /githubusercontent\.com$/,
+  /npmjs\.org$/,
+  /npmjs\.com$/,
+  /pypi\.org$/,
+  /docs\.python\.org$/,
+  /openclaw\.ai$/,
+  /clawhub\.com$/,
+  /crates\.io$/,
+  /rubygems\.org$/,
+  /developer\.mozilla\.org$/,
+  /stackoverflow\.com$/,
+  /stackexchange\.com$/,
+  /wikipedia\.org$/,
+  /arxiv\.org$/,
+  /medium\.com$/,
+  /substack\.com$/,
+  /youtube\.com$/,
+  /reddit\.com$/,
+  /telegram\.org$/,
+  /discord\.com$/,
+  /solana\.com$/,
+  /resonantos\.com$/,
+  /manoloremiddi\.com$/,
+  /augmentatism\.com$/,
+];
+
+const NETWORK_BLOCKED_DOMAINS = [
+  /pastebin\.com$/,
+  /transfer\.sh$/,
+  /file\.io$/,
+  /0x0\.st$/,
+  /hastebin\.com$/,
+  /privatebin\./,
+  /ngrok\.io$/,
+  /webhook\.site$/,
+  /requestbin\./,
+  /pipedream\.com$/,
+];
+
+const SENSITIVE_PATH_PATTERNS = [
+  /\/\.ssh\//,
+  /\/\.ssh$/,
+  /\/\.gnupg\//,
+  /\/\.gnupg$/,
+  /\/\.aws\//,
+  /\/\.aws$/,
+  /\/\.azure\//,
+  /\/\.gcloud\//,
+  /\/\.kube\//,
+  /\/\.docker\/config\.json/,
+  /\/\.netrc$/,
+  /\/\.env$/,
+  /\/\.env\./,
+  /id_rsa/,
+  /id_ed25519/,
+  /private_key/,
+  /\.secret$/,
+  /\.secret\//,
+  /\/\.keychain\//,
+  /\/credentials$/,
+  /\/credentials\//,
+  /\/\.config\/solana\/id\.json/,
+  /\.openclaw\/openclaw\.json/,
+  /auth-profiles\.json/,
+];
+
 // --- Safe Command Prefixes (always allow) ---
 const SAFE_PREFIXES = [
   /^ls\b/, /^cat\b/, /^head\b/, /^tail\b/, /^grep\b/, /^find\b/,
@@ -1135,6 +1208,86 @@ module.exports = function shieldGateExtension(api) {
         if (words > 15 && RESEARCH_KEYWORDS.test(query)) {
           log("BLOCK", "Research Discipline Gate", { query: query.slice(0, 80), words });
           return { block: true, blockReason: `[Research Discipline Gate] Query too complex for basic web_search (${words} words). The AI will delegate this to the researcher agent instead for higher-quality results. No action needed.` + ERROR_EXPLAIN_INSTRUCTION };
+        }
+      }
+
+      // --- Layer 10: Network Allowlist Gate ---
+      if (toolName === "web_fetch") {
+        const rawUrl = String(params?.url || "").trim();
+        let domain = rawUrl;
+        try {
+          domain = new URL(rawUrl).hostname.toLowerCase();
+        } catch (_) {
+          // Fall back to the raw value so invalid URLs still fail closed below.
+        }
+
+        for (const pattern of NETWORK_BLOCKED_DOMAINS) {
+          if (pattern.test(domain)) {
+            log("BLOCK", "Network Allowlist Gate", { url: rawUrl, domain, reason: "blocklist", pattern: pattern.source });
+            return {
+              block: true,
+              blockReason: `🌐 [Network Allowlist Gate] Blocked web_fetch to "${domain}" — domain is on the blocklist (data exfiltration risk).` + ERROR_EXPLAIN_INSTRUCTION
+            };
+          }
+        }
+
+        let allowed = false;
+        for (const pattern of NETWORK_ALLOWED_DOMAINS) {
+          if (pattern.test(domain)) {
+            allowed = true;
+            log("ALLOW", "Network Allowlist Gate", { url: rawUrl, domain, pattern: pattern.source });
+            break;
+          }
+        }
+
+        if (!allowed) {
+          log("BLOCK", "Network Allowlist Gate", { url: rawUrl, domain, reason: "not_in_allowlist" });
+          return {
+            block: true,
+            blockReason: `🌐 [Network Allowlist Gate] Blocked web_fetch to "${domain}" — domain not in allowlist. If this domain is legitimate, tell Manolo so it can be added.` + ERROR_EXPLAIN_INSTRUCTION
+          };
+        }
+      }
+
+      // --- Layer 11: Sensitive Path Protection Gate ---
+      if (!String(ctx?.sessionKey || "").startsWith("agent:main:main")) {
+        if (toolName === "read" || toolName === "write" || toolName === "edit") {
+          const rawPath = String(params?.file_path || params?.path || "");
+          const normalizedPath = rawPath.replace(/^~(?=\/|$)/, HOME);
+          for (const pattern of SENSITIVE_PATH_PATTERNS) {
+            if (pattern.test(normalizedPath)) {
+              log("BLOCK", "Sensitive Path Gate", {
+                tool: toolName,
+                path: normalizedPath,
+                sessionKey: String(ctx?.sessionKey || "").slice(0, 30),
+                pattern: pattern.source
+              });
+              return {
+                block: true,
+                blockReason: `🔐 [Sensitive Path Gate] Blocked access to "${normalizedPath}" — credential/secret paths are restricted for sub-agents. Only the main agent can access sensitive paths.` + ERROR_EXPLAIN_INSTRUCTION
+              };
+            }
+          }
+        }
+
+        if (toolName === "exec") {
+          const rawCommand = String(params?.command || "");
+          const expandedCommand = rawCommand.replace(/~/g, HOME);
+          for (const pattern of SENSITIVE_PATH_PATTERNS) {
+            const match = expandedCommand.match(pattern);
+            if (match) {
+              log("BLOCK", "Sensitive Path Gate", {
+                tool: toolName,
+                path: match[0],
+                sessionKey: String(ctx?.sessionKey || "").slice(0, 30),
+                pattern: pattern.source
+              });
+              return {
+                block: true,
+                blockReason: `🔐 [Sensitive Path Gate] Blocked access to "${match[0]}" — credential/secret paths are restricted for sub-agents. Only the main agent can access sensitive paths.` + ERROR_EXPLAIN_INSTRUCTION
+              };
+            }
+          }
         }
       }
 
