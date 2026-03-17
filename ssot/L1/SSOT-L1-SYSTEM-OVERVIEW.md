@@ -87,6 +87,20 @@ Configure in `openclaw.json`. Supported: Telegram, Discord, Webchat, Signal, Wha
 - **Scheduler:** Built into gateway
 - **Job types:** `systemEvent` (inject into main session) or `agentTurn` (isolated sub-agent)
 
+### 2.9 Platform Security Configuration
+
+Recommended security settings for production deployments:
+
+| Setting | Recommended | Why |
+|---------|-------------|-----|
+| `tools.sessions.visibility` | `tree` | Agent sees only own session + spawned sub-agents. `self` breaks monitoring; `all` leaks cross-session data. |
+| Queue mode | `collect` (default) | Corrections batch together, background agents finish uninterrupted. |
+| `plugins.allow` | Explicit allowlist | Only load plugins you trust. Reduces attack surface. |
+
+**Agent Tool Restrictions:** Sandbox agents by role. Research agents should have web/file/memory access but no exec/browser/messaging. Creative agents should be local-only (no web, no messaging). Define per-agent `tools.allow` lists in your config.
+
+**Node Permissions (Multi-Machine):** Apply least-privilege allowlists for remote nodes. Only designated agents (main, deputy, setup) should target remote nodes. Deny destructive operations by default.
+
 ## 3. ResonantOS Layer (What We Build)
 
 ### 3.1 SSoT System

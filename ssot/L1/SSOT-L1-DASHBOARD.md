@@ -1,10 +1,11 @@
 # ResonantOS Dashboard -- Architecture
+Updated: 2026-03-17
 
 | Field | Value |
 |-------|-------|
-| ID | SSOT-L1-DASHBOARD-V1 |
+| ID | SSOT-L1-DASHBOARD-V2 |
 | Created | 2026-02-11 |
-| Updated | 2026-03-02 |
+| Updated | 2026-03-17 |
 | Author | Augmentor |
 | Level | L1 (Architecture) |
 | Status | Active |
@@ -14,7 +15,7 @@
 
 ## 1. Overview
 
-Local web dashboard for managing ResonantOS. Runs on `localhost:19100`. Not a cloud service -- everything stays on the user's machine.
+Local web dashboard for managing ResonantOS. Runs on `localhost:19100`. Not a cloud service -- everything stays on the user's machine. 160+ API routes, 17 navigable pages, 5 Settings sub-tabs.
 
 ## 2. Stack
 
@@ -23,38 +24,58 @@ Local web dashboard for managing ResonantOS. Runs on `localhost:19100`. Not a cl
 | Backend | Python Flask (single `server_v2.py`) |
 | Templates | Jinja2 with dark theme |
 | Database | SQLite (`chatbots.db` for chatbot manager) |
-| Frontend | Vanilla JS, no npm/node dependencies |
+| Frontend | Vanilla JS, Cytoscape.js (policy graph), no npm/node dependencies |
 | CSS | Custom dark theme with CSS variables |
 | Port | 19100 (default) |
 
 ## 3. Pages
 
+### 3.1 Navigation Pages
+
 | Page | Route | Purpose |
 |------|-------|---------|
-| Overview | `/` | System health, agent status, uptime, activity feed |
-| Agents | `/agents` | Agent management, skills marketplace |
+| Overview | `/` | System health, agent status, uptime, activity feed, LCM status |
+| Shield | `/shield` | Security layers status, file guard summary, Memory Doorman, YARA scan results |
+| Agents | `/agents` | Agent management, agent cards with model/channel info |
 | Chatbots | `/chatbots` | Chatbot builder with visual customizer, widget embeds, knowledge base |
-| R-Memory | `/r-memory` | SSoT document manager, keyword config, file locking |
-| Projects | `/projects` | Project tracking |
-| Docs | `/docs` | Documentation browser |
+| R-Memory | `/r-memory` | SSoT document manager, keyword config, file locking, compression stats |
+| SSoT | `/ssot` | SSoT document browser and staleness tracker |
+| Projects | `/projects` | Monday.com-inspired project manager with Kanban boards, drag-and-drop tasks |
+| Wallet | `/wallet` | Solana wallet interface, token balances, NFT minting, Alpha onboarding |
+| Tribes | `/tribes` | Community tribe management, membership |
+| Bounties | `/bounties` | Bounty board, task claiming, rewards |
+| Protocol Store | `/protocol-store` | Protocol marketplace |
+| Policy Graph | `/policy-graph` | Visual policy graph (Cytoscape.js + dagre), protocol flows, enforcement badges |
+| Docs | `/docs` | Documentation browser with semantic search |
 | TODO | `/todo` | Task management |
-| Ideas | `/ideas` | Idea capture |
-| Intelligence | `/intelligence` | Research and intelligence tools |
-| Settings | `/settings` | System configuration, rules |
+| License | `/license` | License agreement page |
+| Settings | `/settings` | System configuration (5 sub-tabs, see below) |
 
-## 4. R-Memory Page (SSoT Manager)
+### 3.2 Settings Sub-Tabs
 
-### 4.1 Purpose
-Visual interface for managing Single Source of Truth (SSoT) documents. These are markdown files organized in a hierarchy (L0-L4) that get injected into the AI agent's context by R-Awareness when relevant keywords are detected in conversation.
+| Tab | Purpose |
+|-----|---------|
+| General | System config, model info, gateway status |
+| Rules | Logician rules viewer (Mangle/Datalog), working/available rules |
+| Memory Bridge | MCP server configuration for external AI access |
+| Skills | 55 skills × 10 agents matrix, status shapes (circle/diamond), two-axis filtering, setup popovers |
+| Plugins | 7 custom + 43 stock plugins, status labels (Active/On-demand/Retired), allow-list chips, filter buttons |
 
-### 4.2 Features
-- **Document tree**: Browse SSoTs by layer (L0-L4)
-- **Markdown editor**: Split-pane with live preview, token counter
-- **Keywords per document**: Configure trigger words for R-Awareness injection
-- **Dual token display**: Shows both compressed (.ai.md) and raw (.md) token counts
-- **File locking**: OS-level immutable flags prevent AI from editing critical docs
+## 4. Key Page Details
 
-### 4.3 Layer Hierarchy
+### 4.1 R-Memory (SSoT Manager)
+
+Visual interface for managing Single Source of Truth (SSoT) documents.
+
+**Features:**
+- Document tree: Browse SSoTs by layer (L0-L4)
+- Markdown editor: Split-pane with live preview, token counter
+- Keywords per document: Configure trigger words for R-Awareness injection
+- Dual token display: Shows both compressed (.ai.md) and raw (.md) token counts
+- File locking: OS-level immutable flags (`chflags uchg` on macOS, `chattr +i` on Linux)
+- Lock state shown as 🔒/🔓 per document and per layer
+
+**Layer Hierarchy:**
 
 | Layer | Name | Purpose | Lock Default |
 |-------|------|---------|-------------|
@@ -64,78 +85,126 @@ Visual interface for managing Single Source of Truth (SSoT) documents. These are
 | L3 | Drafts | Plans, proposals, research in progress | Unlocked |
 | L4 | Notes | Working notes, session logs, incidents | Unlocked |
 
-### 4.4 File Locking System
+**Compression:** Each SSoT has `.md` (source, human-readable) + `.ai.md` (compressed, 55-80% smaller). R-Awareness injects `.ai.md` to save tokens. Edit `.md` first, regenerate `.ai.md` via `regenerate-ai-md.sh`. Shield Layer 6l enforces this workflow.
 
-**macOS**: Uses `chflags uchg` (user immutable flag). Lock is free, unlock requires sudo (master password). Strongest OS-level protection -- even root processes respect it by default.
+### 4.2 Shield Page
 
-**Linux**: Users should implement via `chattr +i` (requires root). Same concept, different command. The AI can help build this.
+Dedicated security monitoring interface.
 
-**Windows**: Users should implement via `attrib +R` (read-only) or NTFS ACLs. The AI can help build this.
+**Features:**
+- Security layer status cards (14 blocking layers with descriptions)
+- File Guard summary (1,800+ guarded files, lazy group loading for performance)
+- Memory Doorman status (fswatch sanitizer for memory/ dirs)
+- YARA scan results and history
+- Performance: uses `os.stat()` for flag checks (140x faster than subprocess)
 
-The dashboard detects lock state from the filesystem and shows 🔒/🔓 per document and per layer.
+### 4.3 Policy Graph
 
-### 4.5 Compression System
+Visual representation of the entire policy system using Cytoscape.js + dagre layout.
 
-Each SSoT document can have a compressed `.ai.md` version alongside it:
-- Raw `.md`: Human-readable, full document (what users edit)
-- Compressed `.ai.md`: Lossless compressed version (tables over prose, terse, all data preserved)
-- R-Awareness injects the `.ai.md` version to save 55-80% tokens
-- Compression done by Haiku sub-agent (cheap model)
+**Features:**
+- Interactive graph: agents, rules, protocols as nodes with edges showing relationships
+- Category-based color coding: teal (stateful agents), gray (tool agents), amber (task agents)
+- 18 policy rules with enforcement badges (blocking/advisory)
+- 6 protocol flows visualized
+- Click-to-inspect nodes
 
-### 4.6 API Endpoints
+### 4.4 Projects
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | `/api/r-memory/documents` | List all SSoT docs with metadata |
-| GET | `/api/r-memory/documents/<path>` | Get document content |
-| PUT | `/api/r-memory/documents/<path>` | Save document content |
-| POST | `/api/r-memory/documents` | Create new document |
-| DELETE | `/api/r-memory/documents/<path>` | Delete (move to trash) |
-| GET | `/api/r-memory/keywords` | Get keyword mappings |
-| PUT | `/api/r-memory/keywords` | Save keyword mappings |
-| GET | `/api/r-memory/stats` | Overview statistics |
-| POST | `/api/r-memory/lock/<path>` | Lock a document |
-| POST | `/api/r-memory/unlock/<path>` | Unlock (requires password) |
-| POST | `/api/r-memory/lock-layer/<layer>` | Lock entire layer |
-| POST | `/api/r-memory/unlock-layer/<layer>` | Unlock entire layer |
+Monday.com-inspired project management with Kanban boards.
 
-## 5. File Structure
+**Features:**
+- Project cards with icon, priority, progress bar, task summary, deadline
+- 4-column Kanban board (To Do / In Progress / Blocked / Done)
+- Drag-and-drop task management
+- File-based JSON storage (`dashboard/data/projects/`)
+
+### 4.5 Wallet
+
+Solana wallet interface for Alpha onboarding and token management.
+
+**Features:**
+- Token balances ($RCT soulbound + $RES transferable + 5 REX sub-tokens)
+- NFT minting (Identity NFTs)
+- Alpha onboarding flow (6 steps: Wallet → Agreement → License → Manifesto → Identity NFT → Badge)
+- Reputation and XP system, leaderboard
+
+### 4.6 Settings Sub-Tab: Plugins
+
+**Features:**
+- 7 custom plugins (coherence-gate, heuristic-auditor, lossless-claw, r-awareness, r-memory, shield-gate, usage-tracker)
+- 43 stock OpenClaw plugins
+- Status labels: Active (green ●), On-demand (blue ⟳), Retired (with explanation note)
+- Allow-list chips, filter buttons (All/Custom/Stock)
+
+### 4.7 Settings Sub-Tab: Skills
+
+**Features:**
+- 55 skills × 10 agents matrix UI
+- Status shapes: circle (available), diamond (on-demand)
+- Two-axis filtering (by skill, by agent)
+- Setup popovers with agent configuration
+
+## 5. API Structure
+
+160+ routes organized by domain:
+
+| Domain | Prefix | Example Endpoints |
+|--------|--------|-------------------|
+| Overview | `/api/overview` | status, agents, sessions, lcm |
+| Shield | `/api/shield` | layers, guard/summary, guard/group, yara, doorman |
+| R-Memory | `/api/r-memory` | documents, keywords, stats, lock/unlock |
+| Projects | `/api/projects` | CRUD, tasks, reorder |
+| Wallet | `/api/wallet` | balances, mint-nft, onboarding-status, reputation, leaderboard |
+| Tribes | `/api/tribes` | CRUD, join/leave |
+| Bounties | `/api/bounties` | CRUD, claim/submit/review |
+| Docs | `/api/docs` | tree, file, search, semantic |
+| Logician | `/api/logician` | rules, facts, query |
+| Settings | `/api/settings` | plugins, skills, config |
+| Policy Graph | `/api/rules` | rules, protocols |
+
+## 6. File Structure
 
 ```
 dashboard/
-├── server.py              # Flask backend (all routes + API)
+├── server_v2.py           # Flask backend (160+ routes, single file)
 ├── templates/
-│   ├── base.html          # Sidebar + layout shell
-│   ├── index.html         # Overview page
-│   ├── chatbots.html      # Chatbot manager
-│   ├── r-memory.html      # SSoT manager
-│   ├── agents.html        # Agent management
-│   └── ...                # Other pages
+│   ├── base.html          # Sidebar + layout shell (dark theme)
+│   ├── index.html          # Overview
+│   ├── shield.html         # Security monitoring
+│   ├── policy-graph.html   # Cytoscape.js visual graph
+│   ├── settings.html       # 5 sub-tabs (General, Rules, Memory Bridge, Skills, Plugins)
+│   ├── wallet.html         # Solana wallet + onboarding
+│   └── ... (21 templates total)
 ├── static/
-│   ├── css/dashboard.css  # Dark theme styles
+│   ├── css/dashboard.css   # Dark theme styles
+│   ├── css/dashboard-branded.css  # Brand overrides
 │   └── js/dashboard.js    # Shared JS utilities
-├── chatbots.db            # SQLite database
+├── data/
+│   └── projects/           # JSON project files
+├── chatbots.db             # SQLite database
 └── README.md
 ```
 
-## 6. Design Principles
+## 7. Design Principles
 
 - **Local-first**: Everything runs on the user's machine, no cloud dependency
-- **Single file backend**: One `server.py`, easy to understand and modify
+- **Single file backend**: One `server_v2.py`, easy to understand and modify
 - **Dark theme**: Consistent with terminal/dev aesthetic
 - **AI-friendly**: The AI can read this doc and help users extend/customize the dashboard
-- **No build step**: Pure Python + vanilla JS, no npm/webpack/bundler
+- **No build step**: Pure Python + vanilla JS (+ Cytoscape.js for graph), no npm/webpack/bundler
 
-## 7. Dependencies
+## 8. Dependencies
 
 - Python 3.x
-- Flask
-- flask-cors
+- Flask, flask-cors
 - psutil
 - markdown2 (optional, for server-side rendering)
+- Cytoscape.js + dagre (CDN, for policy graph)
 
-## 8. Related Documents
+## 9. Related Documents
 
-- R-Memory plugin: `SSOT-L2-R-MEMORY.md`
-- R-Awareness spec: `SSOT-L1-R-AWARENESS-OLD.md`
-- R-Memory strategy: `R-MEMORY-V2-STRATEGY.md`
+- Shield spec: `SSOT-L1-SHIELD.md`
+- R-Awareness spec: `SSOT-L1-R-AWARENESS.md`
+- Logician spec: `SSOT-L1-LOGICIAN.md`
+- System overview: `SSOT-L1-SYSTEM-OVERVIEW.md`
