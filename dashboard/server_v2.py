@@ -3449,9 +3449,6 @@ def symbiotic_pair_info():
 def todo_page():
     return render_template("todo.html", active_page="todo")
 
-@app.route("/ideas")
-def ideas_page():
-    return render_template("ideas.html", active_page="ideas")
 
 @app.route("/intelligence")
 def intelligence_page():
