@@ -1,5 +1,5 @@
 ## Root Cause
-morning-digest.py contains personal email addresses from the source system. It should not be in Alpha.
+morning-digest.py contained hardcoded personal email addresses from the source system. It should not be in Alpha.
 
 ## Fix
 Delete the file ~/resonantos-alpha/scripts/morning-digest.py entirely. Also clean up artifacts from shield-gate extension: delete ~/resonantos-alpha/extensions/shield-gate/.git directory, ~/resonantos-alpha/extensions/shield-gate/index.js.bak, and ~/resonantos-alpha/extensions/shield-gate/TASK.md.
@@ -19,7 +19,7 @@ Run: test ! -f ~/resonantos-alpha/scripts/morning-digest.py && test ! -d ~/reson
 - No personal data remains in scripts/
 
 ## Data Context
-morning-digest.py has REDACTED_EMAIL and REDACTED_EMAIL hardcoded.
+morning-digest.py contained hardcoded personal email addresses.
 
 ## Preferences
 Use rm for files and rm -rf for .git directory. These are deletions, not modifications.

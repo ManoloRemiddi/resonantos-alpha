@@ -48,7 +48,7 @@ System status (openclaw CLI)
 
 - **Runtime:** Node.js 25+ (already installed)
 - **SQLite:** Use `node:sqlite` (built-in module) — NOT better-sqlite3
-- **Vector extension:** Load vec0.dylib from `/opt/homebrew/lib/node_modules/openclaw/node_modules/sqlite-vec-darwin-arm64/vec0.dylib`
+- **Vector extension:** Load vec0.dylib from `/path/to/vec0.dylib`
 - **MCP SDK:** `@modelcontextprotocol/sdk` (install via npm)
 - **Transport:** stdio (standard for Claude Desktop)
 - **Entry point:** `src/index.js` (plain JS, no TypeScript build step needed)
@@ -86,10 +86,10 @@ CREATE VIRTUAL TABLE chunks_vec USING vec0(
 ### File Paths (constants)
 
 ```javascript
-const MEMORY_DB = '/Users/augmentor/.openclaw/memory/main.sqlite';
-const VEC0_PATH = '/opt/homebrew/lib/node_modules/openclaw/node_modules/sqlite-vec-darwin-arm64/vec0.dylib';
-const SSOT_DIR = '/Users/augmentor/resonantos-augmentor/ssot';
-const RESEARCH_DIR = '/Users/augmentor/resonantos-augmentor/research';
+const MEMORY_DB = '/path/to/.openclaw/memory/main.sqlite';
+const VEC0_PATH = '/path/to/vec0.dylib';
+const SSOT_DIR = '/path/to/resonantos/ssot';
+const RESEARCH_DIR = '/path/to/resonantos/research';
 ```
 
 ### Package.json
@@ -113,7 +113,7 @@ const RESEARCH_DIR = '/Users/augmentor/resonantos-augmentor/research';
 - CREATE `mcp-server/src/index.js` — main MCP server entry point
 - CREATE `mcp-server/README.md` — usage instructions (how to add to Claude Desktop config)
 
-All files in `/Users/augmentor/resonantos-augmentor/mcp-server/`.
+All files in `/path/to/resonantos/mcp-server/`.
 
 ## Data Context
 
@@ -135,7 +135,7 @@ All files in `/Users/augmentor/resonantos-augmentor/mcp-server/`.
 ## Test Command
 
 ```bash
-cd /Users/augmentor/resonantos-augmentor/mcp-server && npm install && node src/index.js --help 2>&1 || echo "Server loads"
+cd /path/to/resonantos/mcp-server && npm install && node src/index.js --help 2>&1 || echo "Server loads"
 ```
 
 ## Acceptance Criteria
