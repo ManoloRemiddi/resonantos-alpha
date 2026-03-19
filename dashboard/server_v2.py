@@ -3952,7 +3952,11 @@ def shield_page():
 # API: Dashboard Self-Update (git-based)
 # ---------------------------------------------------------------------------
 
-DASHBOARD_REPO_DIR = os.path.dirname(os.path.abspath(__file__))
+# For self-update: always target the alpha (public) repo, not the private augmentor repo.
+# The dashboard runs from augmentor but updates should pull from resonantos-alpha.
+_SELF_DIR = os.path.dirname(os.path.abspath(__file__))
+_ALPHA_REPO_DIR = os.path.expanduser("~/resonantos-alpha")
+DASHBOARD_REPO_DIR = _ALPHA_REPO_DIR if os.path.isdir(os.path.join(_ALPHA_REPO_DIR, ".git")) else _SELF_DIR
 _UPDATE_CONFIG_LOCK = threading.Lock()
 _UPDATE_CHECKER_STARTED = False
 _UPDATE_DEFAULTS = {
