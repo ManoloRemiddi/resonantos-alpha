@@ -1,0 +1,14 @@
+# Shield Personal Data Patterns
+# One grep -E pattern per line. Matched against git diff additions.
+# Keep patterns specific enough to avoid false positives on third-party code.
+
+# Our email addresses
+augmentor\.bot@gmail\.com
+manolorem@gmail\.com
+manolo@manoloremiddi\.com
+
+# Private system paths
+/Users/augmentor/
+
+# Private repo references (should never appear in alpha)
+resonantos-augmentor
