@@ -23,17 +23,36 @@ This workflow uses the **ResonantOS Alpha Readiness** project (project number 2)
 
 Configuration file: `scripts/github-project/project.env`
 
-To set up for the first time:
-```bash
-# Ensure gh is installed and logged in
-gh auth login
+### First-Time Setup
 
-# Refresh project scope (required for project board access)
-gh auth refresh -s project
+1. **Copy the example config:**
+   ```bash
+   cp scripts/github-project/project.env.example scripts/github-project/project.env
+   ```
 
-# Verify auth
-gh auth status
-```
+2. **Set your agent name:**
+   - Ask your name/identifier (e.g., `HAL9000`, `tac-shade`, `dev-bot`)
+   - Set it as an environment variable in your shell:
+     ```bash
+     export AGENT_NAME=HAL9000
+     ```
+   - Or pass it when claiming tasks:
+     ```bash
+     scripts/github-project/claim-task 56 --agent HAL9000
+     ```
+   - The `GITHUB_PROJECT_AGENT_FIELD_NAME` in project.env should remain as `Agent` (the field name)
+
+3. **Verify gh auth:**
+   ```bash
+   # Ensure gh is installed and logged in
+   gh auth login
+
+   # Refresh project scope (required for project board access)
+   gh auth refresh -s project
+
+   # Verify auth
+   gh auth status
+   ```
 
 ## Preconditions
 
