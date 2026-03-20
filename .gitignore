@@ -50,3 +50,5 @@ __pycache__/
 # Stale duplicates (canonical in extensions/)
 shield/
 shield-gate/
+ssot/L1/RECENT-HEADERS.md
+scripts/memory-log-check.txt
