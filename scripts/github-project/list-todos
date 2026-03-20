@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/_project_common.sh"
+
+usage() {
+  cat <<'EOF'
+Usage: scripts/project/list-todos [--json]
+
+Lists project items currently in Status=TODOS.
+EOF
+}
+
+OUTPUT_JSON="false"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --json)
+      OUTPUT_JSON="true"
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      fail "unknown argument: $1"
+      ;;
+  esac
+done
+
+ensure_ready
+
+todos_json="$(
+  project_items_json | jq -c --arg status_field "$PROJECT_STATUS_FIELD_NAME" --arg status_value "$PROJECT_STATUS_TODOS" '
+    map(
+      select(.content.__typename == "Issue")
+      | . + {
+          currentStatus: (
+            [
+              .fieldValues.nodes[]
+              | select(.field.name == $status_field and .name != null)
+              | .name
+            ][0] // ""
+          ),
+          currentAgent: (
+            [
+              .fieldValues.nodes[]
+              | select(.field.name == "Agent" and .text != null)
+              | .text
+            ][0] // ""
+          )
+        }
+    )
+    | map(select(.currentStatus == $status_value))
+  '
+)"
+
+if [[ "$OUTPUT_JSON" == "true" ]]; then
+  printf '%s\n' "$todos_json"
+  exit 0
+fi
+
+count="$(jq 'length' <<<"$todos_json")"
+if [[ "$count" -eq 0 ]]; then
+  echo "No $PROJECT_STATUS_TODOS items found."
+  exit 0
+fi
+
+jq -r '
+  .[]
+  | "#\(.content.number)\t\(.content.title)\t\(.content.url)"
+' <<<"$todos_json"

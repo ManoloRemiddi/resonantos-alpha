@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/_project_common.sh"
+
+usage() {
+  cat <<'EOF'
+Usage: scripts/project/create-task --title "Task title" (--body "Task body" | --body-file path)
+
+Creates a GitHub Issue, adds it to the configured Project, and sets Status=TODOS.
+EOF
+}
+
+TITLE=""
+BODY=""
+BODY_FILE=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --title)
+      TITLE="${2:-}"
+      shift 2
+      ;;
+    --body)
+      BODY="${2:-}"
+      shift 2
+      ;;
+    --body-file)
+      BODY_FILE="${2:-}"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      fail "unknown argument: $1"
+      ;;
+  esac
+done
+
+[[ -n "$TITLE" ]] || fail "--title is required"
+if [[ -n "$BODY" && -n "$BODY_FILE" ]]; then
+  fail "use either --body or --body-file, not both"
+fi
+if [[ -n "$BODY_FILE" ]]; then
+  [[ -f "$BODY_FILE" ]] || fail "body file not found: $BODY_FILE"
+  BODY="$(cat "$BODY_FILE")"
+fi
+[[ -n "$BODY" ]] || fail "task body is required"
+
+ensure_ready
+
+issue_url="$(
+  gh issue create \
+    --repo "$PROJECT_REPO" \
+    --title "$TITLE" \
+    --body "$BODY"
+)"
+
+gh project item-add "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --url "$issue_url" >/dev/null
+
+issue_number="$(issue_number_from_url "$issue_url")"
+item_id="$(project_item_id_by_issue_number "$issue_number")"
+set_item_status "$item_id" "$PROJECT_STATUS_TODOS"
+
+printf 'Created issue #%s and added it to %s as %s\n' \
+  "$issue_number" \
+  "$PROJECT_REPO" \
+  "$PROJECT_STATUS_TODOS"
+printf '%s\n' "$issue_url"
