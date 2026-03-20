@@ -47,7 +47,7 @@ Include:
 Have an idea? We want to hear it!
 
 1. **Check existing issues** — Search first to avoid duplicates
-2. **Discuss in Discord** — #roadmap channel for initial feedback
+2. **Discuss in Discord** — Get initial feedback from the community
 3. **Open an issue** — Use the feature request template
 4. **Participate** — Join the discussion and help refine the idea
 
@@ -127,8 +127,8 @@ A: Yes! Free under RC-SL v1.0. See LICENSE and GOVERNANCE.md for commercial term
 **Q: How do I contribute?**
 A: See [CONTRIBUTING.md](CONTRIBUTING.md) for full guide.
 
-**Q: Do I need to know Solidity?**
-A: No! Most contributions are JavaScript/Python/documentation.
+**Q: Do I need blockchain knowledge to contribute?**
+A: No! Most contributions are JavaScript/Python/documentation. The DAO components use Solana (Rust/Anchor), but that's a small part of the project.
 
 **Q: How do I earn $RCT tokens?**
 A: Contribute code, docs, or community support. See [GOVERNANCE.md](GOVERNANCE.md).
@@ -147,7 +147,7 @@ A: Contribute code, docs, or community support. See [GOVERNANCE.md](GOVERNANCE.m
 ## 🌟 Success Stories
 
 Share your experience! If ResonantOS helped you:
-- Post in Discord #show-and-tell
+- Share in our Discord community
 - Write a blog post
 - Share on social media
 - Tag @resonantos (if handles exist)

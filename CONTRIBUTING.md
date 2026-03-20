@@ -173,7 +173,7 @@ Use GitHub Issues with:
 
 Before opening a feature request:
 - Search existing issues to avoid duplicates
-- Discuss in Discord #roadmap first for major changes
+- Discuss in Discord first for major changes
 - Explain the use case and benefit
 
 Feature requests should include:
@@ -206,7 +206,7 @@ Significant contributions earn you:
 - Recognition in the community
 - Potential maintainer status
 
-Learn more about governance in our [Community Standards](COMMUNITY_STANDARDS.md).
+Learn more about governance in [GOVERNANCE.md](GOVERNANCE.md).
 
 ## 💬 Questions?
 

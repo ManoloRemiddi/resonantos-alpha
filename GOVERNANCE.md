@@ -1,5 +1,7 @@
 # Governance
 
+> ⚠️ **Status: Draft** — The token system and DAO voting are in design phase on Solana DevNet. This document describes the intended governance model. Mechanisms described below as "planned" are not yet live.
+
 ## 🏛️ Resonant Chamber DAO
 
 ResonantOS is governed by the community through on-chain mechanisms.
@@ -10,6 +12,7 @@ ResonantOS is governed by the community through on-chain mechanisms.
 - **Purpose:** Voting rights in DAO decisions
 - **Non-transferable:** Bound to your wallet, cannot be sold or transferred
 - **Earned through:** Contributions to the project
+- **Human sovereignty:** Only human-controlled wallets can hold $RCT. AI agents operate through Program Derived Addresses (PDAs) controlled by their human counterpart's wallet — AI cannot hold governance power independently.
 
 ### $RES — Utility Currency (Transferable)
 - **Purpose:** Protocol Store purchases, ecosystem transactions
@@ -35,7 +38,7 @@ ResonantOS is governed by the community through on-chain mechanisms.
 **Examples:** New features, architectural changes, significant refactors
 
 **Process:**
-1. Community discussion (GitHub Discussions or Discord #roadmap)
+1. Community discussion (GitHub Discussions or Discord)
 2. Maintainer proposal
 3. Community feedback period (3-7 days)
 4. Maintainer approval with community input
@@ -144,7 +147,7 @@ Approved by DAO vote. Categories include:
 - All transactions on-chain (Solana)
 - Quarterly treasury reports
 - Public wallet addresses
-- DAO vote for expenditures >$5K
+- DAO vote for expenditures above a threshold (TBD)
 
 ## Conflict Resolution
 
@@ -171,7 +174,7 @@ This governance document can be amended through:
 ## Contact
 
 **Questions about governance?**
-- Discord: #governance channel
+- Discord: https://discord.gg/MRESQnf4R4
 - GitHub: Discussions tagged `governance`
 - Maintainer: @ManoloRemiddi
 

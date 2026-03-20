@@ -92,7 +92,7 @@ Security fixes are our highest priority:
 ### Staying Updated
 
 - Watch this repository for security advisories
-- Join Discord #security channel for announcements
+- Join our Discord for announcements: https://discord.gg/MRESQnf4R4
 - Check releases for security patches
 
 ## 🏛️ DAO Security
