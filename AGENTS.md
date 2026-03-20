@@ -98,6 +98,7 @@ These rules prevent single-file bloat and enforce maintainable structure. Follow
 ### Git Hygiene
 
 - **Rebase only** on main branch — no merge commits
+- **git pull before git push** — always pull latest before pushing to avoid conflicts
 - **PRs must reference issues**: Include "Fixes #XX" or "Related to #XX" in PR description
 - **Branch naming**:
   - `feature/` — new features
