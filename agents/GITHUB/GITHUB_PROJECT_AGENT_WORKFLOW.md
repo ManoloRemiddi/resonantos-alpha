@@ -17,34 +17,53 @@ In this repo, this guide lives at:
 
 - `agents/GITHUB/GITHUB_PROJECT_AGENT_WORKFLOW.md`
 
+## Project Configuration
+
+This workflow uses the **ResonantOS Alpha Readiness** project (project number 2).
+
+Configuration file: `scripts/github-project/project.env`
+
+To set up for the first time:
+```bash
+# Ensure gh is installed and logged in
+gh auth login
+
+# Refresh project scope (required for project board access)
+gh auth refresh -s project
+
+# Verify auth
+gh auth status
+```
+
 ## Preconditions
 
 Before doing any task work, confirm:
 
 - `git` access to the shared repository works
 - `gh` is installed and is version `2.88.1` or newer
-- `gh auth status` succeeds
+- `gh auth status` succeeds with `project` scope
 - Project access is valid for the current `gh` session
 - `scripts/github-project/project.env` exists and points at the correct owner, project number, and repo
 
 This repo is public. Do not place tokens, secrets, or private notes in tracked workflow files.
 
-If `gh` Project auth is missing or expired, stop and fix auth before touching the task board.
+If `gh` Project auth is missing or expired, run:
+```bash
+gh auth refresh -s project
+```
 
 ## Standard Work Loop
 
 1. Run `git pull` on the shared branch.
 2. Use `scripts/github-project/list-todos` to list Project items with `Status = TODOS`.
 3. Pick exactly one task from `TODOS`.
-4. Run `scripts/github-project/claim-task ISSUE_NUMBER --agent <agent-name>`.
-5. This moves the item to `In Progress`.
-6. This sets `Agent = <agent-name>` and `Last Claimed At = <today>`.
-7. Perform the work locally.
-8. Run `git pull` again before `git push`.
-9. Reconcile any merge conflicts locally.
-10. Push to the shared branch.
-11. Run `scripts/github-project/move-to-review ISSUE_NUMBER`.
-12. Add a short completion note on the Issue.
+4. Claim it and move to `In Progress` using the workflow scripts.
+5. Perform the work locally.
+6. Run `git pull` again before `git push`.
+7. Reconcile any merge conflicts locally.
+8. Push to the shared branch.
+9. Move the task to `In Review`.
+10. Add a short completion note on the Issue.
 
 ## Hard Rules
 

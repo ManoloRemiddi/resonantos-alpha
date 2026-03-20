@@ -116,7 +116,7 @@ query($owner: String!, $number: Int!) {
 }
 EOF
 
-  response="$(gh api graphql -F owner="$PROJECT_OWNER" -F number="$PROJECT_NUMBER" -f query="$query")" || \
+  response="$(gh api graphql -F owner="$PROJECT_OWNER" -F number="$PROJECT_NUMBER" -f query="$query" 2>/dev/null)" || \
     fail "unable to load project metadata for owner '$PROJECT_OWNER' and project '$PROJECT_NUMBER'"
   PROJECT_METADATA_JSON="$(
     jq -ce '.data.organization.projectV2 // .data.user.projectV2' <<<"$response"
@@ -297,7 +297,7 @@ EOF
       args+=(-F cursor="$cursor")
     fi
 
-    page="$(gh api graphql "${args[@]}")" || fail "unable to list project items"
+    page="$(gh api graphql "${args[@]}" 2>/dev/null)" || fail "unable to list project items"
     node="$(
       jq -ce '.data.organization.projectV2 // .data.user.projectV2' <<<"$page"
     )" || fail "project '$PROJECT_NUMBER' was not found while listing items"
