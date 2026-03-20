@@ -24,6 +24,52 @@ from pathlib import Path
 from flask import Flask, jsonify, redirect, render_template, request, send_from_directory
 from flask_cors import CORS
 
+# Platform detection helpers
+IS_WINDOWS = sys.platform.startswith("win")
+IS_MAC = sys.platform == "darwin"
+IS_LINUX = sys.platform.startswith("linux")
+
+def is_windows():
+    return IS_WINDOWS
+
+def is_mac():
+    return IS_MAC
+
+def is_linux():
+    return IS_LINUX
+
+def open_file_using_system(filepath):
+    """Open a file with the system default application, cross-platform."""
+    import webbrowser
+    filepath = Path(filepath)
+    if not filepath.exists():
+        return False
+    try:
+        if IS_WINDOWS:
+            os.startfile(str(filepath))
+        elif IS_MAC:
+            subprocess.Popen(["open", str(filepath)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            subprocess.Popen(["xdg-open", str(filepath)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return True
+    except:
+        return False
+
+def restart_openclaw_gateway():
+    """Restart the OpenClaw gateway, cross-platform."""
+    try:
+        if IS_WINDOWS:
+            subprocess.run(["taskkill", "/F", "/IM", "node.exe", "/T"], capture_output=True, timeout=5)
+            time.sleep(1)
+            subprocess.Popen(["npm", "start"], cwd=str(Path.home() / ".openclaw"))
+        elif IS_MAC:
+            subprocess.run(["launchctl", "stop", "com.openclaw.gateway"], capture_output=True, timeout=5)
+            subprocess.run(["launchctl", "start", "com.openclaw.gateway"], capture_output=True, timeout=5)
+        else:
+            subprocess.run(["systemctl", "restart", "openclaw-gateway"], capture_output=True, timeout=5)
+    except:
+        pass
+
 # Solana wallet integration imports — resolve toolkit path dynamically
 _dashboard_dir = Path(__file__).resolve().parent
 _toolkit_candidates = [
@@ -1076,11 +1122,17 @@ def api_docs_open_editor():
         return jsonify({"error": "Not found"}), 404
     try:
         import shutil
-        if shutil.which("code"):
+        if shutil.which("code") and not IS_WINDOWS:
             subprocess.Popen(["code", str(filepath)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             return jsonify({"success": True, "editor": "VS Code"})
-        else:
+        elif IS_MAC:
             subprocess.Popen(["open", str(filepath)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return jsonify({"success": True, "editor": "system"})
+        elif IS_WINDOWS:
+            os.startfile(str(filepath))
+            return jsonify({"success": True, "editor": "system"})
+        else:
+            subprocess.Popen(["xdg-open", str(filepath)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             return jsonify({"success": True, "editor": "system"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -5539,14 +5591,14 @@ def api_rmemory_narrative_model():
 
 @app.route("/api/r-memory/open-log", methods=["POST"])
 def api_rmemory_open_log():
-    """Open R-Memory log in Terminal.app."""
-    import subprocess
-    # PLACEHOLDER: replace command with user-provided string
-    cmd = f"tail -f {os.path.expanduser('~/.openclaw/workspace/r-memory/r-memory.log')}"
-    subprocess.Popen([
-        "osascript", "-e",
-        f'tell application "Terminal" to do script "{cmd}"'
-    ])
+    """Open R-Memory log in system default app, cross-platform."""
+    log_path = os.path.expanduser("~/.openclaw/workspace/r-memory/r-memory.log")
+    if IS_MAC:
+        subprocess.Popen(["open", "-a", "Terminal", log_path])
+    elif IS_WINDOWS:
+        os.startfile(log_path)
+    elif IS_LINUX:
+        subprocess.Popen(["xdg-open", log_path])
     return jsonify({"ok": True})
 
 
@@ -7738,16 +7790,23 @@ def api_shield_doorman_status():
         "watched_paths": 2,
     }
     try:
-        out = subprocess.run(["launchctl", "list"], capture_output=True, text=True, timeout=5)
-        for line in out.stdout.splitlines():
-            if "memory-doorman" in line:
-                parts = line.split()
-                if parts[0] != "-":
-                    result["running"] = True
-                    result["pid"] = int(parts[0])
-                elif parts[1] == "0":
-                    result["running"] = True
-                break
+        if IS_MAC:
+            out = subprocess.run(["launchctl", "list"], capture_output=True, text=True, timeout=5)
+            for line in out.stdout.splitlines():
+                if "memory-doorman" in line:
+                    parts = line.split()
+                    if parts[0] != "-":
+                        result["running"] = True
+                        result["pid"] = int(parts[0])
+                    elif parts[1] == "0":
+                        result["running"] = True
+                    break
+        elif IS_LINUX:
+            out = subprocess.run(["systemctl", "is-active", "memory-doorman"], capture_output=True, text=True, timeout=5)
+            result["running"] = out.stdout.strip() == "active"
+        elif IS_WINDOWS:
+            out = subprocess.run(["tasklist", "/FI", "IMAGENAME eq memory-doorman.exe"], capture_output=True, text=True, timeout=5)
+            result["running"] = "memory-doorman" in out.stdout
     except Exception:
         pass
     try:
@@ -7769,11 +7828,18 @@ def api_shield_doorman_status():
 def api_logician_status():
     """Live-check Logician mangle server (socket existence + process running)."""
     import subprocess, datetime
-    mangle_sock = "/tmp/mangle.sock"
+    if IS_WINDOWS:
+        mangle_sock = os.path.expanduser("~/mangle.sock")
+    else:
+        mangle_sock = "/tmp/mangle.sock"
     sock_exists = os.path.exists(mangle_sock)
     try:
-        result = subprocess.run(["pgrep", "-f", "mangle-server"], capture_output=True, text=True, timeout=5)
-        process_running = result.returncode == 0
+        if IS_WINDOWS:
+            result = subprocess.run(["tasklist", "/FI", "IMAGENAME eq mangle-server.exe"], capture_output=True, text=True, timeout=5)
+            process_running = result.returncode == 0
+        else:
+            result = subprocess.run(["pgrep", "-f", "mangle-server"], capture_output=True, text=True, timeout=5)
+            process_running = result.returncode == 0
     except Exception:
         process_running = False
     now = datetime.datetime.utcnow().isoformat() + "Z"
