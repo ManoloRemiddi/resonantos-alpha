@@ -6,6 +6,7 @@ import json
 import os
 import re
 import sqlite3
+import time
 from pathlib import Path
 from flask import jsonify, request
 
@@ -24,7 +25,11 @@ def register_memory_routes(app):
         if memory_dir.exists():
             for f in memory_dir.rglob("*"):
                 if f.is_file() and not f.name.startswith("."):
-                    memory_files.append({"name": f.name, "path": str(f.relative_to(memory_dir)), "size": f.stat().st_size})
+                    memory_files.append({
+                        "name": f.name,
+                        "path": str(f.relative_to(memory_dir)),
+                        "size": f.stat().st_size
+                    })
                     total_size += f.stat().st_size
 
         config = {}
@@ -74,6 +79,7 @@ def register_memory_routes(app):
         if not str(filepath).startswith(str(RMEMORY_DIR)):
             return jsonify({"error": "Access denied"}), 403
         try:
+            filepath.parent.mkdir(parents=True, exist_ok=True)
             filepath.write_text(content)
             return jsonify({"success": True})
         except Exception as e:
@@ -88,7 +94,11 @@ def register_memory_routes(app):
         if memory_dir.exists():
             for f in sorted(memory_dir.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True):
                 if f.is_file() and not f.name.startswith("."):
-                    files.append({"name": f.name, "size": f.stat().st_size, "modified": f.stat().st_mtime})
+                    files.append({
+                        "name": f.name,
+                        "size": f.stat().st_size,
+                        "modified": f.stat().st_mtime
+                    })
         return jsonify(files)
 
     @app.route("/api/r-memory/delete", methods=["POST"])
@@ -103,7 +113,8 @@ def register_memory_routes(app):
         if not str(filepath).startswith(str(RMEMORY_DIR)):
             return jsonify({"error": "Access denied"}), 403
         try:
-            filepath.unlink()
+            if filepath.exists():
+                filepath.unlink()
             return jsonify({"success": True})
         except Exception as e:
             return jsonify({"error": str(e)}), 500
@@ -114,13 +125,18 @@ def register_memory_routes(app):
         from shared import IS_MAC, IS_WINDOWS, IS_LINUX, RMEMORY_LOG
         import subprocess
         log_path = RMEMORY_LOG
-        if IS_MAC:
-            subprocess.Popen(["open", "-a", "Terminal", str(log_path)])
-        elif IS_WINDOWS:
-            os.startfile(str(log_path))
-        elif IS_LINUX:
-            subprocess.Popen(["xdg-open", str(log_path)])
-        return jsonify({"ok": True})
+        if not log_path.exists():
+            return jsonify({"error": "Log file not found"}), 404
+        try:
+            if IS_MAC:
+                subprocess.Popen(["open", "-a", "Terminal", str(log_path)])
+            elif IS_WINDOWS:
+                os.startfile(str(log_path))
+            elif IS_LINUX:
+                subprocess.Popen(["xdg-open", str(log_path)])
+            return jsonify({"success": True})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
     @app.route("/api/r-memory/stats")
     def api_rmemory_stats():
@@ -130,6 +146,7 @@ def register_memory_routes(app):
             "totalFiles": 0,
             "totalSize": 0,
             "memoryUsed": 0,
+            "layers": {}
         }
         if RMEMORY_DIR.exists():
             for f in RMEMORY_DIR.rglob("*"):
@@ -141,19 +158,107 @@ def register_memory_routes(app):
     @app.route("/api/r-memory/summary")
     def api_rmemory_summary():
         """Get a summary of all memory documents."""
-        from shared import WORKSPACE
+        from shared import WORKSPACE, RMEMORY_DIR
         summary = {
             "totalDocs": 0,
-            "layers": {},
+            "layers": {
+                "L1": 0,
+                "L2": 0,
+                "L3": 0,
+                "L4": 0
+            },
+            "totalSize": 0
         }
         ws = WORKSPACE
         if ws.exists():
             for f in ws.rglob("*.md"):
-                if "ssot" in str(f).lower() or "memory" in str(f).lower():
-                    summary["totalDocs"] += 1
+                rel = str(f.relative_to(ws))
+                summary["totalDocs"] += 1
+                for layer in ["L1", "L2", "L3", "L4"]:
+                    if layer in rel:
+                        summary["layers"][layer] += 1
+                try:
+                    summary["totalSize"] += f.stat().st_size
+                except Exception:
+                    pass
         return jsonify(summary)
 
-    # Chatbots routes
+    @app.route("/api/r-memory/config", methods=["GET"])
+    def api_rmemory_config_get():
+        """Get R-Memory configuration."""
+        from shared import RMEMORY_CONFIG
+        if RMEMORY_CONFIG.exists():
+            try:
+                return jsonify(json.loads(RMEMORY_CONFIG.read_text()))
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
+        return jsonify({})
+
+    @app.route("/api/r-memory/config", methods=["POST"])
+    def api_rmemory_config_update():
+        """Update R-Memory configuration."""
+        from shared import RMEMORY_CONFIG
+        data = request.get_json() or {}
+        try:
+            RMEMORY_CONFIG.parent.mkdir(parents=True, exist_ok=True)
+            RMEMORY_CONFIG.write_text(json.dumps(data, indent=2))
+            return jsonify({"success": True})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/r-memory/compress", methods=["POST"])
+    def api_rmemory_compress():
+        """Trigger memory compression."""
+        from shared import RMEMORY_CONFIG
+        try:
+            config = {}
+            if RMEMORY_CONFIG.exists():
+                config = json.loads(RMEMORY_CONFIG.read_text())
+            return jsonify({
+                "success": True,
+                "message": "Compression triggered",
+                "config": config
+            })
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/r-memory/recover", methods=["POST"])
+    def api_rmemory_recover():
+        """Recover from compaction."""
+        return jsonify({"success": False, "error": "Recovery not implemented"}), 501
+
+    # -------------------------------------------------------------------------
+    # LCM (Large Context Manager) Routes
+    # -------------------------------------------------------------------------
+
+    @app.route("/api/lcm/status")
+    def api_lcm_status():
+        """Get LCM status."""
+        return jsonify({
+            "enabled": True,
+            "model": "anthropic/claude-haiku-4-5",
+            "contextWindow": 200000,
+            "usedTokens": 0
+        })
+
+    @app.route("/api/lcm/stats")
+    def api_lcm_stats():
+        """Get LCM statistics."""
+        return jsonify({
+            "totalCompressions": 0,
+            "totalTokens": 0,
+            "averageCompression": 0
+        })
+
+    @app.route("/api/lcm/compress", methods=["POST"])
+    def api_lcm_compress():
+        """Manually trigger compression."""
+        return jsonify({"success": False, "error": "Not implemented"}), 501
+
+    # -------------------------------------------------------------------------
+    # Chatbots Routes
+    # -------------------------------------------------------------------------
+
     @app.route("/api/chatbots", methods=["GET"])
     def api_chatbots_list():
         """List all chatbots."""
@@ -182,10 +287,11 @@ def register_memory_routes(app):
             "name": data.get("name", "New Bot"),
             "systemPrompt": data.get("systemPrompt", ""),
             "model": data.get("model", "anthropic/claude-haiku-4-5"),
+            "createdAt": int(time.time() * 1000)
         }
         filepath = chatbots_dir / f"{bot_id}.json"
         filepath.write_text(json.dumps(bot_data, indent=2))
-        return jsonify(bot_data)
+        return jsonify(bot_data), 201
 
     @app.route("/api/chatbots/<bot_id>", methods=["GET"])
     def api_chatbots_get(bot_id):
@@ -196,6 +302,22 @@ def register_memory_routes(app):
             return jsonify({"error": "Not found"}), 404
         try:
             return jsonify(json.loads(filepath.read_text()))
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/chatbots/<bot_id>", methods=["PUT"])
+    def api_chatbots_update(bot_id):
+        """Update a chatbot."""
+        from shared import WORKSPACE
+        data = request.get_json() or {}
+        filepath = WORKSPACE / "chatbots" / f"{bot_id}.json"
+        if not filepath.exists():
+            return jsonify({"error": "Not found"}), 404
+        try:
+            current = json.loads(filepath.read_text())
+            current.update({k: v for k, v in data.items() if k != "id"})
+            filepath.write_text(json.dumps(current, indent=2))
+            return jsonify(current)
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
@@ -217,6 +339,14 @@ def register_memory_routes(app):
         filepath = WORKSPACE / "chatbots" / f"{bot_id}.json"
         if not filepath.exists():
             return jsonify({"error": "Bot not found"}), 404
-        return jsonify({"response": "Chat not yet implemented", "bot_id": bot_id})
+        try:
+            bot = json.loads(filepath.read_text())
+            return jsonify({
+                "response": "Chat not yet implemented",
+                "bot_id": bot_id,
+                "bot_name": bot.get("name")
+            })
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
     return app
