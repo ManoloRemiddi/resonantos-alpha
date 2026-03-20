@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/_project_common.sh"
+
+usage() {
+  cat <<'EOF'
+Usage: scripts/project/move-to-review ISSUE_NUMBER [--comment "text"] [--comment-file path]
+
+Moves a task from In Progress to In Review and optionally posts a completion note.
+EOF
+}
+
+ISSUE_NUMBER=""
+COMMENT=""
+COMMENT_FILE=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --comment)
+      COMMENT="${2:-}"
+      shift 2
+      ;;
+    --comment-file)
+      COMMENT_FILE="${2:-}"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      if [[ -z "$ISSUE_NUMBER" ]]; then
+        ISSUE_NUMBER="$1"
+        shift
+      else
+        fail "unknown argument: $1"
+      fi
+      ;;
+  esac
+done
+
+[[ -n "$ISSUE_NUMBER" ]] || fail "issue number is required"
+if [[ -n "$COMMENT" && -n "$COMMENT_FILE" ]]; then
+  fail "use either --comment or --comment-file, not both"
+fi
+if [[ -n "$COMMENT_FILE" ]]; then
+  [[ -f "$COMMENT_FILE" ]] || fail "comment file not found: $COMMENT_FILE"
+  COMMENT="$(cat "$COMMENT_FILE")"
+fi
+
+ensure_ready
+
+item_json="$(project_item_by_issue_number "$ISSUE_NUMBER")"
+current_status="$(item_field_single_select_value "$item_json" "$PROJECT_STATUS_FIELD_NAME")"
+[[ "$current_status" == "$PROJECT_STATUS_IN_PROGRESS" ]] || \
+  fail "issue #$ISSUE_NUMBER cannot move to review from '$current_status'"
+
+item_id="$(jq -r '.id' <<<"$item_json")"
+set_item_status "$item_id" "$PROJECT_STATUS_IN_REVIEW"
+comment_on_issue "$ISSUE_NUMBER" "$COMMENT"
+
+printf 'Moved issue #%s to %s\n' "$ISSUE_NUMBER" "$PROJECT_STATUS_IN_REVIEW"

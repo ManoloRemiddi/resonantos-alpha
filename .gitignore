@@ -7,6 +7,7 @@ venv/
 
 # Config with secrets
 dashboard/config.json
+scripts/github-project/project.env
 
 # OS
 .DS_Store
@@ -29,4 +30,5 @@ node_modules/
 # Private SSoT - NEVER share
 ssot/private/
 ssot-template/private/
+docs/internal/
 chatbots.html.bak

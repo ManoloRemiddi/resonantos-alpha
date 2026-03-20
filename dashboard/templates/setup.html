@@ -1,0 +1,2026 @@
+{% extends "base.html" %}
+{% block title %}Setup & Onboarding - ResonantOS Dashboard{% endblock %}
+{% block page_title %}Setup & Onboarding{% endblock %}
+{% block content %}
+<style>
+.setup-shell {
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr) 300px;
+    gap: 20px;
+    min-height: calc(100vh - 170px);
+}
+
+.setup-sidebar,
+.setup-main,
+.setup-hints-sidebar {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    overflow: hidden;
+}
+
+.setup-sidebar {
+    display: flex;
+    flex-direction: column;
+}
+
+.setup-sidebar-header,
+.setup-main-header {
+    padding: 20px 22px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, var(--bg-secondary), var(--bg-tertiary));
+}
+
+.setup-sidebar-header h2,
+.setup-main-header h2 {
+    margin: 0 0 6px;
+    font-size: 18px;
+    color: var(--text-primary);
+}
+
+.setup-sidebar-header p,
+.setup-main-header p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.setup-steps {
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+}
+
+.setup-step {
+    width: 100%;
+    text-align: left;
+    border: 1px solid var(--border);
+    background: var(--bg-primary);
+    border-radius: 14px;
+    padding: 14px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, transform 0.2s;
+}
+
+.setup-step:hover {
+    border-color: var(--accent);
+    background: var(--bg-hover);
+    transform: translateY(-1px);
+}
+
+.setup-step.active {
+    border-color: var(--accent);
+    background: var(--accent-muted);
+}
+
+.setup-step.completed {
+    border-color: rgba(74, 222, 128, 0.35);
+}
+
+.setup-step-head {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.setup-step-circle {
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.setup-step.active .setup-step-circle {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--bg-primary);
+}
+
+.setup-step.completed .setup-step-circle {
+    border-color: var(--success);
+    background: rgba(74, 222, 128, 0.14);
+    color: var(--success);
+}
+
+.setup-step-copy {
+    min-width: 0;
+    flex: 1;
+}
+
+.setup-step-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 5px;
+}
+
+.setup-step-title {
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.setup-step-state {
+    margin-left: auto;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+}
+
+.setup-step.completed .setup-step-state {
+    color: var(--success);
+}
+
+.setup-step.active .setup-step-state {
+    color: var(--accent);
+}
+
+.setup-step-description {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.setup-main {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.setup-hints-sidebar {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-left: 1px solid var(--border);
+}
+
+.setup-hints-header {
+    padding: 20px 22px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, var(--bg-secondary), var(--bg-tertiary));
+}
+
+.setup-hints-header h2 {
+    margin: 0 0 6px;
+    font-size: 18px;
+    color: var(--text-primary);
+}
+
+.setup-hints-header p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.setup-hints-body {
+    flex: 1;
+    min-height: 0;
+    padding: 18px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.setup-hints-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.setup-hint-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--bg-primary);
+}
+
+.setup-hint-icon {
+    flex-shrink: 0;
+    color: var(--accent);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.setup-hint-text {
+    color: var(--text-primary);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.setup-hints-note {
+    padding: 14px 16px;
+    border: 1px solid rgba(74, 222, 128, 0.18);
+    border-left: 3px solid var(--accent);
+    border-radius: 14px;
+    background: var(--accent-muted);
+}
+
+.setup-suggested-prompts-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.setup-suggested-prompts-label {
+    color: var(--text-secondary);
+    font-size: 12px;
+    margin: 0;
+}
+
+.setup-suggested-prompts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.setup-suggested-prompt {
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--bg-primary);
+    padding: 8px 14px;
+    cursor: pointer;
+    color: var(--text-primary);
+    font-size: 13px;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.setup-suggested-prompt:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent);
+}
+
+.setup-hints-note h3 {
+    margin: 0 0 8px;
+    font-size: 13px;
+    color: var(--text-primary);
+}
+
+.setup-hints-note p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.setup-panel {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.setup-panel-body {
+    flex: 1;
+    min-height: 0;
+    padding: 22px;
+}
+
+.setup-model-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(260px, 0.7fr);
+    gap: 18px;
+    min-height: 100%;
+}
+
+.setup-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+}
+
+.setup-card h3 {
+    margin: 0 0 8px;
+    font-size: 16px;
+    color: var(--text-primary);
+}
+
+.setup-card p {
+    margin: 0 0 16px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.setup-field-label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.setup-model-select,
+.setup-chat-input {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    padding: 12px 14px;
+    font-size: 14px;
+}
+
+.setup-model-select:focus,
+.setup-chat-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-muted);
+}
+
+.setup-model-actions,
+.setup-chat-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+}
+
+.setup-meta-note {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.setup-button,
+.setup-secondary-button {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 11px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s;
+}
+
+.setup-button {
+    background: var(--accent);
+    color: var(--bg-primary);
+    border-color: var(--accent);
+}
+
+.setup-button:hover:not(:disabled) {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+}
+
+.setup-secondary-button {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.setup-secondary-button:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.setup-button:disabled,
+.setup-secondary-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.setup-model-status {
+    display: grid;
+    gap: 12px;
+}
+
+.setup-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-secondary);
+}
+
+.setup-status-label {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.setup-status-value {
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: right;
+    word-break: break-word;
+}
+
+.setup-status-value.success {
+    color: var(--success);
+}
+
+.setup-chat-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.setup-chat-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.setup-chat-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.setup-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: var(--accent-muted);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.setup-chat-stage {
+    color: var(--text-primary);
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.setup-chat-stage-note {
+    margin-top: 8px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.setup-chat-messages {
+    flex: 1;
+    min-height: 280px;
+    margin-top: 18px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 18px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.setup-empty-state {
+    margin: auto;
+    max-width: 520px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.setup-message {
+    max-width: min(760px, 88%);
+    padding: 14px 16px;
+    border-radius: 18px;
+    border: 1px solid var(--border);
+    font-size: 14px;
+    line-height: 1.65;
+    word-break: break-word;
+}
+
+.setup-message.user {
+    align-self: flex-end;
+    background: var(--accent-muted);
+    border-color: rgba(74, 222, 128, 0.28);
+    color: var(--text-primary);
+    border-bottom-right-radius: 6px;
+}
+
+.setup-message.agent {
+    align-self: flex-start;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-bottom-left-radius: 6px;
+}
+
+.setup-message-meta {
+    margin-bottom: 8px;
+    color: var(--text-muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.setup-message-content strong {
+    color: var(--text-primary);
+}
+
+.setup-message-content code {
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    font-family: "SF Mono", Monaco, Consolas, monospace;
+    font-size: 12px;
+}
+
+.setup-message-content pre {
+    margin: 12px 0 0;
+    padding: 14px;
+    border-radius: 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    overflow-x: auto;
+}
+
+.setup-message-content pre code {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    display: block;
+    white-space: pre;
+}
+
+.setup-typing {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+}
+
+.setup-typing-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--text-secondary);
+    animation: setupBounce 1.1s infinite ease-in-out;
+}
+
+.setup-typing-dot:nth-child(2) {
+    animation-delay: 0.15s;
+}
+
+.setup-typing-dot:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+@keyframes setupBounce {
+    0%, 80%, 100% { transform: translateY(0); opacity: 0.45; }
+    40% { transform: translateY(-4px); opacity: 1; }
+}
+
+.setup-chat-composer {
+    margin-top: 16px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 16px;
+}
+
+.setup-chat-input {
+    min-height: 108px;
+    resize: vertical;
+    line-height: 1.55;
+}
+
+.setup-chat-hint {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.setup-upload-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 46px;
+    padding-inline: 12px;
+}
+
+.setup-upload-button svg {
+    width: 16px;
+    height: 16px;
+}
+
+@media (max-width: 1200px) {
+    .setup-shell {
+        grid-template-columns: 320px minmax(0, 1fr) 240px;
+    }
+}
+
+@media (max-width: 980px) {
+    .setup-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .setup-model-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .setup-chat-messages {
+        min-height: 320px;
+    }
+}
+</style>
+
+<div class="setup-shell" data-gateway-ws-url="{{ gateway_ws_url|e }}">
+    <aside class="setup-sidebar">
+        <div class="setup-sidebar-header">
+            <h2>Onboarding Steps</h2>
+            <p>Move step by step. Model selection comes first, then the setup agent can drive each configuration pass.</p>
+        </div>
+        <div class="setup-steps" id="setupSteps"></div>
+    </aside>
+
+    <section class="setup-main">
+        <div id="setupPanel" class="setup-panel"></div>
+    </section>
+
+    <aside id="setupHints" class="setup-hints-sidebar"></aside>
+</div>
+
+<script>
+const SETUP_STEPS = [
+    {
+        id: 0,
+        title: 'Configure Model',
+        description: 'Choose the model the setup agent should use before starting onboarding.',
+        prompt: '',
+        type: 'model'
+    },
+    {
+        id: 1,
+        title: 'System Check',
+        description: 'Audit all ResonantOS components: gateway, Shield, Logician, SSoT, extensions.',
+        prompt: 'Run Phase 0: System Check. Verify the installation state. Check: OpenClaw gateway running, ResonantOS repo exists, extensions installed (r-memory, r-awareness, shield-gate), Logician service running, workspace files present, SSoT structure, Memory Archivist cron, LaunchAgents status. Report in three sections: Active & Working, Not Configured Yet, Legacy Artifacts.',
+        type: 'chat'
+    },
+    {
+        id: 2,
+        title: 'Document Ingest',
+        description: 'Upload documents so the AI can understand who you are: business plan, CV, creative works, etc.',
+        prompt: 'Run Phase 1: Ingest. I will provide materials for you to understand my identity, goals, and domain. I may upload files or paste text. Please analyze everything I provide and summarize what you understand.',
+        type: 'chat',
+        allowUpload: true
+    },
+    {
+        id: 3,
+        title: 'Identity Extraction',
+        description: 'Generate USER.md, SOUL.md customizations, Creative DNA, and INTENT.md.',
+        prompt: 'Run Phase 2: Extract Identity. Based on the materials I provided, draft USER.md, SOUL.md customizations, Creative DNA (if applicable), and INTENT.md. Present each for my approval before writing.',
+        type: 'chat'
+    },
+    {
+        id: 4,
+        title: 'Gap Analysis',
+        description: 'Identify missing information and ask targeted questions to fill gaps.',
+        prompt: 'Run Phase 3: Gap Analysis. Identify what information is still missing for a complete configuration. Categorize gaps as Priority (must fill), Important (should fill), and Nice-to-have (can fill later). Ask specific questions for each gap.',
+        type: 'chat'
+    },
+    {
+        id: 5,
+        title: 'Component Configuration',
+        description: 'Configure Logician rules, Shield, R-Awareness, coding agent, research agent, DAO.',
+        prompt: 'Run Phase 4: Configure Components. Set up Logician production_rules.mg, Shield configuration, R-Awareness keywords, delegation protocol (coding agent), research agent, and DAO registration. Present each component configuration for approval.',
+        type: 'chat'
+    },
+    {
+        id: 6,
+        title: 'Validate & Generate',
+        description: 'Review all configuration, write approved files, run B0 readiness checks.',
+        prompt: 'Run Phases 5-6: Validate and Generate. Present a complete summary of all configuration to be generated. After my approval, write all files to their correct locations, reload Logician rules, and run B0 readiness checks.',
+        type: 'chat'
+    },
+    {
+        id: 7,
+        title: 'Handoff',
+        description: 'Final B0 readiness score and system handoff.',
+        prompt: 'Run Phase 7: Handoff. Report the final B0 Readiness Score with all 18 checks (Human-System Alignment, Self-Awareness, Component Readiness). List what passed, what has gaps, and recommendations for improvement.',
+        type: 'chat'
+    }
+];
+
+const STEP_HINTS = {
+    0: {
+        title: 'Getting Started',
+        intro: 'Pick the setup model first so the rest of the onboarding flow uses the level of reasoning you want.',
+        hints: [
+            {icon: '&#128161;', text: 'Choose the smartest model you can afford'},
+            {icon: '&#128161;', text: 'A better model = better setup guidance'},
+            {icon: '&#128161;', text: 'You can change this later from the Agents page'}
+        ]
+    },
+    1: {
+        title: 'What Happens Here',
+        intro: 'This step is diagnostic. The agent inspects the installation and reports what is already working.',
+        hints: [
+            {icon: '&#128161;', text: 'The agent audits your entire installation'},
+            {icon: '&#128161;', text: 'Components are categorized: Active, Not Configured, Legacy'},
+            {icon: '&#128161;', text: 'No action needed from you — just click Send'}
+        ],
+        prompts: [
+            {label: 'Run full audit', text: 'Run Phase 0: System Check. Verify the installation state. Check all components and report in three sections: Active & Working, Not Configured Yet, Legacy Artifacts.'},
+            {label: 'What needs fixing?', text: 'Based on the system check, what are the most critical issues I should address first?'},
+            {label: 'Explain a component', text: 'Can you explain what each component does and why it matters for my setup?'}
+        ]
+    },
+    2: {
+        title: 'What to Provide',
+        intro: 'Front-load as much raw source material as possible so the agent can build an accurate picture before asking follow-up questions.',
+        hints: [
+            {icon: '&#128161;', text: 'Business plan or project description'},
+            {icon: '&#128161;', text: 'CV, resume, or professional background'},
+            {icon: '&#128161;', text: 'Creative works, portfolio, blog posts, videos'},
+            {icon: '&#128161;', text: 'The Anti-Museum: your scars, wrong decisions, failures, pivots — these reveal more about you than successes'},
+            {icon: '&#128161;', text: 'Values, principles, what you stand for'},
+            {icon: '&#128161;', text: 'Goals document or strategic notes'},
+            {icon: '&#128161;', text: 'Any existing AI prompts or system configurations'}
+        ],
+        prompts: [
+            {label: 'What do you need from me?', text: 'What specific documents and information do you need from me to build an accurate profile? List everything.'},
+            {label: 'I have files ready', text: 'I am going to upload several documents now. Please wait until I tell you I am done, then analyze everything together.'},
+            {label: 'I prefer to describe verbally', text: 'I do not have documents ready. Let me describe my background, project, and goals verbally. Ask me questions one at a time.'},
+            {label: 'What is the Anti-Museum?', text: 'What do you mean by the Anti-Museum? What kind of failures and wrong decisions should I share, and why does that help?'}
+        ],
+        note: 'Upload everything first. The agent will organize your materials and ask deeper questions to fill gaps.'
+    },
+    3: {
+        title: 'What Gets Generated',
+        intro: 'This phase turns the source material into concrete operating documents you can approve or reject.',
+        hints: [
+            {icon: '&#128161;', text: 'USER.md — your identity, preferences, communication style'},
+            {icon: '&#128161;', text: 'SOUL.md — customized AI behavior and decision framework'},
+            {icon: '&#128161;', text: 'Creative DNA — what makes your work uniquely yours (if applicable)'},
+            {icon: '&#128161;', text: 'INTENT.md — goals, tradeoffs, escalation rules'}
+        ],
+        prompts: [
+            {label: 'Generate my USER.md', text: 'Based on everything I provided, draft my USER.md. Present it for my review before writing.'},
+            {label: 'Generate INTENT.md', text: 'Draft my INTENT.md with goals, decision framework, tradeoffs, and escalation rules. Present for review.'},
+            {label: 'Generate Creative DNA', text: 'Draft my Creative DNA document. What makes my work uniquely mine? Present for review.'},
+            {label: 'Customize SOUL.md', text: 'Based on my preferences and working style, what customizations should we make to SOUL.md?'}
+        ],
+        note: 'Review each document carefully before approving. The agent will not write files without your explicit OK.'
+    },
+    4: {
+        title: 'Filling the Gaps',
+        intro: 'The goal here is precision. Missing or fuzzy context now becomes policy ambiguity later.',
+        hints: [
+            {icon: '&#128161;', text: 'The agent identifies what is still missing'},
+            {icon: '&#128161;', text: 'Gaps are prioritized: Must-fill, Should-fill, Nice-to-have'},
+            {icon: '&#128161;', text: 'Answer the specific questions — vague answers produce vague config'}
+        ],
+        prompts: [
+            {label: 'Find my gaps', text: 'Run Phase 3: Gap Analysis. What information is still missing? Categorize by priority and ask me specific questions.'},
+            {label: 'Skip nice-to-haves', text: 'I want to move forward. Mark all Nice-to-have gaps as TBD and focus only on the Must-fill and Should-fill gaps.'},
+            {label: 'I need help deciding', text: 'I am unsure about some of these questions. Can you explain why each piece of information matters and suggest reasonable defaults?'}
+        ],
+        note: 'It is OK to say "I don’t know yet". Gaps marked TBD are better than fabricated answers.'
+    },
+    5: {
+        title: 'Components Being Configured',
+        intro: 'This is where the onboarding output becomes concrete system behavior across the main ResonantOS components.',
+        hints: [
+            {icon: '&#128161;', text: 'Logician — policy rules for agent behavior'},
+            {icon: '&#128161;', text: 'Shield — file protection and security boundaries'},
+            {icon: '&#128161;', text: 'R-Awareness — smart document injection'},
+            {icon: '&#128161;', text: 'Coding Agent — delegation protocol'},
+            {icon: '&#128161;', text: 'Research Agent — deep search setup'},
+            {icon: '&#128161;', text: 'DAO — wallet registration and on-chain identity'}
+        ],
+        prompts: [
+            {label: 'Configure everything', text: 'Run Phase 4: Configure all components. Present each configuration for my approval.'},
+            {label: 'Explain Logician rules', text: 'Explain what Logician rules are, what they control, and what options I have for my setup.'},
+            {label: 'Set up the coding agent', text: 'Help me configure the coding agent delegation protocol. What options do I have?'},
+            {label: 'Skip DAO for now', text: 'I want to skip DAO registration for now and come back to it later. Configure the other components.'}
+        ]
+    },
+    6: {
+        title: 'Final Review',
+        intro: 'This is the last approval gate before the system writes files and runs readiness checks.',
+        hints: [
+            {icon: '&#128161;', text: 'Complete summary of all files to be generated'},
+            {icon: '&#128161;', text: 'Nothing is written without your approval'},
+            {icon: '&#128161;', text: 'B0 readiness checks run automatically after generation'}
+        ],
+        prompts: [
+            {label: 'Show me everything', text: 'Present the complete summary of all files and configurations to be generated. I want to review before approving.'},
+            {label: 'Approve and generate', text: 'I have reviewed everything. Proceed with writing all files and running B0 readiness checks.'},
+            {label: 'I want to change something', text: 'Before generating, I want to modify some of the configuration. Let me tell you what to change.'}
+        ]
+    },
+    7: {
+        title: 'You’re Done',
+        intro: 'The handoff packages your readiness score, remaining gaps, and next actions into one final status pass.',
+        hints: [
+            {icon: '&#128161;', text: 'B0 Readiness Score across 18 checks'},
+            {icon: '&#128161;', text: 'Three categories: Human-System Alignment, Self-Awareness, Component Readiness'},
+            {icon: '&#128161;', text: 'Score 15-18 = excellent, 10-14 = good, <10 = needs work'}
+        ],
+        prompts: [
+            {label: 'Show my score', text: 'Run Phase 7: Handoff. Report the final B0 Readiness Score with all 18 checks and recommendations.'},
+            {label: 'What should I do next?', text: 'Based on my readiness score, what are the top 3 things I should focus on next to improve my setup?'},
+            {label: 'Start over', text: 'I want to redo part of the setup. Which steps can I revisit without losing my existing configuration?'}
+        ],
+        note: 'You can re-run the setup agent anytime to reconfigure.'
+    }
+};
+
+const STORAGE_COMPLETED = 'setup.completedSteps';
+const STORAGE_ACTIVE = 'setup.activeStep';
+
+const state = {
+    activeStepId: 0,
+    completedSteps: new Set(),
+    messagesByStep: {},
+    drafts: {},
+    modelGroups: [],
+    currentModel: '',
+    selectedModel: '',
+    modelLoading: false,
+    modelSaving: false,
+    sendingStepId: null,
+    streamingByStep: {}
+};
+
+let setupGw = null;
+let setupGwReady = null;
+
+class SetupGatewayClient {
+    constructor() {
+        this.ws = null;
+        this.url = '';
+        this.token = '';
+        this.connected = false;
+        this.connectPromise = null;
+        this.pending = new Map();
+        this.chatStreams = new Map();
+        this.requestCounter = 0;
+    }
+
+    async connect(url, token) {
+        this.url = url;
+        this.token = token;
+
+        if (this.connected && this.ws && this.ws.readyState === WebSocket.OPEN) {
+            return;
+        }
+
+        if (this.connectPromise) {
+            return this.connectPromise;
+        }
+
+        this.connectPromise = new Promise((resolve, reject) => {
+            let settled = false;
+            let connectSent = false;
+            const ws = new WebSocket(url);
+            this.ws = ws;
+
+            const finalizeError = (error) => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                this.connectPromise = null;
+                this._handleDisconnect(error);
+                reject(error);
+            };
+
+            const finalizeSuccess = () => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                this.connected = true;
+                this.connectPromise = null;
+                resolve();
+            };
+
+            const sendConnect = () => {
+                if (connectSent || ws.readyState !== WebSocket.OPEN) {
+                    return;
+                }
+                connectSent = true;
+                try {
+                    ws.send(JSON.stringify({
+                        type: 'req',
+                        id: 'c0',
+                        method: 'connect',
+                        params: {
+                            auth: {token},
+                            minProtocol: 3,
+                            maxProtocol: 3,
+                            role: 'operator',
+                            scopes: ['operator.read', 'operator.write'],
+                            caps: [],
+                            client: {
+                                id: 'openclaw-control-ui',
+                                mode: 'webchat',
+                                version: '1.0.0',
+                                platform: 'web'
+                            }
+                        }
+                    }));
+                } catch (error) {
+                    finalizeError(error instanceof Error ? error : new Error(String(error)));
+                }
+            };
+
+            const fallbackTimer = window.setTimeout(sendConnect, 1000);
+
+            ws.addEventListener('message', event => {
+                let msg;
+                try {
+                    msg = JSON.parse(event.data);
+                } catch (error) {
+                    return;
+                }
+
+                if (msg.type === 'event' && msg.event === 'connect.challenge') {
+                    sendConnect();
+                    return;
+                }
+
+                if (msg.type === 'res' && msg.id === 'c0') {
+                    window.clearTimeout(fallbackTimer);
+                    if (msg.ok) {
+                        finalizeSuccess();
+                    } else {
+                        const errorMessage = msg.error && msg.error.message ? msg.error.message : 'Gateway connect failed';
+                        finalizeError(new Error(errorMessage));
+                    }
+                    return;
+                }
+
+                this._handleMessage(msg);
+            });
+
+            ws.addEventListener('close', () => {
+                window.clearTimeout(fallbackTimer);
+                const wasConnected = this.connected;
+                this._handleDisconnect(new Error('Gateway connection closed'));
+                if (!settled && !wasConnected) {
+                    finalizeError(new Error('Gateway connection closed'));
+                }
+            });
+
+            ws.addEventListener('error', () => {
+                if (!settled) {
+                    finalizeError(new Error('Gateway WebSocket error'));
+                }
+            });
+        });
+
+        return this.connectPromise;
+    }
+
+    async ensureConnected() {
+        if (this.connected && this.ws && this.ws.readyState === WebSocket.OPEN) {
+            return;
+        }
+        if (!this.url || !this.token) {
+            throw new Error('Gateway connection is not initialized');
+        }
+        await this.connect(this.url, this.token);
+    }
+
+    async send(sessionKey, message, handlers = {}) {
+        if (!sessionKey) {
+            throw new Error('sessionKey is required');
+        }
+        if (!message) {
+            throw new Error('message is required');
+        }
+
+        await this.ensureConnected();
+
+        const idempotencyKey = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+        this.chatStreams.set(sessionKey, {
+            text: '',
+            onDelta: typeof handlers.onDelta === 'function' ? handlers.onDelta : () => {},
+            onFinal: typeof handlers.onFinal === 'function' ? handlers.onFinal : () => {},
+            onError: typeof handlers.onError === 'function' ? handlers.onError : () => {}
+        });
+
+        try {
+            const response = await this._request('chat.send', {
+                sessionKey,
+                message,
+                deliver: false,
+                idempotencyKey
+            });
+
+            if (!response.ok) {
+                const errorMessage = response.error && response.error.message ? response.error.message : 'chat.send failed';
+                throw new Error(errorMessage);
+            }
+        } catch (error) {
+            this._rejectChatStream(sessionKey, error);
+        }
+    }
+
+    _nextId() {
+        this.requestCounter += 1;
+        return `r${this.requestCounter}`;
+    }
+
+    _request(method, params) {
+        return new Promise((resolve, reject) => {
+            if (!this.connected || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
+                reject(new Error('Gateway is not connected'));
+                return;
+            }
+
+            const id = this._nextId();
+            this.pending.set(id, {resolve, reject});
+
+            try {
+                this.ws.send(JSON.stringify({
+                    type: 'req',
+                    id,
+                    method,
+                    params
+                }));
+            } catch (error) {
+                this.pending.delete(id);
+                reject(error instanceof Error ? error : new Error(String(error)));
+            }
+        });
+    }
+
+    _handleMessage(msg) {
+        if (msg.type === 'res') {
+            const pending = this.pending.get(msg.id);
+            if (!pending) {
+                return;
+            }
+            this.pending.delete(msg.id);
+            pending.resolve(msg);
+            return;
+        }
+
+        if (msg.type === 'event') {
+            this._handleEvent(msg.event, msg.payload || {});
+        }
+    }
+
+    _handleEvent(event, payload) {
+        if (event !== 'chat') {
+            return;
+        }
+
+        const sessionKey = payload.sessionKey || '';
+        const stream = this.chatStreams.get(sessionKey);
+        if (!stream) {
+            return;
+        }
+
+        if (payload.state === 'delta') {
+            const deltaText = typeof payload.message === 'string' ? payload.message : '';
+            stream.text = deltaText.startsWith(stream.text) ? deltaText : `${stream.text}${deltaText}`;
+            stream.onDelta(stream.text);
+            return;
+        }
+
+        if (payload.state === 'final') {
+            let finalText = this._extractAssistantText(payload) || stream.text;
+            if (!finalText) {
+                // Non-streaming agent: fetch last assistant message from chat history
+                this._request('chat.history', {sessionKey: sessionKey, limit: 1}).then(res => {
+                    if (res.ok && res.payload && res.payload.messages) {
+                        const lastMsg = res.payload.messages.filter(m => m.role === 'assistant').pop();
+                        if (lastMsg) {
+                            finalText = this._extractAssistantText({message: lastMsg});
+                        }
+                    }
+                    this.chatStreams.delete(sessionKey);
+                    stream.onFinal(finalText || '(no response received)', payload);
+                }).catch(() => {
+                    this.chatStreams.delete(sessionKey);
+                    stream.onFinal(stream.text || '(no response received)', payload);
+                });
+                return;
+            }
+            this.chatStreams.delete(sessionKey);
+            stream.onFinal(finalText, payload);
+            return;
+        }
+
+        if (payload.state === 'error') {
+            const errorMessage = payload.error || payload.message || 'Setup chat failed';
+            this._rejectChatStream(sessionKey, new Error(String(errorMessage)));
+        }
+    }
+
+    _extractAssistantText(payload) {
+        const message = payload && payload.message;
+        if (!message) {
+            return '';
+        }
+
+        const content = message.content;
+        if (Array.isArray(content)) {
+            return content
+                .map(block => {
+                    if (block && typeof block === 'object' && block.type === 'text') {
+                        return block.text || '';
+                    }
+                    if (typeof block === 'string') {
+                        return block;
+                    }
+                    return '';
+                })
+                .filter(Boolean)
+                .join('\n');
+        }
+
+        if (typeof content === 'string') {
+            return content;
+        }
+
+        if (typeof message.text === 'string') {
+            return message.text;
+        }
+
+        return '';
+    }
+
+    _rejectChatStream(sessionKey, error) {
+        const stream = this.chatStreams.get(sessionKey);
+        if (!stream) {
+            return;
+        }
+        this.chatStreams.delete(sessionKey);
+        stream.onError(error instanceof Error ? error.message : String(error));
+    }
+
+    _handleDisconnect(error) {
+        this.connected = false;
+
+        if (this.ws && this.ws.readyState !== WebSocket.CLOSED) {
+            try {
+                this.ws.close();
+            } catch (closeError) {
+                // No-op
+            }
+        }
+        this.ws = null;
+
+        this.pending.forEach(({reject}) => {
+            reject(error);
+        });
+        this.pending.clear();
+
+        this.chatStreams.forEach(stream => {
+            stream.onError(error instanceof Error ? error.message : String(error));
+        });
+        this.chatStreams.clear();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initSetupPage);
+
+async function initSetupPage() {
+    setupGw = new SetupGatewayClient();
+    setupGwReady = initSetupGateway();
+    restoreState();
+    renderSteps();
+    renderPanel();
+    bindHintsSidebar();
+    await Promise.all([
+        loadCurrentSetupModel(),
+        setupGwReady.catch(error => {
+            console.error('Failed to initialize setup gateway client', error);
+            return null;
+        })
+    ]);
+    await loadAvailableModels();
+    renderSteps();
+    renderPanel();
+}
+
+async function initSetupGateway() {
+    const shell = document.querySelector('.setup-shell');
+    const gatewayUrl = shell && shell.dataset.gatewayWsUrl ? shell.dataset.gatewayWsUrl : 'ws://127.0.0.1:18789';
+
+    const [statusResponse, tokenResponse] = await Promise.all([
+        fetch('/api/gateway/status'),
+        fetch('/api/gateway/token')
+    ]);
+
+    const statusData = await statusResponse.json();
+    const tokenData = await tokenResponse.json();
+    const token = typeof tokenData.token === 'string' ? tokenData.token : '';
+
+    if (!token) {
+        throw new Error('Gateway token is missing');
+    }
+
+    await setupGw.connect(gatewayUrl, token);
+    return {
+        gatewayUrl,
+        connected: Boolean(statusData.connected)
+    };
+}
+
+function restoreState() {
+    try {
+        const completed = JSON.parse(localStorage.getItem(STORAGE_COMPLETED) || '[]');
+        if (Array.isArray(completed)) {
+            state.completedSteps = new Set(completed.map(Number));
+        }
+    } catch (error) {
+        console.warn('Failed to restore completed setup steps', error);
+    }
+
+    try {
+        const savedStep = Number(localStorage.getItem(STORAGE_ACTIVE));
+        if (Number.isFinite(savedStep) && SETUP_STEPS.some(step => step.id === savedStep)) {
+            state.activeStepId = savedStep;
+        }
+    } catch (error) {
+        console.warn('Failed to restore active setup step', error);
+    }
+}
+
+function persistState() {
+    localStorage.setItem(STORAGE_COMPLETED, JSON.stringify(Array.from(state.completedSteps)));
+    localStorage.setItem(STORAGE_ACTIVE, String(state.activeStepId));
+}
+
+function getStep(stepId) {
+    return SETUP_STEPS.find(step => step.id === stepId);
+}
+
+function renderSteps() {
+    const container = document.getElementById('setupSteps');
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = SETUP_STEPS.map(step => {
+        const isActive = step.id === state.activeStepId;
+        const isCompleted = state.completedSteps.has(step.id);
+        const statusText = isCompleted ? 'Completed' : (isActive ? 'Active' : 'Pending');
+        const circleContent = isCompleted ? '&#10003;' : step.id;
+
+        return `
+            <button class="setup-step ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}" data-step-id="${step.id}">
+                <div class="setup-step-head">
+                    <div class="setup-step-circle">${circleContent}</div>
+                    <div class="setup-step-copy">
+                        <div class="setup-step-title-row">
+                            <div class="setup-step-title">${escapeHtml(step.title)}</div>
+                            <div class="setup-step-state">${statusText}</div>
+                        </div>
+                        <p class="setup-step-description">${escapeHtml(step.description)}</p>
+                    </div>
+                </div>
+            </button>
+        `;
+    }).join('');
+
+    container.querySelectorAll('.setup-step').forEach(button => {
+        button.addEventListener('click', () => {
+            const nextStepId = Number(button.dataset.stepId);
+            activateStep(nextStepId);
+        });
+    });
+}
+
+function activateStep(stepId) {
+    const step = getStep(stepId);
+    if (!step) {
+        return;
+    }
+
+    state.activeStepId = stepId;
+    persistState();
+
+    if (step.type === 'chat') {
+        // Don't auto-fill drafts - user clicks suggested prompts instead
+    }
+
+    renderSteps();
+    renderPanel();
+}
+
+function renderPanel() {
+    const container = document.getElementById('setupPanel');
+    const hintsContainer = document.getElementById('setupHints');
+    const activeStep = getStep(state.activeStepId);
+    if (!container || !hintsContainer || !activeStep) {
+        return;
+    }
+
+    hintsContainer.innerHTML = renderHintsSidebar(activeStep.id);
+
+    if (activeStep.type === 'model') {
+        container.innerHTML = renderModelPanel();
+        bindModelPanel();
+        return;
+    }
+
+    container.innerHTML = renderChatPanel(activeStep);
+    bindChatPanel(activeStep);
+    scrollMessagesToBottom();
+}
+
+function renderHintsSidebar(stepId) {
+    const step = getStep(stepId);
+    const hintConfig = STEP_HINTS[stepId];
+
+    if (!step || !hintConfig) {
+        return `
+            <div class="setup-hints-header">
+                <h2>Step Guidance</h2>
+                <p>No step-specific guidance is available for this stage.</p>
+            </div>
+        `;
+    }
+
+    const hintItems = hintConfig.hints.map(item => `
+        <li class="setup-hint-item">
+            <span class="setup-hint-icon" aria-hidden="true">${item.icon}</span>
+            <span class="setup-hint-text">${escapeHtml(item.text)}</span>
+        </li>
+    `).join('');
+    const promptItems = (hintConfig.prompts || []).map(prompt => `
+        <button type="button" class="setup-suggested-prompt" data-prompt-text="${escapeHtml(prompt.text)}">
+            ${escapeHtml(prompt.label)}
+        </button>
+    `).join('');
+
+    return `
+        <div class="setup-hints-header">
+            <h2>${escapeHtml(hintConfig.title)}</h2>
+            <p>Step ${step.id}: ${escapeHtml(step.title)}</p>
+        </div>
+        <div class="setup-hints-body">
+            <p class="setup-chat-stage-note">${escapeHtml(hintConfig.intro || step.description)}</p>
+            <ul class="setup-hints-list">
+                ${hintItems}
+            </ul>
+            ${promptItems ? `
+                <div class="setup-suggested-prompts-section">
+                    <p class="setup-suggested-prompts-label">Suggested Prompts</p>
+                    <div class="setup-suggested-prompts">
+                        ${promptItems}
+                    </div>
+                </div>
+            ` : ''}
+            ${hintConfig.note ? `
+                <div class="setup-hints-note">
+                    <h3>What to Expect</h3>
+                    <p>${escapeHtml(hintConfig.note)}</p>
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+function bindHintsSidebar() {
+    const hintsContainer = document.getElementById('setupHints');
+    if (!hintsContainer) {
+        return;
+    }
+
+    hintsContainer.addEventListener('click', event => {
+        const promptButton = event.target.closest('.setup-suggested-prompt');
+        if (!promptButton) {
+            return;
+        }
+
+        const promptText = promptButton.dataset.promptText || '';
+        const activeStep = getStep(state.activeStepId);
+        if (!activeStep || activeStep.type !== 'chat') {
+            return;
+        }
+
+        state.drafts[activeStep.id] = promptText;
+
+        const input = document.getElementById('setupChatInput');
+        if (input) {
+            input.value = promptText;
+            input.focus();
+            input.setSelectionRange(input.value.length, input.value.length);
+        }
+    });
+}
+
+function renderModelPanel() {
+    const optionGroups = renderModelOptions();
+    const currentModel = state.currentModel || 'Not detected';
+    const activeProvider = state.selectedModel ? providerFromModelId(state.selectedModel) : 'Unassigned';
+    const modelCount = state.modelGroups.reduce((count, group) => count + group.models.length, 0);
+
+    return `
+        <div class="setup-main-header">
+            <h2>Step 0: Configure Model</h2>
+            <p>Select the model for the setup agent. Saving this marks the first onboarding step as complete.</p>
+        </div>
+        <div class="setup-panel-body">
+            <div class="setup-model-layout">
+                <div class="setup-card">
+                    <h3>Setup Agent Model</h3>
+                    <p>Available models are loaded from the gateway. The selected value is written to the setup agent override via <code>/api/agents/setup/model</code>.</p>
+                    <label class="setup-field-label" for="setupModelSelect">Available Models</label>
+                    <select id="setupModelSelect" class="setup-model-select" ${state.modelLoading ? 'disabled' : ''}>
+                        ${optionGroups || `<option value="">${state.modelLoading ? 'Loading models...' : 'No models available'}</option>`}
+                    </select>
+                    <div class="setup-model-actions">
+                        <div class="setup-meta-note">${modelCount ? `${modelCount} models available across ${state.modelGroups.length} providers.` : 'The model list is empty or the gateway did not return a model catalog.'}</div>
+                        <button id="saveModelButton" class="setup-button" ${!state.selectedModel || state.modelSaving ? 'disabled' : ''}>${state.modelSaving ? 'Saving...' : 'Save Model'}</button>
+                    </div>
+                </div>
+                <div class="setup-model-status">
+                    <div class="setup-card">
+                        <h3>Current Status</h3>
+                        <div class="setup-status-row">
+                            <span class="setup-status-label">Current setup model</span>
+                            <span class="setup-status-value">${escapeHtml(currentModel)}</span>
+                        </div>
+                        <div class="setup-status-row">
+                            <span class="setup-status-label">Selected provider</span>
+                            <span class="setup-status-value">${escapeHtml(activeProvider)}</span>
+                        </div>
+                        <div class="setup-status-row">
+                            <span class="setup-status-label">Step completion</span>
+                            <span class="setup-status-value ${state.completedSteps.has(0) ? 'success' : ''}">${state.completedSteps.has(0) ? 'Completed' : 'Pending'}</span>
+                        </div>
+                    </div>
+                    <div class="setup-card">
+                        <h3>What Happens Next</h3>
+                        <p>Once the model is saved, continue through the remaining steps. Each chat step offers suggested prompts in the sidebar that you can insert into the composer when needed.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function bindModelPanel() {
+    const select = document.getElementById('setupModelSelect');
+    const saveButton = document.getElementById('saveModelButton');
+
+    if (select) {
+        if (state.selectedModel) {
+            select.value = state.selectedModel;
+        }
+        select.addEventListener('change', event => {
+            state.selectedModel = event.target.value;
+            renderPanel();
+        });
+    }
+
+    if (saveButton) {
+        saveButton.addEventListener('click', saveSelectedModel);
+    }
+}
+
+function renderChatPanel(step) {
+    const messages = state.messagesByStep[step.id] || [];
+    const draft = state.drafts[step.id] || '';
+    const isCompleted = state.completedSteps.has(step.id);
+    const isTyping = state.sendingStepId === step.id;
+    const streamingText = state.streamingByStep[step.id] || '';
+    const uploadsAllowed = step.type === 'chat' || step.allowUpload;
+
+    return `
+        <div class="setup-main-header">
+            <div class="setup-chat-toolbar">
+                <div>
+                    <div class="setup-chat-title">
+                        <span class="setup-badge">Setup Agent</span>
+                        <span class="setup-chat-stage">Step ${step.id}: ${escapeHtml(step.title)}</span>
+                    </div>
+                    <div class="setup-chat-stage-note">${escapeHtml(step.description)}</div>
+                </div>
+                <button id="toggleStepCompletion" class="setup-secondary-button">${isCompleted ? 'Completed' : 'Mark Complete'}</button>
+            </div>
+        </div>
+        <div class="setup-panel-body">
+            <div class="setup-chat-shell">
+                <div id="setupChatMessages" class="setup-chat-messages">
+                    ${renderMessages(messages, isTyping, streamingText)}
+                </div>
+                <div class="setup-chat-composer">
+                    <textarea id="setupChatInput" class="setup-chat-input" placeholder="Ask the setup agent...">${escapeHtml(draft)}</textarea>
+                    <input type="file" id="setupFileInput" multiple accept=".md,.txt,.pdf,.json,.yaml,.yml,.csv,.doc,.docx,.html,.py,.js,.ts" hidden>
+                    <div class="setup-chat-actions">
+                        ${uploadsAllowed ? `
+                            <button id="setupUploadButton" type="button" class="setup-secondary-button setup-upload-button" ${isTyping ? 'disabled' : ''} aria-label="Upload files">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.2a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                                </svg>
+                            </button>
+                        ` : ''}
+                        <div class="setup-chat-hint">Press Enter to send. Use Shift+Enter for a newline.</div>
+                        <button id="sendSetupMessage" class="setup-button" ${isTyping ? 'disabled' : ''}>${isTyping ? 'Waiting...' : 'Send'}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function bindChatPanel(step) {
+    const input = document.getElementById('setupChatInput');
+    const sendButton = document.getElementById('sendSetupMessage');
+    const completionButton = document.getElementById('toggleStepCompletion');
+    const uploadButton = document.getElementById('setupUploadButton');
+    const fileInput = document.getElementById('setupFileInput');
+
+    if (input) {
+        input.addEventListener('input', event => {
+            state.drafts[step.id] = event.target.value;
+        });
+        input.addEventListener('keydown', event => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendSetupMessage(step.id);
+            }
+        });
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+    }
+
+    if (sendButton) {
+        sendButton.addEventListener('click', () => sendSetupMessage(step.id));
+    }
+
+    if (uploadButton && fileInput) {
+        uploadButton.addEventListener('click', () => {
+            if (state.sendingStepId === null) {
+                fileInput.click();
+            }
+        });
+        fileInput.addEventListener('change', event => {
+            handleSetupFileSelection(step.id, event.target.files);
+        });
+    }
+
+    if (completionButton) {
+        completionButton.addEventListener('click', () => {
+            if (state.completedSteps.has(step.id)) {
+                state.completedSteps.delete(step.id);
+                showToast(`Step ${step.id} marked pending`, 'info');
+            } else {
+                state.completedSteps.add(step.id);
+                showToast(`Step ${step.id} marked complete`, 'success');
+            }
+            persistState();
+            renderSteps();
+            renderPanel();
+        });
+    }
+}
+
+function renderMessages(messages, isTyping, streamingText) {
+    if (!messages.length && !isTyping) {
+        return `
+            <div class="setup-empty-state">
+                Use a suggested prompt from the sidebar or write your own message below, then send it to the setup agent.
+            </div>
+        `;
+    }
+
+    const items = messages.map(message => `
+        <div class="setup-message ${message.role}">
+            <div class="setup-message-meta">${message.role === 'user' ? 'You' : 'Setup Agent'}</div>
+            <div class="setup-message-content">${message.role === 'agent' ? renderMarkdown(message.content) : escapeHtml(message.content).replace(/\n/g, '<br>')}</div>
+        </div>
+    `);
+
+    if (isTyping && streamingText) {
+        items.push(`
+            <div class="setup-message agent">
+                <div class="setup-message-meta">Setup Agent</div>
+                <div class="setup-message-content">${renderMarkdown(streamingText)}</div>
+            </div>
+        `);
+    } else if (isTyping) {
+        items.push(`
+            <div class="setup-typing" aria-label="Setup agent is typing">
+                <span class="setup-typing-dot"></span>
+                <span class="setup-typing-dot"></span>
+                <span class="setup-typing-dot"></span>
+            </div>
+        `);
+    }
+
+    return items.join('');
+}
+
+async function loadAvailableModels() {
+    state.modelLoading = true;
+    renderPanel();
+
+    try {
+        if (!setupGw || !setupGwReady) {
+            console.warn('Gateway not ready, skipping model load');
+            state.modelGroups = [];
+            return;
+        }
+
+        await setupGwReady;
+        const res = await setupGw._request('models.list', {});
+        if (!res.ok || !res.payload) {
+            throw new Error((res.error && res.error.message) || 'models.list failed');
+        }
+
+        state.modelGroups = extractModelGroups(res.payload);
+
+        // Always prefer the current configured model
+        if (state.currentModel) {
+            state.selectedModel = state.currentModel;
+        } else if (!state.selectedModel) {
+            const firstModel = state.modelGroups[0] && state.modelGroups[0].models[0];
+            state.selectedModel = firstModel ? firstModel.id : '';
+        }
+    } catch (error) {
+        console.error('Failed to load models', error);
+        showToast('Failed to load models', 'error');
+        state.modelGroups = [];
+    } finally {
+        state.modelLoading = false;
+    }
+}
+
+async function loadCurrentSetupModel() {
+    try {
+        const response = await fetch('/api/agents');
+        const data = await response.json();
+        const agents = extractAgents(data);
+        const setupAgent = agents.find(agent => agent.agentId === 'setup');
+        state.currentModel = setupAgent && typeof setupAgent.mainModel === 'string' ? setupAgent.mainModel : '';
+        if (state.currentModel && !state.selectedModel) {
+            state.selectedModel = state.currentModel;
+        }
+    } catch (error) {
+        console.error('Failed to load setup agent model', error);
+        showToast('Failed to load current setup model', 'error');
+    }
+}
+
+async function saveSelectedModel() {
+    if (!state.selectedModel || state.modelSaving) {
+        return;
+    }
+
+    state.modelSaving = true;
+    renderPanel();
+
+    try {
+        const response = await fetch('/api/agents/setup/model', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({model: state.selectedModel})
+        });
+        const data = await response.json();
+        if (!response.ok || !data.ok) {
+            throw new Error(data.error || 'Failed to save model');
+        }
+
+        state.currentModel = data.model || state.selectedModel;
+        state.selectedModel = state.currentModel;
+        state.completedSteps.add(0);
+        persistState();
+        renderSteps();
+        renderPanel();
+        showToast(`Setup model saved: ${state.currentModel.split('/').pop()}`, 'success');
+    } catch (error) {
+        console.error('Failed to save setup model', error);
+        showToast(error.message || 'Failed to save model', 'error');
+    } finally {
+        state.modelSaving = false;
+        renderPanel();
+    }
+}
+
+async function sendSetupMessage(stepId) {
+    const step = getStep(stepId);
+    const input = document.getElementById('setupChatInput');
+    const overrideMessage = arguments.length > 1 ? arguments[1] : null;
+    if (!step || state.sendingStepId !== null) {
+        return;
+    }
+
+    const message = typeof overrideMessage === 'string' ? overrideMessage.trim() : (input ? input.value.trim() : '');
+    if (!message) {
+        showToast('Enter a message before sending', 'info');
+        return;
+    }
+
+    if (!state.messagesByStep[stepId]) {
+        state.messagesByStep[stepId] = [];
+    }
+
+    state.messagesByStep[stepId].push({role: 'user', content: message});
+    if (typeof overrideMessage === 'string') {
+        if (input) {
+            state.drafts[stepId] = input.value;
+        }
+    } else {
+        state.drafts[stepId] = '';
+    }
+    state.sendingStepId = stepId;
+    state.streamingByStep[stepId] = '';
+    renderPanel();
+
+    try {
+        if (!setupGwReady) {
+            setupGwReady = initSetupGateway();
+        }
+        await setupGwReady;
+
+        const responseText = await new Promise((resolve, reject) => {
+            setupGw.send('agent:setup:main', message, {
+                onDelta: text => {
+                    state.streamingByStep[stepId] = text;
+                    updateChatMessages(stepId);
+                },
+                onFinal: text => resolve(text),
+                onError: error => reject(new Error(error))
+            });
+        });
+
+        state.messagesByStep[stepId].push({
+            role: 'agent',
+            content: typeof responseText === 'string' ? responseText : JSON.stringify(responseText, null, 2)
+        });
+    } catch (error) {
+        console.error('Setup chat failed', error);
+        state.messagesByStep[stepId].push({
+            role: 'agent',
+            content: `Error: ${error.message || 'Setup chat failed'}`
+        });
+        showToast(error.message || 'Setup chat failed', 'error');
+    } finally {
+        delete state.streamingByStep[stepId];
+        state.sendingStepId = null;
+        if (state.activeStepId === stepId) {
+            renderPanel();
+        }
+    }
+}
+
+async function handleSetupFileSelection(stepId, fileList) {
+    const files = Array.from(fileList || []);
+    const fileInput = document.getElementById('setupFileInput');
+
+    if (!files.length) {
+        return;
+    }
+
+    for (const file of files) {
+        showToast(`Uploading ${file.name}...`, 'info');
+
+        try {
+            const content = await readSetupFileAsText(file);
+            const message = `📎 Uploaded: ${file.name}\n---\n${content}`;
+            await sendSetupMessage(stepId, message);
+        } catch (error) {
+            console.error('Failed to read uploaded file', error);
+            showToast(`Failed to read ${file.name}`, 'error');
+        }
+    }
+
+    if (fileInput) {
+        fileInput.value = '';
+    }
+}
+
+function readSetupFileAsText(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+        reader.onerror = () => reject(reader.error || new Error('File read failed'));
+        reader.readAsText(file);
+    });
+}
+
+function scrollMessagesToBottom() {
+    const messages = document.getElementById('setupChatMessages');
+    if (messages) {
+        messages.scrollTop = messages.scrollHeight;
+    }
+}
+
+function updateChatMessages(stepId) {
+    if (state.activeStepId !== stepId) {
+        return;
+    }
+
+    const step = getStep(stepId);
+    const messages = document.getElementById('setupChatMessages');
+    if (!step || !messages) {
+        return;
+    }
+
+    messages.innerHTML = renderMessages(
+        state.messagesByStep[stepId] || [],
+        state.sendingStepId === stepId,
+        state.streamingByStep[stepId] || ''
+    );
+    scrollMessagesToBottom();
+}
+
+function renderModelOptions() {
+    const knownIds = new Set();
+    const groups = state.modelGroups.map(group => {
+        const options = group.models.map(model => {
+            knownIds.add(model.id);
+            const suffix = model.description ? ` - ${escapeHtml(model.description)}` : '';
+            return `<option value="${escapeHtml(model.id)}" ${model.id === state.selectedModel ? 'selected' : ''}>${escapeHtml(model.name)}${suffix}</option>`;
+        }).join('');
+        return `<optgroup label="${escapeHtml(group.name)}">${options}</optgroup>`;
+    });
+
+    if (state.selectedModel && !knownIds.has(state.selectedModel)) {
+        groups.unshift(`<optgroup label="Current"><option value="${escapeHtml(state.selectedModel)}" selected>${escapeHtml(state.selectedModel)}</option></optgroup>`);
+    }
+
+    return groups.join('');
+}
+
+function extractAgents(data) {
+    if (Array.isArray(data)) {
+        return data;
+    }
+    if (Array.isArray(data && data.agents)) {
+        return data.agents;
+    }
+    if (Array.isArray(data && data.payload)) {
+        return data.payload;
+    }
+    if (Array.isArray(data && data.payload && data.payload.agents)) {
+        return data.payload.agents;
+    }
+    return [];
+}
+
+function extractModelGroups(data) {
+    const groups = normalizeModelGroups(data);
+    if (groups.length) {
+        return groups;
+    }
+
+    for (const key of ['payload', 'data', 'result']) {
+        if (data && data[key]) {
+            const nested = normalizeModelGroups(data[key]);
+            if (nested.length) {
+                return nested;
+            }
+        }
+    }
+
+    return [];
+}
+
+function normalizeModelGroups(source) {
+    if (!source) {
+        return [];
+    }
+
+    if (Array.isArray(source)) {
+        return groupModels(source.map(item => normalizeModel(item)).filter(Boolean));
+    }
+
+    if (Array.isArray(source.providers)) {
+        return source.providers.map(provider => {
+            const providerName = provider.name || provider.id || provider.provider || 'Provider';
+            const models = (provider.models || []).map(item => normalizeModel(item, providerName)).filter(Boolean);
+            return {name: providerName, models};
+        }).filter(group => group.models.length);
+    }
+
+    if (Array.isArray(source.models)) {
+        return groupModels(source.models.map(item => normalizeModel(item)).filter(Boolean));
+    }
+
+    return [];
+}
+
+function normalizeModel(item, defaultProvider) {
+    if (!item) {
+        return null;
+    }
+
+    if (typeof item === 'string') {
+        return {
+            id: item,
+            name: item,
+            provider: providerFromModelId(item, defaultProvider)
+        };
+    }
+
+    const id = item.id || item.model || item.name || item.slug;
+    if (!id) {
+        return null;
+    }
+
+    return {
+        id,
+        name: item.name || item.label || id,
+        provider: item.provider || item.vendor || item.apiType || providerFromModelId(id, defaultProvider),
+        description: item.description || item.summary || ''
+    };
+}
+
+function groupModels(models) {
+    const grouped = new Map();
+
+    models.forEach(model => {
+        const provider = model.provider || 'Other';
+        if (!grouped.has(provider)) {
+            grouped.set(provider, []);
+        }
+        grouped.get(provider).push(model);
+    });
+
+    return Array.from(grouped.entries()).map(([name, groupModels]) => ({
+        name,
+        models: groupModels
+    }));
+}
+
+function providerFromModelId(modelId, fallback) {
+    if (!modelId) {
+        return fallback || 'Other';
+    }
+    const slashIndex = modelId.indexOf('/');
+    if (slashIndex > 0) {
+        return modelId.slice(0, slashIndex);
+    }
+    return fallback || 'Other';
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function renderMarkdown(value) {
+    const placeholders = [];
+    let html = escapeHtml(value || '');
+
+    html = html.replace(/```([\w-]+)?\n([\s\S]*?)```/g, (_, language, code) => {
+        const label = language ? `${language}\n` : '';
+        const token = `__CODE_BLOCK_${placeholders.length}__`;
+        placeholders.push(`<pre><code>${escapeHtml(label + code.trim())}</code></pre>`);
+        return token;
+    });
+
+    html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\n/g, '<br>');
+
+    placeholders.forEach((block, index) => {
+        html = html.replace(`__CODE_BLOCK_${index}__`, block);
+    });
+
+    return html;
+}
+</script>
+{% endblock %}

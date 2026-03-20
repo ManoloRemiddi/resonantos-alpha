@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/_project_common.sh"
+
+usage() {
+  cat <<'EOF'
+Usage: scripts/project/block-task ISSUE_NUMBER (--note "text" | --note-file path)
+
+Moves a task to Blocked and records a blocking note on the issue.
+EOF
+}
+
+ISSUE_NUMBER=""
+NOTE=""
+NOTE_FILE=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --note)
+      NOTE="${2:-}"
+      shift 2
+      ;;
+    --note-file)
+      NOTE_FILE="${2:-}"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      if [[ -z "$ISSUE_NUMBER" ]]; then
+        ISSUE_NUMBER="$1"
+        shift
+      else
+        fail "unknown argument: $1"
+      fi
+      ;;
+  esac
+done
+
+[[ -n "$ISSUE_NUMBER" ]] || fail "issue number is required"
+if [[ -n "$NOTE" && -n "$NOTE_FILE" ]]; then
+  fail "use either --note or --note-file, not both"
+fi
+if [[ -n "$NOTE_FILE" ]]; then
+  [[ -f "$NOTE_FILE" ]] || fail "note file not found: $NOTE_FILE"
+  NOTE="$(cat "$NOTE_FILE")"
+fi
+[[ -n "$NOTE" ]] || fail "a blocking note is required"
+
+ensure_ready
+
+item_id="$(project_item_id_by_issue_number "$ISSUE_NUMBER")"
+set_item_status "$item_id" "$PROJECT_STATUS_BLOCKED"
+comment_on_issue "$ISSUE_NUMBER" "$NOTE"
+
+printf 'Moved issue #%s to %s\n' "$ISSUE_NUMBER" "$PROJECT_STATUS_BLOCKED"
