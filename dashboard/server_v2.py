@@ -859,6 +859,10 @@ def r_memory_page():
 def projects_page():
     return render_template("projects.html", active_page="projects")
 
+@app.route("/setup")
+def setup_page():
+    return render_template("setup.html", active_page="setup", gateway_ws_url=GW_WS_URL)
+
 @app.route("/chatbots")
 def chatbots_page():
     return render_template("chatbots.html", active_page="chatbots")
@@ -5310,38 +5314,36 @@ def api_agent_sessions(agent_id):
 
 @app.route("/api/agents/<agent_id>/model", methods=["PUT"])
 def api_agent_model(agent_id):
-    """Update an agent's model - writes to override file to bypass Shield."""
     data = request.get_json(force=True) or {}
     model = data.get("model")
     if not model:
         return jsonify({"error": "model required"}), 400
-
-    # Write to override file instead of openclaw.json (bypasses Shield)
-    override_path = Path.home() / ".openclaw" / "model-overrides.json"
-    try:
-        overrides = {}
-        if override_path.exists():
-            overrides = json.loads(override_path.read_text())
-        overrides[agent_id] = {"model": model, "updated_at": datetime.now().isoformat()}
-        override_path.write_text(json.dumps(overrides, indent=2))
-    except Exception as e:
-        return jsonify({"error": f"Failed to write override: {e}"}), 500
-
-    # Also try to update main config (will be blocked by Shield but that's OK)
     cfg_path = Path.home() / ".openclaw" / "openclaw.json"
-    if cfg_path.exists():
-        try:
-            cfg = json.loads(cfg_path.read_text())
-            if "agents" not in cfg:
-                cfg["agents"] = {}
-            if agent_id not in cfg["agents"]:
-                cfg["agents"][agent_id] = {}
-            cfg["agents"][agent_id]["model"] = model
-            cfg_path.write_text(json.dumps(cfg, indent=2))
-        except Exception:
-            pass  # Shield will block this, that's OK
-
-    return jsonify({"ok": True, "agentId": agent_id, "model": model})
+    try:
+        cfg = json.loads(cfg_path.read_text())
+        agents_list = cfg.setdefault("agents", {}).setdefault("list", [])
+        entry = next((e for e in agents_list if e.get("id") == agent_id), None)
+        if entry:
+            entry["model"] = model
+        else:
+            agents_list.append({"id": agent_id, "model": model})
+        cfg_path.write_text(json.dumps(cfg, indent=2))
+    except Exception as e:
+        return jsonify({"error": f"Failed to update config: {e}"}), 500
+    restart_error = None
+    try:
+        import subprocess
+        result = subprocess.run(["openclaw", "gateway", "restart"], capture_output=True, text=True, timeout=15)
+        if result.returncode != 0:
+            restart_error = result.stderr.strip() or "restart failed"
+    except Exception as e:
+        restart_error = str(e)
+    resp = {"ok": True, "agentId": agent_id, "model": model}
+    if restart_error:
+        resp["restartError"] = restart_error
+    else:
+        resp["restarted"] = True
+    return jsonify(resp)
 
 
 # ---------------------------------------------------------------------------
