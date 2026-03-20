@@ -1,22 +1,24 @@
 #!/usr/bin/env node
 // ResonantOS Alpha Installer — Cross-platform (macOS, Linux, Windows)
-// Usage: npx https://github.com/ResonantOS/resonantos-alpha install
-//   or:  node install.js
+//
+// Usage:
+//   1. Clone the repo: git clone https://github.com/ResonantOS/resonantos-alpha.git
+//   2. cd resonantos-alpha
+//   3. git checkout dev  (if you want the dev branch)
+//   4. node install.js
+//
+// This script copies files from the LOCAL directory to ~/.openclaw/
+// It does NOT clone or pull from git - that's your job before running this.
 
 const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
 
-const REPO = "https://github.com/ResonantOS/resonantos-alpha.git";
 const HOME = os.homedir();
 const SCRIPT_DIR = __dirname; // Directory where install.js lives
 const OPENCLAW_AGENT_DIR = path.join(HOME, ".openclaw", "agents", "main", "agent");
 const OPENCLAW_WORKSPACE = path.join(HOME, ".openclaw", "workspace");
-
-// Determine INSTALL_DIR: use repo we're already in, or clone fresh
-const CWD_GIT = fs.existsSync(path.join(process.cwd(), ".git")) && !process.cwd().includes(".openclaw");
-const INSTALL_DIR = CWD_GIT ? process.cwd() : path.join(HOME, "resonantos-alpha");
 
 const isWin = process.platform === "win32";
 
@@ -60,9 +62,23 @@ function writeJsonIfMissing(filePath, data, label) {
   }
 }
 
-// ── Main ──
+// ── Validate we're in the right place ──
 
 log("=== ResonantOS Alpha Installer ===\n");
+
+// Check that we're running from inside the repo
+const sourceRoot = SCRIPT_DIR;
+const requiredDirs = ["extensions", "dashboard", "workspace-templates"];
+const missing = requiredDirs.filter(d => !fs.existsSync(path.join(sourceRoot, d)));
+if (missing.length > 0) {
+  fail(`Not a valid ResonantOS repo. Missing directories: ${missing.join(", ")}\n` +
+       `Did you clone the repo first? Usage:\n` +
+       `  git clone https://github.com/ResonantOS/resonantos-alpha.git\n` +
+       `  cd resonantos-alpha\n` +
+       `  node install.js`);
+}
+
+// ── Main ──
 
 // 1. Check dependencies
 if (!hasCmd("git")) fail("git is required. Install: https://git-scm.com/");
@@ -86,39 +102,30 @@ if (!hasCmd("openclaw")) {
 
 ok("Dependencies OK");
 
-// 3. Clone or pull repo
-if (fs.existsSync(path.join(INSTALL_DIR, ".git"))) {
-  log(`Directory ${INSTALL_DIR} exists. Pulling latest...`);
-  run("git pull", { cwd: INSTALL_DIR });
-} else {
-  log("Cloning ResonantOS Alpha...");
-  run(`git clone ${REPO} "${INSTALL_DIR}"`);
-}
-
-// 4. Copy extensions
+// 3. Copy extensions
 log("Installing extensions...");
 const extDir = path.join(OPENCLAW_AGENT_DIR, "extensions");
 mkdirp(extDir);
-copyFile(path.join(INSTALL_DIR, "extensions", "r-memory.js"), path.join(extDir, "r-memory.js"));
-copyFile(path.join(INSTALL_DIR, "extensions", "r-awareness.js"), path.join(extDir, "r-awareness.js"));
-copyFile(path.join(INSTALL_DIR, "extensions", "gateway-lifecycle.js"), path.join(extDir, "gateway-lifecycle.js"));
+copyFile(path.join(sourceRoot, "extensions", "r-memory.js"), path.join(extDir, "r-memory.js"));
+copyFile(path.join(sourceRoot, "extensions", "r-awareness.js"), path.join(extDir, "r-awareness.js"));
+copyFile(path.join(sourceRoot, "extensions", "gateway-lifecycle.js"), path.join(extDir, "gateway-lifecycle.js"));
 ok("Extensions installed");
 
-// 5. SSoT template
+// 4. SSoT template
 log("Setting up SSoT documents...");
 const ssotDir = path.join(OPENCLAW_WORKSPACE, "resonantos-alpha", "ssot");
 mkdirp(ssotDir);
 const ssotEmpty = fs.readdirSync(ssotDir).length === 0;
 if (ssotEmpty) {
-  copyDirContents(path.join(INSTALL_DIR, "ssot", "templates"), ssotDir);
+  copyDirContents(path.join(sourceRoot, "ssot", "templates"), ssotDir);
   ok("SSoT template installed");
 } else {
   log("  SSoT directory not empty — skipping (won't overwrite your docs)");
 }
 
-// 6. Workspace templates (AGENTS.md, SOUL.md, USER.md, MEMORY.md, TOOLS.md)
+// 5. Workspace templates (AGENTS.md, SOUL.md, USER.md, MEMORY.md, TOOLS.md)
 log("Setting up workspace templates...");
-const workspaceTemplatesDir = path.join(INSTALL_DIR, "workspace-templates");
+const workspaceTemplatesDir = path.join(sourceRoot, "workspace-templates");
 const memoryDir = path.join(OPENCLAW_WORKSPACE, "memory");
 mkdirp(memoryDir);
 
@@ -138,7 +145,7 @@ if (templatesInstalled > 0) {
   log("  Workspace templates already exist — skipping");
 }
 
-// 7. R-Memory & R-Awareness configs
+// 6. R-Memory & R-Awareness configs
 mkdirp(path.join(OPENCLAW_WORKSPACE, "r-memory"));
 mkdirp(path.join(OPENCLAW_WORKSPACE, "r-awareness"));
 
@@ -183,9 +190,9 @@ writeJsonIfMissing(
   "R-Memory config"
 );
 
-// 8. Setup Agent (onboarding for new users)
+// 7. Setup Agent (onboarding for new users)
 log("Installing Setup Agent...");
-const setupSrc = path.join(INSTALL_DIR, "agents", "setup");
+const setupSrc = path.join(sourceRoot, "agents", "setup");
 const setupDest = path.join(HOME, ".openclaw", "agents", "setup", "agent");
 if (fs.existsSync(setupSrc)) {
   mkdirp(setupDest);
@@ -197,22 +204,9 @@ if (fs.existsSync(setupSrc)) {
   log("  Setup Agent source not found — skipping");
 }
 
-// 9. Logician binary (Windows) — NOTE: bin/ is gitignored, build from source if needed
-if (process.platform === "win32") {
-  const logSrc = path.join(INSTALL_DIR, "logician", "mangle-service", "bin", "mangle-server.exe");
-  const logDest = path.join(HOME, ".openclaw", "bin", "mangle-server.exe");
-  if (fs.existsSync(logSrc)) {
-    mkdirp(path.dirname(logDest));
-    copyFile(logSrc, logDest);
-    ok("Logician binary installed");
-  } else {
-    log("  Logician binary not found — build from logician/mangle-service if needed");
-  }
-}
-
-// 10. Skills
+// 8. Skills
 log("Installing skills...");
-const skillsSrc = path.join(INSTALL_DIR, "skills");
+const skillsSrc = path.join(sourceRoot, "skills");
 const skillsDest = path.join(OPENCLAW_WORKSPACE, "skills");
 if (fs.existsSync(skillsSrc)) {
   for (const entry of fs.readdirSync(skillsSrc, { withFileTypes: true })) {
@@ -235,7 +229,6 @@ if (fs.existsSync(openclawCfgPath)) {
     const agentsList = cfg.agents && cfg.agents.list ? cfg.agents.list : [];
     const hasSetup = agentsList.some(a => a.id === "setup");
     if (!hasSetup) {
-      // Use the user's primary model for setup agent (don't assume a specific provider)
       const primaryModel = (cfg.agents && cfg.agents.defaults && cfg.agents.defaults.model && cfg.agents.defaults.model.primary)
         || "anthropic/claude-haiku-4-5";
       agentsList.push({ id: "setup", model: primaryModel });
@@ -251,12 +244,11 @@ if (fs.existsSync(openclawCfgPath)) {
   }
 }
 
-// 10. Dashboard dependencies
+// 9. Dashboard dependencies
 log("Installing dashboard dependencies...");
-const dashDir = path.join(INSTALL_DIR, "dashboard");
+const dashDir = path.join(sourceRoot, "dashboard");
 const dashDeps = "flask flask-cors psutil websocket-client solana solders";
 try {
-  // Try venv first (works on all platforms, avoids PEP 668 issues on Ubuntu 24.04+)
   const venvDir = path.join(dashDir, "venv");
   if (!fs.existsSync(venvDir)) {
     run(`${python} -m venv "${venvDir}"`, { cwd: dashDir });
@@ -265,12 +257,10 @@ try {
   run(`"${venvPip}" install -q ${dashDeps}`, { cwd: dashDir });
   ok("Dashboard ready (venv)");
 } catch {
-  // Fallback: try system pip with --break-system-packages (PEP 668 override)
   try {
     run(`${pip} install -q --break-system-packages ${dashDeps}`, { cwd: dashDir });
     ok("Dashboard ready (system packages)");
   } catch {
-    // Last resort: plain pip install
     try {
       run(`${pip} install ${dashDeps}`, { cwd: dashDir });
       ok("Dashboard ready");
@@ -281,9 +271,9 @@ try {
   }
 }
 
-// 11. Config from example
-const cfgPath = path.join(INSTALL_DIR, "dashboard", "config.json");
-const cfgExample = path.join(INSTALL_DIR, "dashboard", "config.example.json");
+// 10. Config from example
+const cfgPath = path.join(sourceRoot, "dashboard", "config.json");
+const cfgExample = path.join(sourceRoot, "dashboard", "config.example.json");
 if (!fs.existsSync(cfgPath) && fs.existsSync(cfgExample)) {
   fs.copyFileSync(cfgExample, cfgPath);
   ok("Dashboard config created from template (edit config.json with your addresses)");
@@ -293,10 +283,8 @@ log(`
 === Installation Complete ===
 
 Next steps:
-  1. Edit ~/resonantos-alpha/dashboard/config.json with your Solana addresses
+  1. Edit the dashboard config.json with your Solana addresses
   2. Start OpenClaw:  openclaw gateway start
-  3. Start Dashboard: cd ~/resonantos-alpha/dashboard && ${python} server_v2.py
+  3. Start Dashboard: cd ${path.relative(HOME, dashDir)} && ${python} server_v2.py
   4. Open http://localhost:19100
-
-Docs: https://github.com/ResonantOS/resonantos-alpha
 `);
