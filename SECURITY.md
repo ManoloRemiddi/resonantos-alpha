@@ -12,7 +12,7 @@ Security vulnerabilities should **never** be reported through public GitHub issu
 
 Please report security issues through one of these private channels:
 
-1. **Email:** security@resonantos.com (if configured)
+1. **Email:** manolorem@gmail.com
 2. **Discord:** Direct message @ManoloRemiddi
 3. **GitHub:** Use GitHub's private vulnerability reporting feature
 
@@ -45,9 +45,9 @@ ResonantOS is designed with security in mind:
 
 We implement multiple security layers:
 
-1. **Shield** — File protection and security governance (in development)
-2. **Logician** — Cost and policy validation (spec phase)
-3. **Guardian** — Self-healing and incident recovery (in development)
+1. **Shield** — 14 blocking security layers, file protection, YARA scanning (active)
+2. **Logician** — Policy engine with 285+ facts, Mangle/Datalog rules (active)
+3. **Guardian** — Self-healing and incident recovery (design phase)
 4. **File Locking** — OS-level immutable flags for critical files
 
 ### Secure Development
@@ -67,15 +67,13 @@ We implement multiple security layers:
 
 ### In Development
 
-- **Shield:** Permission validation, file access control, sandboxing
 - **Guardian:** Anomaly detection, self-healing, incident recovery
-- **Logician:** Policy enforcement, cost limits, safety checks
 
 ## ⚠️ Known Limitations (Alpha 0.1)
 
 ResonantOS is in **alpha**. Current limitations:
 
-- Shield/Guardian/Logician are not yet complete
+- Guardian is not yet complete
 - Limited sandboxing for AI operations
 - File locking requires manual setup
 - No formal security audit yet

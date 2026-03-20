@@ -6,7 +6,7 @@ Need help with ResonantOS? Here's how to get support.
 
 Start with the docs:
 
-- **README:** https://github.com/ManoloRemiddi/resonantos-alpha
+- **README:** https://github.com/ResonantOS/resonantos-alpha
 - **Installation Guide:** See README installation section
 - **Philosophy:** https://augmentatism.com
 - **OpenClaw Docs:** https://github.com/openclaw/openclaw
@@ -16,20 +16,10 @@ Start with the docs:
 ### Discord (Recommended)
 **Join:** https://discord.gg/MRESQnf4R4
 
-Our Discord server is the fastest way to get help:
-
-- **#general** — General questions and discussion
-- **#installation-help** — Installation and setup issues
-- **#r-memory** — R-Memory compression questions
-- **#r-awareness** — SSoT and context injection help
-- **#dashboard** — Dashboard troubleshooting
-- **#wallet** — Symbiotic wallet and DAO questions
-- **#development** — Contributing and code questions
-
-Community members and maintainers actively monitor these channels.
+Our Discord server is the fastest way to get help. Community members and maintainers actively monitor it.
 
 ### GitHub Discussions
-**Visit:** https://github.com/ManoloRemiddi/resonantos-alpha/discussions
+**Visit:** https://github.com/ResonantOS/resonantos-alpha/discussions
 
 For longer-form questions, ideas, and discussions:
 
@@ -42,7 +32,7 @@ For longer-form questions, ideas, and discussions:
 
 Found a bug? Please report it!
 
-**Open an issue:** https://github.com/ManoloRemiddi/resonantos-alpha/issues/new
+**Open an issue:** https://github.com/ResonantOS/resonantos-alpha/issues/new
 
 Include:
 - Clear, descriptive title
@@ -66,7 +56,7 @@ Have an idea? We want to hear it!
 **DO NOT** report security issues publicly.
 
 Instead:
-- Email: security@resonantos.com (if configured)
+- Email: manolorem@gmail.com
 - Discord DM: @ManoloRemiddi
 - See [SECURITY.md](SECURITY.md) for full details
 
@@ -118,19 +108,19 @@ A: Install OpenClaw first: https://github.com/openclaw/openclaw
 **Q: Dashboard won't start**
 A: Check Python 3 is installed. Run: `python3 --version`
 
-**Q: R-Memory not compressing**
-A: Check `r-memory/config.json` settings. Default triggers at 36K tokens.
+**Q: Context getting lost in long sessions?**
+A: ResonantOS uses LCM (Lossless Context Management) for automatic context compression. Check your OpenClaw config for LCM settings.
 
 ### Features
 
-**Q: How does R-Memory work?**
-A: Three-phase compression pipeline. See README R-Memory section.
+**Q: How does memory work in ResonantOS?**
+A: Four-layer stack: MEMORY.md (long-term curated), R-Awareness headers (recent context), LCM (lossless context compression), and RAG (semantic vector search). See README for details.
 
 **Q: What's the difference between $RCT and $RES?**
 A: $RCT is soulbound governance token (voting rights). $RES is transferable currency.
 
 **Q: Can I use ResonantOS commercially?**
-A: Yes! Free under RC-SL v1.0. Commercial users (>$10K/year) contribute 1% tithe.
+A: Yes! Free under RC-SL v1.0. See LICENSE and GOVERNANCE.md for commercial terms.
 
 ### Contributing
 
@@ -152,7 +142,7 @@ A: Contribute code, docs, or community support. See [GOVERNANCE.md](GOVERNANCE.m
 ### Project
 - Website: https://resonantos.com
 - Philosophy: https://augmentatism.com
-- Email: security@resonantos.com (security issues only)
+- Email: manolorem@gmail.com
 
 ## 🌟 Success Stories
 

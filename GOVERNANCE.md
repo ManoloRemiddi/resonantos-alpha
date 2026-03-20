@@ -48,7 +48,7 @@ ResonantOS is governed by the community through on-chain mechanisms.
 1. DAO proposal submitted (requires $RCT tokens)
 2. Discussion period (7 days minimum)
 3. Voting period (7 days)
-4. **67% approval threshold** required
+4. Supermajority approval required (threshold TBD)
 5. Implementation after approval
 
 ## Earning Governance Rights ($RCT)
@@ -110,8 +110,8 @@ Contribute to earn soulbound governance tokens:
 ### Core Maintainers
 - **Current:** Manolo Remiddi
 - **Authority:** Merge rights, release management, security decisions
-- **Selection:** DAO vote for new maintainers (67% threshold)
-- **Removal:** DAO vote with 75% threshold
+- **Selection:** DAO vote for new maintainers (threshold TBD)
+- **Removal:** DAO vote with supermajority (threshold TBD)
 
 ### Component Maintainers
 - **Scope:** Specific components (R-Memory, Dashboard, etc.)
@@ -126,17 +126,19 @@ Contribute to earn soulbound governance tokens:
 ## Treasury Management
 
 ### Funding Sources
-- **1% Tithe:** Commercial users (>$10K/year revenue) contribute 1%
+- **Tithe:** Commercial users contribute a percentage of revenue (terms TBD)
 - **Protocol Store:** Transaction fees
 - **Donations:** Community contributions
 - **Grants:** External funding
 
 ### Fund Allocation
-Approved by DAO vote:
-- **Development (40%):** Core team, bounties, grants
-- **Community (30%):** Events, documentation, education
-- **Operations (20%):** Infrastructure, hosting, services
-- **Reserve (10%):** Emergency fund
+Approved by DAO vote. Categories include:
+- **Development:** Core team, bounties, grants
+- **Community:** Events, documentation, education
+- **Operations:** Infrastructure, hosting, services
+- **Reserve:** Emergency fund
+
+*Specific allocation percentages will be determined by DAO vote.*
 
 ### Transparency
 - All transactions on-chain (Solana)
@@ -163,7 +165,7 @@ Approved by DAO vote:
 This governance document can be amended through:
 1. DAO proposal for governance changes
 2. 14-day discussion + voting period (longer than standard)
-3. **75% approval threshold** (higher than standard)
+3. Higher approval threshold than standard proposals (TBD)
 4. Implementation after approval
 
 ## Contact

@@ -58,7 +58,7 @@ This Code of Conduct applies to all ResonantOS community spaces, including:
 
 If you experience or witness unacceptable behavior, please report it:
 - Discord DM: @ManoloRemiddi
-- Email: security@resonantos.com (if configured)
+- Email: manolorem@gmail.com
 
 All reports will be handled with discretion and confidentiality.
 

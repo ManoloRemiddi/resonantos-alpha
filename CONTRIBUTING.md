@@ -27,10 +27,10 @@ We welcome all types of contributions:
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js 18+
+- Node.js 20+
 - Python 3
 - Git
-- OpenClaw installed
+- [OpenClaw](https://github.com/openclaw/openclaw) installed
 
 ### Setup
 
@@ -43,12 +43,13 @@ We welcome all types of contributions:
 
 2. **Add upstream remote**
    ```bash
-   git remote add upstream https://github.com/ManoloRemiddi/resonantos-alpha.git
+   git remote add upstream https://github.com/ResonantOS/resonantos-alpha.git
    ```
 
-3. **Install dependencies**
+3. **Install and configure**
    ```bash
-   node install.js
+   # Follow the installation guide in the README
+   npm install  # if applicable
    ```
 
 ## 📝 Contribution Workflow
@@ -128,7 +129,7 @@ When working with an AI collaborator, please:
    ```bash
    git commit -m "Feature: Add compression algorithm
    
-   Co-authored-by: Augmentor <ai@resonantos.com>"
+   Co-authored-by: YourAI <noreply@users.noreply.github.com>"
    ```
 
 2. **Explain in PR comments:**
@@ -186,7 +187,7 @@ Feature requests should include:
 **DO NOT** open public issues for security vulnerabilities.
 
 Instead:
-- Email: security@resonantos.com (if configured)
+- Email: manolorem@gmail.com (if configured)
 - Discord DM: @ManoloRemiddi
 - Include: Description, reproduction steps, potential impact
 
@@ -210,7 +211,7 @@ Learn more about governance in our [Community Standards](COMMUNITY_STANDARDS.md)
 ## 💬 Questions?
 
 - **Discord:** https://discord.gg/MRESQnf4R4
-- **GitHub Discussions:** https://github.com/ManoloRemiddi/resonantos-alpha/discussions
+- **GitHub Discussions:** https://github.com/ResonantOS/resonantos-alpha/discussions
 - **Maintainer:** @ManoloRemiddi
 
 ---
