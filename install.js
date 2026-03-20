@@ -289,7 +289,7 @@ Next steps:
   1. Edit dashboard/config.json with your Solana addresses
   2. Start OpenClaw:  openclaw gateway start
   3. Start Dashboard:
-     cd ~/ros/dashboard
+     cd dashboard
      source venv/bin/activate
      python server_v2.py
   4. Open http://localhost:19100
