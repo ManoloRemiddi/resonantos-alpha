@@ -895,6 +895,10 @@ def docs_page():
 def license_page():
     return render_template("license.html", active_page="license")
 
+@app.route("/setup")
+def setup_page():
+    return render_template("setup.html", active_page="setup")
+
 
 # ============================================================================
 # Docs API — browse, read, and search documentation
