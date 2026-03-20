@@ -14,7 +14,7 @@ jobs:
 
       - name: Python syntax check
         run: |
-          python3 -m py_compile dashboard/server_v2.py
+          python3 -m py_compile dashboard/server_v2.py || exit 1
           find dashboard -name "*.py" -exec python3 -m py_compile {} \; 2>&1 || true
           echo "Python syntax check passed"
 
@@ -58,26 +58,26 @@ jobs:
       - name: Run smoke test
         run: |
           echo "Running smoke test..."
-          timeout 10 python3 -c "
+          timeout 10 python3 -c '
 import sys
-sys.path.insert(0, 'dashboard')
+sys.path.insert(0, "dashboard")
 try:
     import server_v2
-    print('server_v2.py imports successfully')
+    print("server_v2.py imports successfully")
 except Exception as e:
-    print(f'Import failed: {e}')
+    print(f"Import failed: {e}")
     sys.exit(1)
-" 2>&1 || echo "Smoke test completed with warnings"
+' 2>&1 || echo "Smoke test completed with warnings"
 
       - name: Test dashboard boot
         run: |
           cd dashboard
-          timeout 5 python3 -c "
+          timeout 5 python3 -c '
 import subprocess
 import time
-proc = subprocess.Popen(['python3', 'server_v2.py'], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+proc = subprocess.Popen(["python3", "server_v2.py"], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 time.sleep(2)
 proc.terminate()
 stdout, stderr = proc.communicate(timeout=3)
-print('Dashboard boot test completed')
-" 2>&1 || echo "Dashboard boot test completed"
+print("Dashboard boot test completed")
+' 2>&1 || echo "Dashboard boot test completed"
