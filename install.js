@@ -10,9 +10,13 @@ const os = require("os");
 
 const REPO = "https://github.com/ResonantOS/resonantos-alpha.git";
 const HOME = os.homedir();
-const INSTALL_DIR = path.join(HOME, "resonantos-alpha");
+const SCRIPT_DIR = __dirname; // Directory where install.js lives
 const OPENCLAW_AGENT_DIR = path.join(HOME, ".openclaw", "agents", "main", "agent");
 const OPENCLAW_WORKSPACE = path.join(HOME, ".openclaw", "workspace");
+
+// Determine INSTALL_DIR: use repo we're already in, or clone fresh
+const CWD_GIT = fs.existsSync(path.join(process.cwd(), ".git")) && !process.cwd().includes(".openclaw");
+const INSTALL_DIR = CWD_GIT ? process.cwd() : path.join(HOME, "resonantos-alpha");
 
 const isWin = process.platform === "win32";
 
