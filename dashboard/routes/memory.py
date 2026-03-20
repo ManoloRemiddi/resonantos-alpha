@@ -1,0 +1,222 @@
+"""
+Memory routes - R-Memory, LCM, Chatbots.
+"""
+
+import json
+import os
+import re
+import sqlite3
+from pathlib import Path
+from flask import jsonify, request
+
+def register_memory_routes(app):
+    """Register all memory-related routes."""
+
+    @app.route("/api/r-memory/scan")
+    def api_rmemory_scan():
+        """Scan R-Memory directory and return memory stats."""
+        from shared import RMEMORY_DIR, RMEMORY_CONFIG, WORKSPACE
+        memory_dir = RMEMORY_DIR
+        config_path = RMEMORY_CONFIG
+        memory_files = []
+        total_size = 0
+
+        if memory_dir.exists():
+            for f in memory_dir.rglob("*"):
+                if f.is_file() and not f.name.startswith("."):
+                    memory_files.append({"name": f.name, "path": str(f.relative_to(memory_dir)), "size": f.stat().st_size})
+                    total_size += f.stat().st_size
+
+        config = {}
+        if config_path.exists():
+            try:
+                config = json.loads(config_path.read_text())
+            except Exception:
+                pass
+
+        return jsonify({
+            "memoryDir": str(memory_dir),
+            "config": config,
+            "memoryFiles": memory_files,
+            "totalSize": total_size,
+            "path": str(memory_dir),
+        })
+
+    @app.route("/api/r-memory/read", methods=["POST"])
+    def api_rmemory_read():
+        """Read a specific memory file."""
+        from shared import RMEMORY_DIR
+        data = request.get_json() or {}
+        filename = data.get("filename", "")
+        if not filename:
+            return jsonify({"error": "No filename provided"}), 400
+        filepath = RMEMORY_DIR / filename
+        if not str(filepath).startswith(str(RMEMORY_DIR)):
+            return jsonify({"error": "Access denied"}), 403
+        if not filepath.exists():
+            return jsonify({"error": "File not found"}), 404
+        try:
+            content = filepath.read_text()
+            return jsonify({"content": content, "filename": filename})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/r-memory/write", methods=["POST"])
+    def api_rmemory_write():
+        """Write to a specific memory file."""
+        from shared import RMEMORY_DIR
+        data = request.get_json() or {}
+        filename = data.get("filename", "")
+        content = data.get("content", "")
+        if not filename:
+            return jsonify({"error": "No filename provided"}), 400
+        filepath = RMEMORY_DIR / filename
+        if not str(filepath).startswith(str(RMEMORY_DIR)):
+            return jsonify({"error": "Access denied"}), 403
+        try:
+            filepath.write_text(content)
+            return jsonify({"success": True})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/r-memory/list")
+    def api_rmemory_list():
+        """List all memory files."""
+        from shared import RMEMORY_DIR
+        memory_dir = RMEMORY_DIR
+        files = []
+        if memory_dir.exists():
+            for f in sorted(memory_dir.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True):
+                if f.is_file() and not f.name.startswith("."):
+                    files.append({"name": f.name, "size": f.stat().st_size, "modified": f.stat().st_mtime})
+        return jsonify(files)
+
+    @app.route("/api/r-memory/delete", methods=["POST"])
+    def api_rmemory_delete():
+        """Delete a memory file."""
+        from shared import RMEMORY_DIR
+        data = request.get_json() or {}
+        filename = data.get("filename", "")
+        if not filename:
+            return jsonify({"error": "No filename provided"}), 400
+        filepath = RMEMORY_DIR / filename
+        if not str(filepath).startswith(str(RMEMORY_DIR)):
+            return jsonify({"error": "Access denied"}), 403
+        try:
+            filepath.unlink()
+            return jsonify({"success": True})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/r-memory/open-log", methods=["POST"])
+    def api_rmemory_open_log():
+        """Open R-Memory log in system default app."""
+        from shared import IS_MAC, IS_WINDOWS, IS_LINUX, RMEMORY_LOG
+        import subprocess
+        log_path = RMEMORY_LOG
+        if IS_MAC:
+            subprocess.Popen(["open", "-a", "Terminal", str(log_path)])
+        elif IS_WINDOWS:
+            os.startfile(str(log_path))
+        elif IS_LINUX:
+            subprocess.Popen(["xdg-open", str(log_path)])
+        return jsonify({"ok": True})
+
+    @app.route("/api/r-memory/stats")
+    def api_rmemory_stats():
+        """Get memory usage stats."""
+        from shared import RMEMORY_DIR, WORKSPACE
+        stats = {
+            "totalFiles": 0,
+            "totalSize": 0,
+            "memoryUsed": 0,
+        }
+        if RMEMORY_DIR.exists():
+            for f in RMEMORY_DIR.rglob("*"):
+                if f.is_file():
+                    stats["totalFiles"] += 1
+                    stats["totalSize"] += f.stat().st_size
+        return jsonify(stats)
+
+    @app.route("/api/r-memory/summary")
+    def api_rmemory_summary():
+        """Get a summary of all memory documents."""
+        from shared import WORKSPACE
+        summary = {
+            "totalDocs": 0,
+            "layers": {},
+        }
+        ws = WORKSPACE
+        if ws.exists():
+            for f in ws.rglob("*.md"):
+                if "ssot" in str(f).lower() or "memory" in str(f).lower():
+                    summary["totalDocs"] += 1
+        return jsonify(summary)
+
+    # Chatbots routes
+    @app.route("/api/chatbots", methods=["GET"])
+    def api_chatbots_list():
+        """List all chatbots."""
+        from shared import WORKSPACE
+        chatbots_dir = WORKSPACE / "chatbots"
+        bots = []
+        if chatbots_dir.exists():
+            for f in sorted(chatbots_dir.iterdir()):
+                if f.suffix == ".json":
+                    try:
+                        bots.append(json.loads(f.read_text()))
+                    except Exception:
+                        pass
+        return jsonify(bots)
+
+    @app.route("/api/chatbots", methods=["POST"])
+    def api_chatbots_create():
+        """Create a new chatbot."""
+        from shared import WORKSPACE
+        data = request.get_json() or {}
+        chatbots_dir = WORKSPACE / "chatbots"
+        chatbots_dir.mkdir(parents=True, exist_ok=True)
+        bot_id = data.get("id", f"bot_{int(time.time())}")
+        bot_data = {
+            "id": bot_id,
+            "name": data.get("name", "New Bot"),
+            "systemPrompt": data.get("systemPrompt", ""),
+            "model": data.get("model", "anthropic/claude-haiku-4-5"),
+        }
+        filepath = chatbots_dir / f"{bot_id}.json"
+        filepath.write_text(json.dumps(bot_data, indent=2))
+        return jsonify(bot_data)
+
+    @app.route("/api/chatbots/<bot_id>", methods=["GET"])
+    def api_chatbots_get(bot_id):
+        """Get a specific chatbot."""
+        from shared import WORKSPACE
+        filepath = WORKSPACE / "chatbots" / f"{bot_id}.json"
+        if not filepath.exists():
+            return jsonify({"error": "Not found"}), 404
+        try:
+            return jsonify(json.loads(filepath.read_text()))
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/chatbots/<bot_id>", methods=["DELETE"])
+    def api_chatbots_delete(bot_id):
+        """Delete a chatbot."""
+        from shared import WORKSPACE
+        filepath = WORKSPACE / "chatbots" / f"{bot_id}.json"
+        if filepath.exists():
+            filepath.unlink()
+        return jsonify({"success": True})
+
+    @app.route("/api/chatbots/<bot_id>/chat", methods=["POST"])
+    def api_chatbots_chat(bot_id):
+        """Chat with a chatbot."""
+        from shared import WORKSPACE
+        data = request.get_json() or {}
+        message = data.get("message", "")
+        filepath = WORKSPACE / "chatbots" / f"{bot_id}.json"
+        if not filepath.exists():
+            return jsonify({"error": "Bot not found"}), 404
+        return jsonify({"response": "Chat not yet implemented", "bot_id": bot_id})
+
+    return app
