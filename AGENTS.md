@@ -20,18 +20,22 @@ This defines:
 resonantos-alpha/
 ├── dashboard/           # Flask web UI (server_v2.py) on port 19100
 ├── agents/             # Agent workflow definitions
-├── config/              # Runtime configuration
-├── docs/                # Project documentation
-├── extensions/          # OpenClaw plugin extensions
-├── scripts/             # Maintenance and setup scripts
-├── workspace-templates/  # OpenClaw workspace templates
-├── shield/              # Security components
-├── solana-toolkit/      # Solana blockchain utilities (DevNet)
-├── logician/            # Policy engine
-├── ssot/                # Single Source of Truth documents
-├── experiments/          # Archived experimental code
-├── install.js           # One-command installer
-└── AGENTS.md            # This file
+├── config/             # Runtime config (incl. extensions/)
+├── docs/               # Project documentation
+├── extensions/         # OpenClaw plugin extensions
+├── scripts/            # Maintenance scripts (merged from tools/)
+├── workspace-templates/ # OpenClaw templates (merged from templates/)
+├── shield/             # Security components (merged shield-gate/)
+├── logician/           # Policy engine
+├── ssot/               # SSOT docs (merged ssot-template/)
+├── solana-toolkit/     # Solana utilities (DevNet)
+├── bin/                # Binary utilities
+├── data/               # Data files
+├── assets/             # Static assets
+├── skills/             # Skill definitions
+├── experiments/        # Archived experimental code
+├── install.js          # One-command installer
+└── AGENTS.md           # This file
 ```
 
 ## Key Components

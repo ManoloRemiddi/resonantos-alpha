@@ -8,11 +8,13 @@ Security components for ResonantOS.
 |----------------|---------|
 | `daemon.py` | Shield daemon process |
 | `file_guard.py` | File protection |
-| `shield-gate.js` | Security gate |
+| `shield-gate.js` | Main security gate implementation |
+| `shield-gate.index.js` | Security gate entry point (merged from shield-gate/) |
 | `delegation-gate.js` | Delegation control |
 | `update-yara-rules.sh` | YARA rule updates |
-| `watchdog/` | Process watchdog |
+| `watchdog/` | Process watchdog subdirectory |
 
-## Note
+## Consolidation Notes
 
-The `shield-gate/` directory at root contains `index.js` which relates to this module. See the directory inventory for overlap details.
+- `shield-gate/` directory was merged into this directory (2026-03-20)
+- `shield-gate.index.js` is the entry point, `shield-gate.js` is the main implementation
