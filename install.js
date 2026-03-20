@@ -78,10 +78,6 @@ if (missing.length > 0) {
        `  node install.js`);
 }
 
-log("DEBUG: sourceRoot = " + sourceRoot);
-
-// ── Main ──
-
 // 1. Check dependencies
 if (!hasCmd("git")) fail("git is required. Install: https://git-scm.com/");
 if (!hasCmd("node")) fail("node is required. Install: https://nodejs.org/");
@@ -264,11 +260,8 @@ if (!fs.existsSync(venvDir)) {
 const venvPip = isWin ? path.join(venvDir, "Scripts", "pip") : path.join(venvDir, "bin", "pip");
 
 // Install dependencies from requirements.txt if it exists, otherwise use hardcoded list
-log("  Looking for requirements at: " + reqFile);
-log("  Venv pip at: " + venvPip);
 try {
   if (fs.existsSync(reqFile)) {
-    log("  Found requirements.txt, installing...");
     run(`"${venvPip}" install -q -r "${reqFile}"`, { cwd: dashDir });
     ok("Dashboard dependencies installed from requirements.txt");
   } else {
@@ -293,8 +286,11 @@ log(`
 === Installation Complete ===
 
 Next steps:
-  1. Edit the dashboard config.json with your Solana addresses
+  1. Edit dashboard/config.json with your Solana addresses
   2. Start OpenClaw:  openclaw gateway start
-  3. Start Dashboard: cd ${path.relative(HOME, dashDir)} && ${python} server_v2.py
+  3. Start Dashboard:
+     cd ~/ros/dashboard
+     source venv/bin/activate
+     python server_v2.py
   4. Open http://localhost:19100
 `);
