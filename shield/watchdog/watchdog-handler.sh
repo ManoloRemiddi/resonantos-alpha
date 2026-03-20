@@ -14,11 +14,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 REPO_DASHBOARD_DIR="${REPO_ROOT}/dashboard"
-LOG_FILE="/tmp/watchdog-handler.log"
+LOG_FILE="${TMPDIR:-/tmp}/watchdog-handler.log"
 LAUNCH_AGENT_LABEL="ai.openclaw.gateway"
 NODE_LAUNCH_AGENT="ai.openclaw.node"
 DASHBOARD_PORT="${DASHBOARD_PORT:-19100}"
-DASHBOARD_LOG="/tmp/dashboard.log"
+DASHBOARD_LOG="${TMPDIR:-/tmp}/dashboard.log"
 
 log() {
     echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] $*" >> "$LOG_FILE"
@@ -45,42 +45,51 @@ case "$ACTION" in
     
     restart-gateway)
         log "Restarting gateway service"
-        # Bootout (stop) then bootstrap (start) the LaunchAgent
-        UID_VAL=$(id -u)
-        launchctl bootout "gui/${UID_VAL}/${LAUNCH_AGENT_LABEL}" 2>/dev/null || true
-        sleep 2
-        PLIST="${HOME}/Library/LaunchAgents/${LAUNCH_AGENT_LABEL}.plist"
-        if [ -f "$PLIST" ]; then
-            launchctl bootstrap "gui/${UID_VAL}" "$PLIST" 2>/dev/null
-            sleep 3
-            # Verify it came back
-            if "${SCRIPT_DIR}/health-sensors.sh" json 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if d['sensors']['gateway_http']['status']=='ok' else 1)" 2>/dev/null; then
-                echo '{"action": "restart-gateway", "result": "success", "message": "Gateway restarted and responding"}'
-                log "Gateway restart: SUCCESS"
-            else
-                echo '{"action": "restart-gateway", "result": "partial", "message": "Gateway restarted but not yet responding — may need time"}'
-                log "Gateway restart: PARTIAL — not responding yet"
+        if [[ "$(uname)" == "Darwin" ]]; then
+            UID_VAL=$(id -u)
+            launchctl bootout "gui/${UID_VAL}/${LAUNCH_AGENT_LABEL}" 2>/dev/null || true
+            sleep 2
+            PLIST="${HOME}/Library/LaunchAgents/${LAUNCH_AGENT_LABEL}.plist"
+            if [ -f "$PLIST" ]; then
+                launchctl bootstrap "gui/${UID_VAL}" "$PLIST" 2>/dev/null
+                sleep 3
             fi
         else
-            echo '{"action": "restart-gateway", "result": "failed", "message": "LaunchAgent plist not found"}'
-            log "Gateway restart: FAILED — plist not found"
-            exit 1
+            pkill -f "openclaw-gateway" 2>/dev/null || true
+            sleep 2
+            openclaw gateway start 2>/dev/null || true
+            sleep 3
+        fi
+        if "${SCRIPT_DIR}/health-sensors.sh" json 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if d['sensors']['gateway_http']['status']=='ok' else 1)" 2>/dev/null; then
+            echo '{"action": "restart-gateway", "result": "success", "message": "Gateway restarted and responding"}'
+            log "Gateway restart: SUCCESS"
+        else
+            echo '{"action": "restart-gateway", "result": "partial", "message": "Gateway restarted but not yet responding — may need time"}'
+            log "Gateway restart: PARTIAL — not responding yet"
         fi
         ;;
-    
+
     restart-node)
         log "Restarting node service"
-        UID_VAL=$(id -u)
-        launchctl bootout "gui/${UID_VAL}/${NODE_LAUNCH_AGENT}" 2>/dev/null || true
-        sleep 2
-        PLIST="${HOME}/Library/LaunchAgents/${NODE_LAUNCH_AGENT}.plist"
-        if [ -f "$PLIST" ]; then
-            launchctl bootstrap "gui/${UID_VAL}" "$PLIST" 2>/dev/null
-            echo '{"action": "restart-node", "result": "success", "message": "Node service restarted"}'
-            log "Node restart: SUCCESS"
+        if [[ "$(uname)" == "Darwin" ]]; then
+            UID_VAL=$(id -u)
+            launchctl bootout "gui/${UID_VAL}/${NODE_LAUNCH_AGENT}" 2>/dev/null || true
+            sleep 2
+            PLIST="${HOME}/Library/LaunchAgents/${NODE_LAUNCH_AGENT}.plist"
+            if [ -f "$PLIST" ]; then
+                launchctl bootstrap "gui/${UID_VAL}" "$PLIST" 2>/dev/null
+                echo '{"action": "restart-node", "result": "success", "message": "Node service restarted"}'
+                log "Node restart: SUCCESS"
+            else
+                echo '{"action": "restart-node", "result": "skipped", "message": "Node LaunchAgent not installed"}'
+                log "Node restart: SKIPPED — plist not found"
+            fi
         else
-            echo '{"action": "restart-node", "result": "skipped", "message": "Node LaunchAgent not installed (expected if this IS the orchestrator)"}'
-            log "Node restart: SKIPPED — plist not found"
+            pkill -f "openclaw.*node" 2>/dev/null || true
+            sleep 2
+            openclaw node start 2>/dev/null || true
+            echo '{"action": "restart-node", "result": "success", "message": "Node service restarted (pkill+start)"}'
+            log "Node restart: SUCCESS"
         fi
         ;;
 

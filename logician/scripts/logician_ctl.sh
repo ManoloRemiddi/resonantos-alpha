@@ -5,7 +5,7 @@
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 LOGICIAN_DIR="$(dirname "$SCRIPT_DIR")"
 SERVICE_DIR="$LOGICIAN_DIR/mangle-service"
-SOCK_PATH="/tmp/mangle.sock"
+SOCK_PATH="${TMPDIR:-/tmp}/mangle.sock"
 PLIST_NAME="com.resonantos.logician"
 PLIST_PATH="$HOME/Library/LaunchAgents/$PLIST_NAME.plist"
 LOG_DIR="$LOGICIAN_DIR/logs"
@@ -71,7 +71,7 @@ case "${1:-help}" in
     ;;
 
   status)
-    if pgrep -f "mangle-server" > /dev/null; then
+    if pgrep -f "mangle-server" > /dev/null 2>&1; then
       echo "✅ Logician is running"
       if [ -S "$SOCK_PATH" ]; then
         echo "✅ Socket: $SOCK_PATH"

@@ -50,15 +50,17 @@ let completeSimple = null;
 let getModel = null;
 for (const p of [
   "@mariozechner/pi-ai",
-  "/opt/homebrew/lib/node_modules/openclaw/node_modules/@mariozechner/pi-ai",
-  "/usr/local/lib/node_modules/openclaw/node_modules/@mariozechner/pi-ai",
+  path.join(process.env.HOME || "", "Library/Caches/npm/node_modules/@mariozechner/pi-ai"),
+  path.join(process.env.HOME || "", ".npm/node_modules/@mariozechner/pi-ai"),
+  path.join(process.env.HOME || "", "go/path/node_modules/@mariozechner/pi-ai"),
 ]) {
   try { completeSimple = require(p).completeSimple; break; } catch (e) {}
 }
 for (const p of [
   "@mariozechner/pi-ai",
-  "/opt/homebrew/lib/node_modules/openclaw/node_modules/@mariozechner/pi-ai",
-  "/usr/local/lib/node_modules/openclaw/node_modules/@mariozechner/pi-ai",
+  path.join(process.env.HOME || "", "Library/Caches/npm/node_modules/@mariozechner/pi-ai"),
+  path.join(process.env.HOME || "", ".npm/node_modules/@mariozechner/pi-ai"),
+  path.join(process.env.HOME || "", "go/path/node_modules/@mariozechner/pi-ai"),
 ]) {
   try { getModel = require(p).getModel; break; } catch (e) {}
 }
@@ -1851,7 +1853,6 @@ module.exports = function rMemoryExtension(api) {
       const repoDir = path.join(workspaceDir, "..");
       const planPaths = [
         path.join(workspaceDir, "PLAN.md"),
-        path.join(repoDir, "resonantos-augmentor", "PLAN.md"),
         path.join(repoDir, "resonantos-alpha", "PLAN.md"),
       ];
       for (const planPath of planPaths) {
