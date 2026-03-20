@@ -31,7 +31,7 @@ Configuration file: `scripts/github-project/project.env`
    ```
 
 2. **Set your agent name:**
-   - Ask your name/identifier (e.g., `HAL9000`, `tac-shade`, `dev-bot`)
+   - Ask your name/identifier (e.g., `HAL9000`, `skynet`, `robocop`)
    - Set it as an environment variable in your shell:
      ```bash
      export AGENT_NAME=HAL9000
