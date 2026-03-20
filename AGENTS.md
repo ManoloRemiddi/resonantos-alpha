@@ -4,25 +4,34 @@
 
 ResonantOS is an experience layer built on [OpenClaw](https://github.com/openclaw/openclaw). This is the **public alpha repo** — everything here is user-facing and must work for external testers.
 
+## Feature Support
+
+**Before working on any feature, check the [Supported Feature Matrix](docs/SUPPORTED-MATRIX.md).**
+
+This defines:
+- **Core**: Actively supported, tested, expected to work
+- **Optional**: Works but may have issues
+- **Experimental**: Known issues, high failure risk
+- **Legacy**: Deprecated, do not modify unless critical
+
 ## Architecture
 
 ```
 resonantos-alpha/
 ├── dashboard/           # Flask web UI (server_v2.py) on port 19100
-│   ├── server_v2.py     # Main server — all routes
-│   ├── templates/       # Jinja2 HTML templates
-│   ├── static/          # CSS, JS, images
-│   └── config.json      # Runtime config (network, program IDs)
+├── agents/             # Agent workflow definitions
+├── config/              # Runtime configuration
+├── docs/                # Project documentation
 ├── extensions/          # OpenClaw plugin extensions
-│   ├── r-memory.js      # Conversation compression (before_turn / after_turn hooks)
-│   └── r-awareness.js   # Contextual document injection
+├── scripts/             # Maintenance and setup scripts
+├── workspace-templates/  # OpenClaw workspace templates
 ├── shield/              # Security components
-│   ├── file_guard.py    # File protection
-│   └── data_leak_scanner.py  # Pre-push secret scanning
-├── solana-toolkit/      # Solana blockchain utilities (NFTs, tokens, wallets)
-├── ssot-template/       # Single Source of Truth doc templates
-├── tools/               # Maintenance scripts
-└── install.js           # One-command installer
+├── solana-toolkit/      # Solana blockchain utilities (DevNet)
+├── logician/            # Policy engine
+├── ssot/                # Single Source of Truth documents
+├── experiments/          # Archived experimental code
+├── install.js           # One-command installer
+└── AGENTS.md            # This file
 ```
 
 ## Key Components
