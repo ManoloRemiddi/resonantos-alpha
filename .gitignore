@@ -13,6 +13,9 @@ scripts/github-project/project.env
 .DS_Store
 Thumbs.db
 
+# Binaries (built artifacts - should be compiled during setup)
+bin/
+
 # Database
 *.db
 *.sqlite
