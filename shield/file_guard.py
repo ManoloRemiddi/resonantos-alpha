@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """
 Shield File Guard — filesystem-level protection for core system files.
-Uses macOS `chflags schg/noschg` (system immutable) — requires root to modify.
+Uses platform-specific immutable file flags:
+  - macOS: sudo chflags schg/noschg (system immutable — requires root)
+  - Linux: sudo chattr +i/-i (EXT4/XFS immutable — requires root)
 This means the AI agent CANNOT unlock files; only a human with sudo can.
-Previous version used `uchg` which could be bypassed without root.
 """
 
 import json
 import os
+import platform
 import subprocess
 import sys
 from pathlib import Path
@@ -36,25 +38,25 @@ GUARD_MANIFEST = {
     "dashboard": {
         "label": "Dashboard",
         "paths": [
-            "~/resonantos-augmentor/dashboard/server_v2.py",
-            "~/resonantos-augmentor/dashboard/templates/",
-            "~/resonantos-augmentor/dashboard/static/",
+            "~/resonantos-alpha/dashboard/server_v2.py",
+            "~/resonantos-alpha/dashboard/templates/",
+            "~/resonantos-alpha/dashboard/static/",
         ],
         "category": "core",
     },
     "shield": {
         "label": "Shield",
-        "paths": ["~/resonantos-augmentor/shield/"],
+        "paths": ["~/resonantos-alpha/shield/"],
         "category": "core",
     },
     "ssot_l0": {
         "label": "SSOT L0 — Foundation",
-        "paths": ["~/resonantos-augmentor/ssot/L0/"],
+        "paths": ["~/resonantos-alpha/ssot/L0/"],
         "category": "ssot",
     },
     "ssot_l1": {
         "label": "SSOT L1 — Architecture",
-        "paths": ["~/resonantos-augmentor/ssot/L1/"],
+        "paths": ["~/resonantos-alpha/ssot/L1/"],
         "category": "ssot",
     },
     "github_push": {
@@ -63,7 +65,7 @@ GUARD_MANIFEST = {
         "category": "core",
         "hook_guard": True,  # Special: manages pre-push hook instead of chflags
         "repos": [
-            "~/resonantos-augmentor",
+            "~/resonantos-alpha",
         ],
     },
 }
@@ -114,15 +116,23 @@ def collect_files(paths: list[str], include_data: bool = False,
 
 
 def is_locked(filepath: Path) -> bool:
-    """Check if file has schg or uchg flag set (either counts as locked)."""
+    """Check if file has immutable flag set (platform-specific check)."""
+    system = platform.system()
     try:
-        import os, stat
-        st = os.stat(str(filepath))
-        flags = st.st_flags
-        # UF_IMMUTABLE = 0x00000002 (uchg), SF_IMMUTABLE = 0x00020000 (schg)
-        return bool(flags & (0x00000002 | 0x00020000))
+        if system == "Darwin":
+            import stat
+            st = os.stat(str(filepath))
+            flags = st.st_flags
+            return bool(flags & (0x00000002 | 0x00020000))
+        elif system == "Linux":
+            result = subprocess.run(
+                ["lsattr", "-d", str(filepath)],
+                capture_output=True, text=True, timeout=5
+            )
+            return "+i" in result.stdout
     except Exception:
-        return False
+        pass
+    return False
 
 
 def get_status() -> dict:
@@ -178,8 +188,19 @@ def get_status() -> dict:
 
 
 def _sudo_chflags(flag: str, filepath: str, password: str = None) -> bool:
-    """Run sudo chflags with optional password via stdin. Returns True on success."""
-    cmd = ["sudo", "-S", "chflags", flag, filepath] if password else ["sudo", "chflags", flag, filepath]
+    """Run sudo with platform-specific immutable flag command. Returns True on success."""
+    system = platform.system()
+    if system == "Darwin":
+        cmd = ["sudo", "-S", "chflags", flag, filepath]
+    elif system == "Linux":
+        if flag == "schg":
+            cmd = ["sudo", "-S", "chattr", "+i", filepath]
+        elif flag == "noschg":
+            cmd = ["sudo", "-S", "chattr", "-i", filepath]
+        else:
+            return False
+    else:
+        return False
     stdin_data = (password + "\n") if password else None
     result = subprocess.run(cmd, input=stdin_data, capture_output=True, text=True, timeout=10)
     return result.returncode == 0
@@ -274,9 +295,10 @@ def unlock_file(filepath: str, password: str = None) -> dict:
 
 
 def migrate_uchg_to_schg() -> dict:
-    """Migrate all guarded files from uchg (user) to schg (system) immutable.
+    """Migrate all guarded files from uchg to schg (macOS) or check chattr (Linux).
     Requires root. Run: sudo python3 file_guard.py migrate
     """
+    system = platform.system()
     results = []
     for group_id, group in GUARD_MANIFEST.items():
         if group.get("hook_guard"):
@@ -285,26 +307,35 @@ def migrate_uchg_to_schg() -> dict:
                               exclude_names=group.get("exclude_names"))
         for f in files:
             try:
-                # Check current state
-                check = subprocess.run(["ls", "-lO", str(f)], capture_output=True, text=True, timeout=5)
-                had_uchg = "uchg" in check.stdout and "schg" not in check.stdout
-                had_schg = "schg" in check.stdout
+                if system == "Darwin":
+                    check = subprocess.run(["ls", "-lO", str(f)], capture_output=True, text=True, timeout=5)
+                    had_uchg = "uchg" in check.stdout and "schg" not in check.stdout
+                    had_schg = "schg" in check.stdout
 
-                if had_schg:
-                    results.append({"path": str(f), "action": "already_schg"})
-                    continue
+                    if had_schg:
+                        results.append({"path": str(f), "action": "already_schg"})
+                        continue
 
-                if had_uchg:
-                    # Remove uchg first, then apply schg
-                    subprocess.run(["chflags", "nouchg", str(f)], check=True, timeout=5)
+                    if had_uchg:
+                        subprocess.run(["chflags", "nouchg", str(f)], check=True, timeout=5)
 
-                subprocess.run(["chflags", "schg", str(f)], check=True, timeout=5)
-                results.append({"path": str(f), "action": "migrated" if had_uchg else "locked_new"})
+                    subprocess.run(["chflags", "schg", str(f)], check=True, timeout=5)
+                    results.append({"path": str(f), "action": "migrated" if had_uchg else "locked_new"})
+                elif system == "Linux":
+                    check = subprocess.run(["lsattr", "-d", str(f)], capture_output=True, text=True, timeout=5)
+                    had_i = "+i" in check.stdout
+
+                    if had_i:
+                        results.append({"path": str(f), "action": "already_immutable"})
+                        continue
+
+                    subprocess.run(["chattr", "+i", str(f)], check=True, timeout=5)
+                    results.append({"path": str(f), "action": "locked_linux"})
             except subprocess.CalledProcessError as e:
                 results.append({"path": str(f), "action": "error", "error": str(e)})
-    return {"migrated": sum(1 for r in results if r["action"] == "migrated"),
-            "already": sum(1 for r in results if r["action"] == "already_schg"),
-            "new": sum(1 for r in results if r["action"] == "locked_new"),
+    return {"migrated": sum(1 for r in results if r["action"] in ("migrated", "locked_new", "locked_linux")),
+            "already": sum(1 for r in results if r["action"] in ("already_schg", "already_immutable")),
+            "new": sum(1 for r in results if r["action"] in ("migrated", "locked_new", "locked_linux")),
             "errors": sum(1 for r in results if r["action"] == "error"),
             "details": results}
 

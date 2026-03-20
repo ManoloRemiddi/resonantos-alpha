@@ -12,7 +12,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 LOGICIAN_DIR="$(dirname "$SCRIPT_DIR")"
 SERVICE_DIR="$LOGICIAN_DIR/mangle-service"
 RULES_FILE="${1:-$LOGICIAN_DIR/rules/example-rules.mg}"
-SOCK_PATH="/tmp/mangle.sock"
+SOCK_PATH="${TMPDIR:-/tmp}/mangle.sock"
 
 echo "========================================"
 echo "  Logician — Deterministic Policy Engine"

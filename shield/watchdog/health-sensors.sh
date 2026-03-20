@@ -6,14 +6,10 @@
 
 set -euo pipefail
 
-# Ensure PATH includes homebrew (not set in SSH forced-command environment)
-export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
-
 FORMAT="${1:-json}"
 GATEWAY_PORT="${OPENCLAW_GATEWAY_PORT:-18789}"
 DASHBOARD_PORT="${DASHBOARD_PORT:-19100}"
-OPENCLAW_USER="${OPENCLAW_USER:-augmentor}"
-OPENCLAW_HOME="/Users/${OPENCLAW_USER}/.openclaw"
+OPENCLAW_HOME="${OPENCLAW_HOME:-$HOME/.openclaw}"
 LAUNCH_AGENT_LABEL="ai.openclaw.gateway"
 LAUNCH_AGENT_PLIST="${HOME}/Library/LaunchAgents/${LAUNCH_AGENT_LABEL}.plist"
 
@@ -68,6 +64,10 @@ sensor_dashboard() {
 }
 
 sensor_launchagent() {
+    if [[ "$(uname)" != "Darwin" ]]; then
+        echo "ok|LaunchAgent not applicable on non-macOS systems|"
+        return
+    fi
     if [ ! -f "$LAUNCH_AGENT_PLIST" ]; then
         echo "degraded|LaunchAgent plist not found at ${LAUNCH_AGENT_PLIST}|"
         return
@@ -106,28 +106,47 @@ sensor_disk_space() {
 }
 
 sensor_memory() {
-    # Use memory_pressure command (macOS native)
-    local free_pct
-    free_pct=$(memory_pressure 2>/dev/null | grep "System-wide memory free percentage" | awk '{print $NF}' | tr -d '%' || echo "-1")
-    
-    if [ "$free_pct" = "-1" ]; then
-        # Fallback to vm_stat
-        local free_pages
-        free_pages=$(vm_stat 2>/dev/null | grep "Pages free" | awk '{print $3}' | tr -d '.' || echo "0")
-        local free_mb=$(( (free_pages * 16384) / 1048576 ))
-        if [ "$free_mb" -lt 512 ]; then
-            echo "critical|Memory critically low: ${free_mb}MB free (vm_stat fallback)|free_mb:${free_mb}"
-        elif [ "$free_mb" -lt 2048 ]; then
-            echo "degraded|Memory low: ${free_mb}MB free (vm_stat fallback)|free_mb:${free_mb}"
+    if [[ "$(uname)" == "Darwin" ]]; then
+        local free_pct
+        free_pct=$(memory_pressure 2>/dev/null | grep "System-wide memory free percentage" | awk '{print $NF}' | tr -d '%' || echo "-1")
+
+        if [ "$free_pct" = "-1" ]; then
+            local free_pages
+            free_pages=$(vm_stat 2>/dev/null | grep "Pages free" | awk '{print $3}' | tr -d '.' || echo "0")
+            local free_mb=$(( (free_pages * 16384) / 1048576 ))
+            if [ "$free_mb" -lt 512 ]; then
+                echo "critical|Memory critically low: ${free_mb}MB free (vm_stat fallback)|free_mb:${free_mb}"
+            elif [ "$free_mb" -lt 2048 ]; then
+                echo "degraded|Memory low: ${free_mb}MB free (vm_stat fallback)|free_mb:${free_mb}"
+            else
+                echo "ok|Memory adequate: ${free_mb}MB free (vm_stat fallback)|free_mb:${free_mb}"
+            fi
+        elif [ "$free_pct" -lt 10 ]; then
+            echo "critical|Memory pressure CRITICAL: ${free_pct}% free|free_pct:${free_pct}"
+        elif [ "$free_pct" -lt 25 ]; then
+            echo "degraded|Memory pressure elevated: ${free_pct}% free|free_pct:${free_pct}"
         else
-            echo "ok|Memory adequate: ${free_mb}MB free (vm_stat fallback)|free_mb:${free_mb}"
+            echo "ok|Memory healthy: ${free_pct}% free|free_pct:${free_pct}"
         fi
-    elif [ "$free_pct" -lt 10 ]; then
-        echo "critical|Memory pressure CRITICAL: ${free_pct}% free|free_pct:${free_pct}"
-    elif [ "$free_pct" -lt 25 ]; then
-        echo "degraded|Memory pressure elevated: ${free_pct}% free|free_pct:${free_pct}"
     else
-        echo "ok|Memory healthy: ${free_pct}% free|free_pct:${free_pct}"
+        local free_mem
+        local total_mem
+        local free_pct
+        free_mem=$(free -m 2>/dev/null | grep Mem | awk '{print $7}' || echo "0")
+        total_mem=$(free -m 2>/dev/null | grep Mem | awk '{print $2}' || echo "1")
+        if [ "$total_mem" -gt 0 ]; then
+            free_pct=$(( (free_mem * 100) / total_mem ))
+        else
+            free_pct=0
+        fi
+
+        if [ "$free_pct" -lt 5 ]; then
+            echo "critical|Memory critically low: ${free_mem}MB free (${free_pct}%)|free_mb:${free_mem}"
+        elif [ "$free_pct" -lt 15 ]; then
+            echo "degraded|Memory low: ${free_mem}MB free (${free_pct}%)|free_mb:${free_mem}"
+        else
+            echo "ok|Memory adequate: ${free_mem}MB free (${free_pct}%)|free_mb:${free_mem}"
+        fi
     fi
 }
 
@@ -166,7 +185,7 @@ sensor_node_tunnel() {
     
     # Also check for active SSH sessions from BeeAMD
     local tunnel_pids
-    tunnel_pids=$(pgrep -f "sshd.*10.0.0.2" 2>/dev/null || true)
+    tunnel_pids=$(ps aux 2>/dev/null | grep "[s]shd.*10.0.0.2" | awk '{print $2}' || true)
     
     if $ssh_ok && [ -n "$tunnel_pids" ]; then
         echo "ok|BeeAMD reachable (SSH port open) with active tunnel (pids: ${tunnel_pids//$'\n'/,})|"

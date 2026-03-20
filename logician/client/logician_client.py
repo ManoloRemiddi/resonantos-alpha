@@ -23,16 +23,17 @@ import subprocess
 import json
 import re
 import shutil
+import tempfile
 from pathlib import Path
 from typing import List, Optional
 
 
 class LogicianClient:
     """Client for the Mangle Logician gRPC service."""
-    
-    def __init__(self, sock_path: str = "/tmp/mangle.sock", 
+
+    def __init__(self, sock_path: str = None,
                  proto_dir: Optional[str] = None):
-        self.sock_path = sock_path
+        self.sock_path = sock_path or Path(tempfile.gettempdir()) / "mangle.sock"
         
         # Find proto directory
         if proto_dir:

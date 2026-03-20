@@ -14,12 +14,14 @@
 const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 
 // --- Configuration ---
-const HOME = process.env.HOME || "/Users/augmentor";
-const LOGICIAN_SOCK = process.env.LOGICIAN_SOCK || "/tmp/mangle.sock";
-const PROTO_PATH = path.join(process.env.HOME, "resonantos-augmentor/logician/poc/mangle-service/proto/mangle.proto");
-const LOG_FILE = path.join(process.env.HOME, "resonantos-augmentor/shield/logs/shield-gate.log");
+const HOME = process.env.HOME || "";
+const REPO_DIR = path.resolve(__dirname, "..");
+const LOGICIAN_SOCK = process.env.LOGICIAN_SOCK || path.join(os.tmpdir(), "mangle.sock");
+const PROTO_PATH = path.join(REPO_DIR, "logician", "mangle-service", "proto", "mangle.proto");
+const LOG_FILE = path.join(REPO_DIR, "shield", "logs", "shield-gate.log");
 const ERROR_EXPLAIN_INSTRUCTION = "\n\n⚠️ MANDATORY: Explain this block to the user briefly. What was blocked and what you are doing instead. Never leave a block message unexplained.";
 
 // --- Logician gRPC Client (native Node.js, no grpcurl) ---
@@ -45,9 +47,9 @@ function getLogicianClient() {
 }
 
 // --- Coherence Gate Integration ---
-const CG_TASK_DIR = path.join(process.env.HOME, "resonantos-augmentor/coherence-gate/tasks");
-const CG_CONFIG_FILE = path.join(process.env.HOME, "resonantos-augmentor/coherence-gate/config.json");
-const CG_LOG_FILE = path.join(process.env.HOME, "resonantos-augmentor/coherence-gate/logs/coherence-gate.log");
+const CG_TASK_DIR = path.join(REPO_DIR, "coherence-gate", "tasks");
+const CG_CONFIG_FILE = path.join(REPO_DIR, "coherence-gate", "config.json");
+const CG_LOG_FILE = path.join(REPO_DIR, "coherence-gate", "logs", "coherence-gate.log");
 
 // Tools that require an active CG task (mirrors config.significantTools)
 const CG_SIGNIFICANT_TOOLS = ["write", "edit", "exec", "message", "sessions_spawn", "gateway"];
@@ -234,7 +236,7 @@ function checkExecCommand(command) {
   //       (python3 -c can write to any file, bypassing writeOps detection)
   const hasPipe = /\|/.test(trimmed);
   const hasRedirect = />{1,2}\s/.test(trimmed);
-  const expanded = trimmed.replace(/~/g, process.env.HOME || "/Users/augmentor");
+  const expanded = trimmed.replace(/~/g, HOME);
   if (!hasPipe && !hasRedirect) {
     let isSafe = false;
     for (const safe of SAFE_PREFIXES) {
@@ -325,7 +327,7 @@ function checkExecCommand(command) {
   const cpMvMatch = trimmed.match(/\b(cp|mv)\s+(?:-[^\s]*\s+)*(\S+)\s+(\S+)/);
   if (cpMvMatch) {
     const dest = cpMvMatch[3];
-    const expandedDest = dest.replace(/^~(?=\/|$)/, process.env.HOME || "/Users/augmentor");
+    const expandedDest = dest.replace(/^~(?=\/|$)/, HOME);
 
     if (CODE_EXTENSIONS.test(expandedDest)) {
       let isExempt = false;
@@ -472,7 +474,7 @@ function checkCoherenceGate(toolName, params) {
     });
     return {
       block: true,
-      reason: `🔒 Coherence Gate: No active task registered. Create a task first:\n  node ~/resonantos-augmentor/coherence-gate/cg-cli.js create "Your task description"`
+      reason: `🔒 Coherence Gate: No active task registered. Create a task first:\n  node ${path.join(REPO_DIR, "coherence-gate", "cg-cli.js").replace(/\\/g, "/")} create "Your task description"`
     };
   }
   
@@ -523,7 +525,7 @@ function checkCoherenceGate(toolName, params) {
 let delegationGate = null;
 try {
   delegationGate = require(path.join(
-    process.env.HOME, "resonantos-augmentor/shield/delegation-gate.js"
+    REPO_DIR, "shield", "delegation-gate.js"
   ));
 } catch (e) {
   // Will be checked at call time
@@ -608,7 +610,7 @@ function normalizeDerivativePath(rawPath, baseDir) {
   let filePath = String(rawPath).trim().replace(/^['"]|['"]$/g, "");
   if (!filePath) return "";
   if (filePath.startsWith("~/")) {
-    filePath = path.join(process.env.HOME || "/Users/augmentor", filePath.slice(2));
+    filePath = path.join(HOME, filePath.slice(2));
   } else if (baseDir && !path.isAbsolute(filePath)) {
     filePath = path.resolve(baseDir, filePath);
   }
@@ -1661,12 +1663,10 @@ module.exports = function shieldGateExtension(api) {
 
   // --- Layer 6: Repo Contamination Gate (outbound message scanning) ---
   const PRIVATE_PATTERNS = [
-    /resonantos-augmentor/i,
+    /resonantos-alpha/i,
     /ssot\/private/i,
     /MEMORY\.md/i,
     /memory\/\d{4}-\d{2}-\d{2}\.md/i,
-    /\/Users\/augmentor\//i,
-    /ManoloRemiddi\/resonantos-augmentor/i,
   ];
   // Manolo's Telegram DM — the only channel where private references are safe
   const SAFE_DESTINATIONS = ["7825655623", "telegram:7825655623"];
@@ -1988,7 +1988,7 @@ module.exports = function shieldGateExtension(api) {
       const spawnModel = (event?.model || "").toLowerCase();
       if (spawnModel) {
         try {
-          const pricingPath = path.join(process.env.HOME, "resonantos-augmentor/shield/model-pricing.json");
+          const pricingPath = path.join(REPO_DIR, "shield", "model-pricing.json");
           if (fs.existsSync(pricingPath)) {
             const pricing = JSON.parse(fs.readFileSync(pricingPath, "utf8"));
             const taskLower = task.toLowerCase();

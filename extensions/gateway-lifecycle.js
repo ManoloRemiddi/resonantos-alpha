@@ -20,16 +20,19 @@
  * v2.0.0 — 2026-02-26
  */
 
+const os = require("os");
 const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
+const { tmpdir } = os;
 
 const HOME = process.env.HOME || "";
 const WORKSPACE_DIR = path.join(HOME, ".openclaw/workspace");
 const MAINTENANCE_FILE = path.join(WORKSPACE_DIR, ".gateway-maintenance");
 const TASK_STATE_FILE = path.join(WORKSPACE_DIR, "TASK-STATE.json");
-const RESUME_SCRIPT = path.join(HOME, "resonantos-alpha/shield/scripts/gateway-resume.sh");
-const LOG_FILE = path.join(HOME, "resonantos-alpha/shield/logs/gateway-lifecycle.log");
+const LOG_FILE = path.join(HOME, ".openclaw", "shield", "logs", "gateway-lifecycle.log");
+const RESUME_SCRIPT = path.join(HOME, ".openclaw", "shield", "scripts", "gateway-resume.sh");
+const RESUME_LOG = path.join(tmpdir(), "gateway-resume.log");
 
 const DEFAULT_RESUME_SECONDS = 120;
 const MAX_RESUME_SECONDS = 3600;
@@ -81,7 +84,7 @@ function readTaskState() {
 function scheduleAutoResume(seconds) {
   try {
     ensureResumeScript();
-    const cmd = `nohup bash "${RESUME_SCRIPT}" ${seconds} >> /tmp/gateway-resume.log 2>&1 &`;
+    const cmd = `nohup bash "${RESUME_SCRIPT}" ${seconds} >> "${RESUME_LOG}" 2>&1 &`;
     execSync(cmd, { stdio: "ignore", timeout: 5000 });
     log("INFO", "Auto-resume scheduled: " + seconds + "s");
     return true;
@@ -96,18 +99,14 @@ function ensureResumeScript() {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   const script = '#!/bin/bash\n'
     + '# Gateway Auto-Resume — spawned by gateway-lifecycle.js\n'
+    + '# Cross-platform: uses openclaw CLI, works on macOS/Linux/Windows(WSL)\n'
     + 'DELAY=${1:-' + DEFAULT_RESUME_SECONDS + '}\n'
-    + 'PLIST="$HOME/Library/LaunchAgents/ai.openclaw.gateway.plist"\n'
-    + 'UID_NUM=$(id -u)\n'
-    + 'echo "[$(date -Iseconds)] Resume timer: ${DELAY}s" >> /tmp/gateway-resume.log\n'
+    + 'echo "[$(date -Iseconds)] Resume timer: ${DELAY}s" >> "' + RESUME_LOG + '"\n'
     + 'sleep "$DELAY"\n'
-    + 'echo "[$(date -Iseconds)] Bootstrapping gateway..." >> /tmp/gateway-resume.log\n'
-    + 'launchctl bootstrap "gui/${UID_NUM}" "$PLIST" 2>> /tmp/gateway-resume.log\n'
-    + 'if [ $? -ne 0 ]; then\n'
-    + '  /opt/homebrew/bin/openclaw gateway start >> /tmp/gateway-resume.log 2>&1\n'
-    + 'fi\n'
+    + 'echo "[$(date -Iseconds)] Starting gateway..." >> "' + RESUME_LOG + '"\n'
+    + 'openclaw gateway start >> "' + RESUME_LOG + '" 2>&1\n'
     + 'rm -f "' + TASK_STATE_FILE + '" 2>/dev/null\n'
-    + 'echo "[$(date -Iseconds)] Resumed, TASK-STATE cleaned" >> /tmp/gateway-resume.log\n';
+    + 'echo "[$(date -Iseconds)] Resumed, TASK-STATE cleaned" >> "' + RESUME_LOG + '"\n';
   fs.writeFileSync(RESUME_SCRIPT, script, { mode: 0o755 });
 }
 
