@@ -4950,6 +4950,34 @@ def api_gateway_restart():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
+@app.route("/api/gateway/token")
+def api_gateway_token():
+    """Return gateway WebSocket URL and auth token for browser clients."""
+    return jsonify({
+        "url": GW_WS_URL,
+        "token": GW_TOKEN,
+    })
+
+
+@app.route("/api/agents/setup/model", methods=["POST"])
+def api_agents_setup_model():
+    """Set the model override for the setup agent."""
+    body = request.get_json(force=True)
+    model = body.get("model", "").strip()
+    if not model:
+        return jsonify({"ok": False, "error": "model required"}), 400
+    setup_models = Path.home() / ".openclaw" / "agents" / "setup" / "agent" / "models.json"
+    try:
+        data = {}
+        if setup_models.exists():
+            data = json.loads(setup_models.read_text())
+        data["default"] = model
+        setup_models.write_text(json.dumps(data, indent=2) + "\n")
+        return jsonify({"ok": True, "model": model})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 # ---------------------------------------------------------------------------
 # API: Agents
 # ---------------------------------------------------------------------------
