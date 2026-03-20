@@ -37,6 +37,8 @@ from routes import (
     register_projects_routes,
     register_wallet_routes,
     register_system_routes,
+    register_bounty_routes,
+    register_profile_routes,
 )
 
 # ============================================================================
@@ -117,6 +119,13 @@ register_projects_routes(app)
 register_wallet_routes(app)
 register_system_routes(app)
 
+# Register full implementations if available
+if register_bounty_routes:
+    register_bounty_routes(app)
+
+if register_profile_routes:
+    register_profile_routes(app)
+
 # ============================================================================
 # Additional Routes (TODO - extract to modules)
 # ============================================================================
@@ -129,7 +138,6 @@ def api_dashboard_update():
 @app.route("/api/dashboard/restart", methods=["POST"])
 def api_dashboard_restart():
     """Restart dashboard."""
-    import os
     return jsonify({"success": True})
 
 # ============================================================================
