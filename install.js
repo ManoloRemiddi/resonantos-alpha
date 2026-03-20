@@ -247,28 +247,31 @@ if (fs.existsSync(openclawCfgPath)) {
 // 9. Dashboard dependencies
 log("Installing dashboard dependencies...");
 const dashDir = path.join(sourceRoot, "dashboard");
-const dashDeps = "flask flask-cors psutil websocket-client solana solders";
+const venvDir = path.join(dashDir, "venv");
+const reqFile = path.join(sourceRoot, "requirements.txt");
+
+// Create venv if it doesn't exist
+if (!fs.existsSync(venvDir)) {
+  log("Creating Python virtual environment...");
+  run(`${python} -m venv "${venvDir}"`, { cwd: dashDir });
+}
+
+// Determine pip in venv
+const venvPip = isWin ? path.join(venvDir, "Scripts", "pip") : path.join(venvDir, "bin", "pip");
+
+// Install dependencies from requirements.txt if it exists, otherwise use hardcoded list
 try {
-  const venvDir = path.join(dashDir, "venv");
-  if (!fs.existsSync(venvDir)) {
-    run(`${python} -m venv "${venvDir}"`, { cwd: dashDir });
+  if (fs.existsSync(reqFile)) {
+    run(`"${venvPip}" install -q -r "${reqFile}"`, { cwd: dashDir });
+    ok("Dashboard dependencies installed from requirements.txt");
+  } else {
+    const dashDeps = "flask flask-cors psutil websocket-client solana solders";
+    run(`"${venvPip}" install -q ${dashDeps}`, { cwd: dashDir });
+    ok("Dashboard dependencies installed");
   }
-  const venvPip = isWin ? path.join(venvDir, "Scripts", "pip") : path.join(venvDir, "bin", "pip");
-  run(`"${venvPip}" install -q ${dashDeps}`, { cwd: dashDir });
-  ok("Dashboard ready (venv)");
-} catch {
-  try {
-    run(`${pip} install -q --break-system-packages ${dashDeps}`, { cwd: dashDir });
-    ok("Dashboard ready (system packages)");
-  } catch {
-    try {
-      run(`${pip} install ${dashDeps}`, { cwd: dashDir });
-      ok("Dashboard ready");
-    } catch {
-      log("  Warning: Could not install dashboard dependencies. Install manually:");
-      log(`  ${pip} install ${dashDeps}`);
-    }
-  }
+} catch (e) {
+  log("  Warning: Could not install dashboard dependencies: " + e.message);
+  log("  Try manually: cd dashboard && source venv/bin/activate && pip install -r ../requirements.txt");
 }
 
 // 10. Config from example

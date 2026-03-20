@@ -48,7 +48,7 @@ resonantos-alpha/
 
 ## Testing
 
-- Dashboard: `cd dashboard && python3 server_v2.py` then hit `http://localhost:19100`
+- Dashboard: `cd dashboard && source venv/bin/activate && python server_v2.py` then hit `http://localhost:19100`
 - Solana operations need: `pip3 install solana solders anchorpy`
 - Phantom wallet browser extension needed for wallet features (enable Developer Mode + Devnet)
 
