@@ -4,13 +4,25 @@ System routes - Agents, Shield, Logician, System Info.
 
 import json
 import os
+import platform
 import subprocess
+import shutil
 import time
 from pathlib import Path
 from flask import jsonify, request
 
 def register_system_routes(app):
     """Register all system-related routes."""
+
+    def _get_openclaw_version():
+        """Get OpenClaw version if available."""
+        try:
+            result = subprocess.run(["openclaw", "--version"], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                return result.stdout.strip()
+        except Exception:
+            pass
+        return None
 
     # -------------------------------------------------------------------------
     # Agents API
@@ -31,6 +43,10 @@ def register_system_routes(app):
     @app.route("/api/agents/<agent_id>/status")
     def api_agents_status(agent_id):
         """Get agent status."""
+        from shared import WORKSPACE
+        agent_dir = WORKSPACE / "agents" / agent_id
+        if not agent_dir.exists():
+            return jsonify({"error": "Agent not found"}), 404
         return jsonify({"id": agent_id, "status": "unknown", "running": False})
 
     # -------------------------------------------------------------------------
@@ -40,12 +56,20 @@ def register_system_routes(app):
     @app.route("/api/gateway/status")
     def api_gateway_status():
         """Get gateway status."""
-        return jsonify({"connected": False, "version": "unknown"})
+        version = _get_openclaw_version()
+        return jsonify({
+            "connected": version is not None,
+            "version": version
+        })
 
     @app.route("/api/gateway/health")
     def api_gateway_health():
         """Get gateway health."""
-        return jsonify({"healthy": False, "uptime": 0})
+        version = _get_openclaw_version()
+        return jsonify({
+            "healthy": version is not None,
+            "uptime": 0
+        })
 
     @app.route("/api/gateway/stats")
     def api_gateway_stats():
@@ -56,8 +80,11 @@ def register_system_routes(app):
     def api_gateway_restart():
         """Restart gateway."""
         from shared import restart_openclaw_gateway
-        restart_openclaw_gateway()
-        return jsonify({"success": True})
+        try:
+            restart_openclaw_gateway()
+            return jsonify({"success": True})
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 500
 
     # -------------------------------------------------------------------------
     # Shield Status
@@ -82,6 +109,13 @@ def register_system_routes(app):
     @app.route("/api/shield/config")
     def api_shield_config():
         """Get shield config."""
+        from shared import WORKSPACE
+        config_file = WORKSPACE / "shield" / "config.json"
+        if config_file.exists():
+            try:
+                return jsonify(json.loads(config_file.read_text()))
+            except Exception:
+                pass
         return jsonify({"enabled": False})
 
     @app.route("/api/shield/logs")
@@ -97,6 +131,28 @@ def register_system_routes(app):
                 pass
         return jsonify({"logs": ""})
 
+    @app.route("/api/shield/file-guard/status")
+    def api_shield_file_guard_status():
+        """Get file guard status."""
+        from shared import WORKSPACE
+        status_file = WORKSPACE / "shield" / "file_guard_status.json"
+        if status_file.exists():
+            try:
+                return jsonify(json.loads(status_file.read_text()))
+            except Exception:
+                pass
+        return jsonify({"locked": False})
+
+    @app.route("/api/shield/file-guard/lock", methods=["POST"])
+    def api_shield_file_guard_lock():
+        """Lock files (requires sudo on Unix)."""
+        return jsonify({"success": False, "error": "Not implemented"}), 501
+
+    @app.route("/api/shield/file-guard/unlock", methods=["POST"])
+    def api_shield_file_guard_unlock():
+        """Unlock files."""
+        return jsonify({"success": False, "error": "Not implemented"}), 501
+
     # -------------------------------------------------------------------------
     # Logician Status
     # -------------------------------------------------------------------------
@@ -105,7 +161,6 @@ def register_system_routes(app):
     def api_logician_status():
         """Live-check Logician mangle server."""
         from shared import IS_WINDOWS, IS_MAC, IS_LINUX
-        import subprocess
         if IS_WINDOWS:
             mangle_sock = os.path.expanduser("~/mangle.sock")
         else:
@@ -115,7 +170,7 @@ def register_system_routes(app):
         try:
             if IS_WINDOWS:
                 result = subprocess.run(["tasklist", "/FI", "IMAGENAME eq mangle-server.exe"], capture_output=True, text=True, timeout=5)
-                process_running = result.returncode == 0
+                process_running = "mangle-server" in result.stdout
             else:
                 result = subprocess.run(["pgrep", "-f", "mangle-server"], capture_output=True, text=True, timeout=5)
                 process_running = result.returncode == 0
@@ -130,17 +185,42 @@ def register_system_routes(app):
     @app.route("/api/logician/start", methods=["POST"])
     def api_logician_start():
         """Start Logician."""
-        return jsonify({"success": False, "error": "Not implemented"}), 501
+        from shared import IS_MAC, IS_LINUX
+        try:
+            if IS_MAC or IS_LINUX:
+                subprocess.Popen(["logician_ctl.sh", "start"], cwd=str(Path.home() / "resonantos-alpha" / "logician" / "scripts"))
+            return jsonify({"success": True})
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 500
 
     @app.route("/api/logician/stop", methods=["POST"])
     def api_logician_stop():
         """Stop Logician."""
-        return jsonify({"success": False, "error": "Not implemented"}), 501
+        try:
+            subprocess.run(["logician_ctl.sh", "stop"], capture_output=True, timeout=5)
+            return jsonify({"success": True})
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 500
 
     @app.route("/api/logician/query", methods=["POST"])
     def api_logician_query():
         """Query Logician."""
         return jsonify({"success": False, "error": "Not implemented"}), 501
+
+    @app.route("/api/logician/rules")
+    def api_logician_rules():
+        """Get Logician rules."""
+        from shared import WORKSPACE
+        rules_dir = WORKSPACE / "logician" / "rules"
+        if not rules_dir.exists():
+            return jsonify({"rules": []})
+        rules = []
+        for f in rules_dir.glob("*.json"):
+            try:
+                rules.append(json.loads(f.read_text()))
+            except Exception:
+                pass
+        return jsonify({"rules": rules})
 
     # -------------------------------------------------------------------------
     # System Info
@@ -149,7 +229,6 @@ def register_system_routes(app):
     @app.route("/api/system/info")
     def api_system_info():
         """Get system info."""
-        import platform
         return jsonify({
             "platform": platform.system(),
             "platform_version": platform.version(),
@@ -160,23 +239,58 @@ def register_system_routes(app):
     @app.route("/api/system/openclaw-status")
     def api_openclaw_status():
         """Get OpenClaw status."""
-        return jsonify({"installed": False, "version": None})
+        version = _get_openclaw_version()
+        return jsonify({
+            "installed": version is not None,
+            "version": version
+        })
 
     @app.route("/api/system/disk-usage")
     def api_disk_usage():
         """Get disk usage."""
-        import shutil
-        usage = shutil.disk_usage("/")
-        return jsonify({
-            "total": usage.total,
-            "used": usage.used,
-            "free": usage.free,
-        })
+        try:
+            usage = shutil.disk_usage("/")
+            return jsonify({
+                "total": usage.total,
+                "used": usage.used,
+                "free": usage.free,
+            })
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
     @app.route("/api/system/uptime")
     def api_system_uptime():
         """Get system uptime."""
-        return jsonify({"uptime": time.time() - __import__("os").getpid()})
+        boot_time_file = "/proc/uptime" if os.path.exists("/proc/uptime") else None
+        if boot_time_file:
+            try:
+                with open(boot_time_file) as f:
+                    uptime_seconds = float(f.read().split()[0])
+                    return jsonify({"uptime": uptime_seconds})
+            except Exception:
+                pass
+        return jsonify({"uptime": time.time() - os.times().elapsed})
+
+    @app.route("/api/system/memory")
+    def api_system_memory():
+        """Get memory info."""
+        try:
+            if os.path.exists("/proc/meminfo"):
+                with open("/proc/meminfo") as f:
+                    lines = f.readlines()
+                    mem = {}
+                    for line in lines:
+                        if ":" in line:
+                            k, v = line.split(":", 1)
+                            mem[k.strip()] = v.strip()
+                    return jsonify({
+                        "total": mem.get("MemTotal", "0 kB"),
+                        "available": mem.get("MemAvailable", "0 kB"),
+                        "used": mem.get("MemFree", "0 kB"),
+                    })
+        except Exception:
+            pass
+        return jsonify({"total": 0, "available": 0, "used": 0})
 
     # -------------------------------------------------------------------------
     # Config
@@ -191,12 +305,32 @@ def register_system_routes(app):
 
     @app.route("/api/config", methods=["POST"])
     def api_config_set():
-        """Set config."""
-        return jsonify({"success": False, "error": "Not implemented"}), 501
+        """Set config value."""
+        data = request.get_json() or {}
+        key = data.get("key")
+        value = data.get("value")
+        if not key:
+            return jsonify({"error": "Missing key"}), 400
+        try:
+            from shared import Config
+            cfg = Config()
+            keys = key.split(".")
+            obj = cfg._cfg
+            for k in keys[:-1]:
+                if k not in obj:
+                    obj[k] = {}
+                obj = obj[k]
+            obj[keys[-1]] = value
+            dashboard_dir = Path(__file__).resolve().parent
+            config_file = dashboard_dir / "config.json"
+            config_file.write_text(json.dumps(cfg._cfg, indent=2))
+            return jsonify({"success": True})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
     @app.route("/api/config/save", methods=["POST"])
     def api_config_save():
-        """Save config."""
+        """Save config to file."""
         return jsonify({"success": False, "error": "Not implemented"}), 501
 
     # -------------------------------------------------------------------------
@@ -206,11 +340,19 @@ def register_system_routes(app):
     @app.route("/api/models", methods=["GET"])
     def api_models_list():
         """List available models."""
-        return jsonify([])
+        models = [
+            {"id": "anthropic/claude-haiku-4-5", "name": "Claude Haiku"},
+            {"id": "anthropic/claude-sonnet-4", "name": "Claude Sonnet"},
+            {"id": "openai/gpt-4o-mini", "name": "GPT-4o Mini"},
+        ]
+        return jsonify(models)
 
     @app.route("/api/models/default", methods=["GET"])
     def api_models_default():
         """Get default model."""
-        return jsonify({"model": "anthropic/claude-haiku-4-5"})
+        from shared import Config
+        cfg = Config()
+        default_model = cfg.get("agents", "defaults", "model", "primary", default="anthropic/claude-haiku-4-5")
+        return jsonify({"model": default_model})
 
     return app
