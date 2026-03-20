@@ -58,26 +58,9 @@ jobs:
       - name: Run smoke test
         run: |
           echo "Running smoke test..."
-          timeout 10 python3 -c '
-import sys
-sys.path.insert(0, "dashboard")
-try:
-    import server_v2
-    print("server_v2.py imports successfully")
-except Exception as e:
-    print(f"Import failed: {e}")
-    sys.exit(1)
-' 2>&1 || echo "Smoke test completed with warnings"
+          timeout 10 python3 -c "import sys; sys.path.insert(0, 'dashboard'); import server_v2; print('server_v2.py imports successfully')" 2>&1 || echo "Smoke test completed with warnings"
 
       - name: Test dashboard boot
         run: |
           cd dashboard
-          timeout 5 python3 -c '
-import subprocess
-import time
-proc = subprocess.Popen(["python3", "server_v2.py"], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-time.sleep(2)
-proc.terminate()
-stdout, stderr = proc.communicate(timeout=3)
-print("Dashboard boot test completed")
-' 2>&1 || echo "Dashboard boot test completed"
+          timeout 5 python3 -c "import subprocess,time; proc=subprocess.Popen(['python3','server_v2.py'], stderr=subprocess.PIPE, stdout=subprocess.PIPE); time.sleep(2); proc.terminate(); proc.communicate(timeout=3); print('Dashboard boot test completed')" 2>&1 || echo "Dashboard boot test completed"
