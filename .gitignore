@@ -1,0 +1,43 @@
+# Personal data - NEVER commit
+MEMORY.md
+memory/
+USER.md
+IDENTITY.md
+HEARTBEAT.md
+heartbeat-state.json
+breadcrumbs.jsonl
+.shield-personal-data
+
+# SSoT personal content
+ssot/L0/SSOT-L0-CREATIVE-DNA*
+ssot/L0/SSOT-L0-BUSINESS-PLAN*
+ssot/L0/SSOT-L0-BRAND-IDENTITY*
+ssot/L0/SSOT-L0-POSITIONING-MISSION*
+ssot/L0/SSOT-L0-ROADMAP*
+ssot/L0/SSOT-L0-OVERVIEW*
+ssot/L0/*.md
+!ssot/L0/SSOT-L0-PHILOSOPHY.ai.md
+!ssot/L0/SSOT-L0-CONSTITUTION.ai.md
+!ssot/L0/SSOT-L0-WORLD-MODEL.ai.md
+ssot/L1/*.md
+ssot/L2/
+ssot/L3/
+ssot/L4/
+ssot/archive/
+
+# Session/config data
+*.sqlite
+*.db
+.openclaw/
+.augmentor-drift-flag
+
+# Media
+media/
+
+# OS/IDE
+.DS_Store
+*.swp
+.vscode/
+
+# Task files (may contain personal data)
+TASK.md
