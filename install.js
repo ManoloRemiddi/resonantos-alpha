@@ -78,6 +78,8 @@ if (missing.length > 0) {
        `  node install.js`);
 }
 
+log("DEBUG: sourceRoot = " + sourceRoot);
+
 // ── Main ──
 
 // 1. Check dependencies
@@ -252,16 +254,21 @@ const reqFile = path.join(sourceRoot, "requirements.txt");
 
 // Create venv if it doesn't exist
 if (!fs.existsSync(venvDir)) {
-  log("Creating Python virtual environment...");
+  log("Creating Python virtual environment at: " + venvDir);
   run(`${python} -m venv "${venvDir}"`, { cwd: dashDir });
+} else {
+  log("  Venv already exists at: " + venvDir);
 }
 
 // Determine pip in venv
 const venvPip = isWin ? path.join(venvDir, "Scripts", "pip") : path.join(venvDir, "bin", "pip");
 
 // Install dependencies from requirements.txt if it exists, otherwise use hardcoded list
+log("  Looking for requirements at: " + reqFile);
+log("  Venv pip at: " + venvPip);
 try {
   if (fs.existsSync(reqFile)) {
+    log("  Found requirements.txt, installing...");
     run(`"${venvPip}" install -q -r "${reqFile}"`, { cwd: dashDir });
     ok("Dashboard dependencies installed from requirements.txt");
   } else {
