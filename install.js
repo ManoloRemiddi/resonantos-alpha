@@ -106,7 +106,7 @@ const ssotDir = path.join(OPENCLAW_WORKSPACE, "resonantos-alpha", "ssot");
 mkdirp(ssotDir);
 const ssotEmpty = fs.readdirSync(ssotDir).length === 0;
 if (ssotEmpty) {
-  copyDirContents(path.join(INSTALL_DIR, "ssot-template"), ssotDir);
+  copyDirContents(path.join(INSTALL_DIR, "ssot", "templates"), ssotDir);
   ok("SSoT template installed");
 } else {
   log("  SSoT directory not empty — skipping (won't overwrite your docs)");
@@ -193,16 +193,16 @@ if (fs.existsSync(setupSrc)) {
   log("  Setup Agent source not found — skipping");
 }
 
-// 9. Logician binary (Windows)
+// 9. Logician binary (Windows) — NOTE: bin/ is gitignored, build from source if needed
 if (process.platform === "win32") {
-  const logSrc = path.join(INSTALL_DIR, "bin", "mangle-server.exe");
+  const logSrc = path.join(INSTALL_DIR, "logician", "mangle-service", "bin", "mangle-server.exe");
   const logDest = path.join(HOME, ".openclaw", "bin", "mangle-server.exe");
   if (fs.existsSync(logSrc)) {
     mkdirp(path.dirname(logDest));
     copyFile(logSrc, logDest);
     ok("Logician binary installed");
   } else {
-    log("  Logician binary not found — skipping");
+    log("  Logician binary not found — build from logician/mangle-service if needed");
   }
 }
 
