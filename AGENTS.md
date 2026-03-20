@@ -29,7 +29,6 @@ resonantos-alpha/
 ├── logician/           # Policy engine
 ├── ssot/               # SSOT docs (merged ssot-template/)
 ├── solana-toolkit/     # Solana utilities (DevNet)
-├── bin/                # Binary utilities
 ├── data/               # Data files
 ├── assets/             # Static assets
 ├── skills/             # Skill definitions

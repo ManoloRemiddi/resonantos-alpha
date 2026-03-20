@@ -33,15 +33,16 @@ This document maps every top-level directory to a classification. The directory 
 | `logician/` | Policy engine | |
 | `solana-toolkit/` | Solana blockchain utilities | Experimental - DevNet only |
 
-### Optional/Supporting (5 directories)
+### Optional/Supporting (4 directories)
 
 | Directory | Purpose | Notes |
 |-----------|---------|-------|
-| `bin/` | Binary utilities | Contains mangle-server.exe |
 | `data/` | Data files | Contains nft_registry.json |
 | `assets/` | Static assets | Contains banner.png |
 | `skills/` | Active skill definitions | Contains node-deploy/ |
 | `experiments/` | Archived experimental code | Moved from root (mcp-server, research, self-improver, watchdog) |
+
+**Note:** `bin/` was removed from git. Compiled binaries belong in setup/build flow, not in repo.
 
 ---
 
