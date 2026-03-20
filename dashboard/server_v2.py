@@ -5542,7 +5542,7 @@ def api_rmemory_open_log():
     """Open R-Memory log in Terminal.app."""
     import subprocess
     # PLACEHOLDER: replace command with user-provided string
-    cmd = "tail -f ~/.openclaw/workspace/r-memory/r-memory.log"
+    cmd = f"tail -f {os.path.expanduser('~/.openclaw/workspace/r-memory/r-memory.log')}"
     subprocess.Popen([
         "osascript", "-e",
         f'tell application "Terminal" to do script "{cmd}"'
@@ -6395,8 +6395,8 @@ def api_token_savings():
             "trackerError": tracker_error,
             "trackerEntries": _ts_int(tracker_meta.get("keptEntries"), 0),
             "gatewayUsageCost": "openclaw gateway usage-cost --days N --json",
-            "rMemoryUsageStats": "~/.openclaw/workspace/r-memory/usage-stats.json",
-            "rMemoryHistory": "~/.openclaw/workspace/r-memory/history-*.json",
+            "rMemoryUsageStats": os.path.expanduser("~/.openclaw/workspace/r-memory/usage-stats.json"),
+            "rMemoryHistory": os.path.expanduser("~/.openclaw/workspace/r-memory/history-*.json"),
             "pricing": "dashboard/config.json:pricing",
             "gatewayError": gateway_error if source == "gateway" else None,
             "gatewayCmd": gateway_meta.get("cmd") if isinstance(gateway_meta, dict) else None,
