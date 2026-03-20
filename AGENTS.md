@@ -120,6 +120,8 @@ These rules prevent single-file bloat and enforce maintainable structure. Follow
 - **Bug fixes**: Include a test case that would have caught the bug
 - **No test = won't be merged**, except for trivial one-line fixes
 - **Test location**: `dashboard/tests/` for dashboard tests, `scripts/` for smoke tests
+- **Always run local verification before commit/push**: Execute relevant tests and checks for the files you changed
+- **Never mark work done without verification**: If tests cannot run, clearly document what was attempted and why it could not be validated
 
 ### CI Enforcement
 
