@@ -1,0 +1,7 @@
+# DEPRECATED
+
+This file has been moved to `archive/legacy-dashboard/server.py`.
+
+See `archive/legacy-dashboard/README.md` for details.
+
+Use `server_v2.py` for the current implementation.

@@ -62,9 +62,9 @@ These features are deprecated, superseded, or archived. Do not modify unless fix
 
 | Feature | Location | Status | Replacement |
 |---------|---------|--------|-------------|
-| Old dashboard | `dashboard/server.py` | ❌ Deprecated | `dashboard/server_v2.py` |
-| Old path references | Various | ❌ Deprecated | Use centralized path resolution |
-| MCP server (root) | `mcp-server/` → `experiments/` | ❌ Archived | `experiments/mcp-server/` |
+| Old dashboard | `archive/legacy-dashboard/` | ❌ Archived | `dashboard/server_v2.py` |
+| Old path references | Various | ❌ Deprecated | See issues #41, #42 |
+| MCP server (root) | `experiments/mcp-server/` | ❌ Archived | None |
 
 ---
 
