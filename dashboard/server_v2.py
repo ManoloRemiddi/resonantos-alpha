@@ -7775,7 +7775,7 @@ def api_logician_rules():
     mangle-server) instead of the old separate logician/rules/*.mg files.
     """
     rules_file = os.path.join(
-        os.path.dirname(__file__), "..", "logician", "poc", "production_rules.mg"
+        os.path.dirname(__file__), "..", "logician", "rules", "templates", "production_rules.mg"
     )
 
     # Section-name -> dashboard category mapping
@@ -7933,7 +7933,7 @@ def api_logician_rule_section(section_slug):
         return jsonify({"error": "Invalid section slug"}), 400
 
     rules_file = os.path.join(
-        os.path.dirname(__file__), "..", "logician", "poc", "production_rules.mg"
+        os.path.dirname(__file__), "..", "logician", "rules", "templates", "production_rules.mg"
     )
 
     try:
