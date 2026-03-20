@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/_project_common.sh"
+
+usage() {
+  cat <<'EOF'
+Usage: scripts/project/claim-task ISSUE_NUMBER [--agent NAME]
+
+Moves a task from TODOS to In Progress and records agent metadata.
+EOF
+}
+
+ISSUE_NUMBER=""
+AGENT_NAME_VALUE="$(agent_name_default)"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --agent)
+      AGENT_NAME_VALUE="${2:-}"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      if [[ -z "$ISSUE_NUMBER" ]]; then
+        ISSUE_NUMBER="$1"
+        shift
+      else
+        fail "unknown argument: $1"
+      fi
+      ;;
+  esac
+done
+
+[[ -n "$ISSUE_NUMBER" ]] || fail "issue number is required"
+
+ensure_ready
+
+item_json="$(project_item_by_issue_number "$ISSUE_NUMBER")"
+current_status="$(item_field_single_select_value "$item_json" "$PROJECT_STATUS_FIELD_NAME")"
+[[ "$current_status" == "$PROJECT_STATUS_TODOS" ]] || \
+  fail "issue #$ISSUE_NUMBER is not claimable; current status is '$current_status'"
+
+item_id="$(jq -r '.id' <<<"$item_json")"
+set_item_status "$item_id" "$PROJECT_STATUS_IN_PROGRESS"
+set_item_text_field "$item_id" "$PROJECT_AGENT_FIELD_NAME" "$AGENT_NAME_VALUE"
+set_item_date_field "$item_id" "$PROJECT_LAST_CLAIMED_AT_FIELD_NAME" "$(today_utc)"
+
+printf 'Claimed issue #%s as %s\n' "$ISSUE_NUMBER" "$AGENT_NAME_VALUE"

@@ -1,0 +1,49 @@
+#!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$SCRIPT_DIR/project.env" ]]; then
+  source "$SCRIPT_DIR/project.env"
+fi
+
+GITHUB_PROJECT_OWNER="${GITHUB_PROJECT_OWNER:-ResonantOS}"
+GITHUB_PROJECT_NUMBER="${GITHUB_PROJECT_NUMBER:-2}"
+GITHUB_PROJECT_REPO="${GITHUB_PROJECT_REPO:-ResonantOS/resonantos-alpha}"
+
+STATUS_TODOS_ID="8a89dae5"
+STATUS_FIELD_ID="PVTSSF_lADOD_kK8c4BSQYHzg_2CMQ"
+PROJECT_ID="PVT_kwDOD_kK8c4BSQYH"
+
+usage() {
+  echo "Usage: create-task-simple --title 'Title' --body 'Body'"
+}
+
+TITLE=""
+BODY=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --title) TITLE="${2:-}"; shift 2 ;;
+    --body) BODY="${2:-}"; shift 2 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown: $1" >&2; exit 1 ;;
+  esac
+done
+
+[[ -n "$TITLE" ]] || { echo "--title required" >&2; exit 1; }
+[[ -n "$BODY" ]] || { echo "--body required" >&2; exit 1; }
+
+echo "Creating issue: $TITLE"
+issue_url=$(gh issue create --repo "$GITHUB_PROJECT_REPO" --title "$TITLE" --body "$BODY")
+issue_number=$(echo "$issue_url" | grep -o '[0-9]*$')
+echo "Created issue #$issue_number"
+
+echo "Adding to project..."
+gh project item-add "$GITHUB_PROJECT_NUMBER" --owner "$GITHUB_PROJECT_OWNER" --url "$issue_url" >/dev/null
+
+item_id=$(gh api graphql -f query="{organization(login: \"$GITHUB_PROJECT_OWNER\") {projectV2(number: $GITHUB_PROJECT_NUMBER) {items(first:100) {nodes {id content{... on Issue{number}}}}}}}" --jq ".data.organization.projectV2.items.nodes[] | select(.content.number == $issue_number) | .id")
+
+echo "Setting status to TODOS..."
+gh api graphql -f query="mutation { updateProjectV2ItemFieldValue(input: {projectId: \"$PROJECT_ID\" itemId: \"$item_id\" fieldId: \"$STATUS_FIELD_ID\" value: {singleSelectOptionId: \"$STATUS_TODOS_ID\"} }) { projectV2Item { id } } }" >/dev/null
+
+echo "Done! Issue #$issue_number is in TODOS"
