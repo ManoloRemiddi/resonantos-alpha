@@ -57,11 +57,29 @@ except ImportError:
 
 OPENCLAW_HOME = Path.home() / ".openclaw"
 OPENCLAW_CONFIG = OPENCLAW_HOME / "openclaw.json"
-BUILTIN_SKILLS_DIR = Path("/opt/homebrew/lib/node_modules/openclaw/skills")
+import subprocess
+
+def get_openclaw_skills_dir():
+    """Find OpenClaw's builtin skills directory, cross-platform."""
+    try:
+        result = subprocess.run(["npm", "root", "-g"], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            skills = Path(result.stdout.strip()) / "openclaw" / "skills"
+            if skills.exists():
+                return skills
+    except:
+        pass
+    for base in ["/opt/homebrew", "/usr/local", "/usr"]:
+        skills = Path(base) / "lib" / "node_modules" / "openclaw" / "skills"
+        if skills.exists():
+            return skills
+    return None
+
+BUILTIN_SKILLS_DIR = get_openclaw_skills_dir()
 CUSTOM_SKILLS_DIR = OPENCLAW_HOME / "workspace" / "skills"
 SSOT_ACCESS_FILE = Path("~/.openclaw/ssot_access.json").expanduser()
 WORKSPACE = OPENCLAW_HOME / "workspace"
-SSOT_ROOT = WORKSPACE / "resonantos-augmentor" / "ssot"
+SSOT_ROOT = WORKSPACE / "resonantos-alpha" / "ssot"
 AGENTS_DIR = OPENCLAW_HOME / "agents"
 EXTENSIONS_DIR = OPENCLAW_HOME / "extensions"
 RMEMORY_DIR = WORKSPACE / "r-memory"
