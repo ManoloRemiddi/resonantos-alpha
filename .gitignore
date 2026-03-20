@@ -19,8 +19,6 @@ ssot/L0/*.md
 !ssot/L0/SSOT-L0-PHILOSOPHY.ai.md
 !ssot/L0/SSOT-L0-CONSTITUTION.ai.md
 !ssot/L0/SSOT-L0-WORLD-MODEL.ai.md
-ssot/L1/*.md
-ssot/L2/
 ssot/L3/
 ssot/L4/
 ssot/archive/
@@ -41,3 +39,14 @@ media/
 
 # Task files (may contain personal data)
 TASK.md
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Compiled binaries
+*.exe
+
+# Stale duplicates (canonical in extensions/)
+shield/
+shield-gate/

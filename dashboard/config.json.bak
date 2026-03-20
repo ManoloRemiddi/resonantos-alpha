@@ -1,0 +1,105 @@
+{
+  "solana": {
+    "network": "devnet",
+    "rpcs": {
+      "devnet": "https://api.devnet.solana.com",
+      "testnet": "https://api.testnet.solana.com",
+      "mainnet-beta": "https://api.mainnet-beta.solana.com"
+    },
+    "keypairPath": "~/.config/solana/id.json",
+    "daoRegistrationBasketKeypairPath": "~/.config/solana/dao-registration-basket.json",
+    "minSolForGas": 0.01
+  },
+  "tokens": {
+    "RCT_MINT": "2z2GEVqhTVUc6Pb3pzmVTTyBh2BeMHqSw1Xrej8KVUKG",
+    "RES_MINT": "DiZuWvmQ6DEwsfz7jyFqXCsMfnJiMVahCj3J5MxkdV5N",
+    "REX_MINTS": {
+      "GOV": "",
+      "FIN": "",
+      "COM": "",
+      "CRE": "",
+      "TEC": ""
+    }
+  },
+  "programs": {
+    "SYMBIOTIC_PROGRAM_ID": "HMthR7AStR3YKJ4m8GMveWx5dqY3D2g2cfnji7VdcVoG",
+    "MARKETPLACE_PROGRAM_ID": "5wpGj4EG6J5uEqozLqUyHzEQbU26yjaL5aUE5FwBiYe5"
+  },
+  "rctCaps": {
+    "maxPerWalletYear": 10000,
+    "dailyPerHolder": 30,
+    "dailyFloor": 300,
+    "dailyMax": 100000,
+    "decimals": 9
+  },
+  "paths": {
+    "daoDetails": "ssot/L2/DAO_DETAILS.json",
+    "rctCapsFile": "data/rct_caps.json",
+    "onboardingFile": "data/onboarding.json",
+    "nftRegistry": "data/nft_registry.json",
+    "dailyClaims": "data/daily_claims.json"
+  },
+  "pricing": {
+    "currency": "USD",
+    "defaultModel": "gateway/blended",
+    "models": {
+      "gateway/blended": {
+        "label": "Gateway Blended (from usage-cost)",
+        "inputPer1M": 5.0,
+        "outputPer1M": 25.0,
+        "cacheReadPer1M": 0.5,
+        "cacheWritePer1M": 6.25
+      },
+      "anthropic/claude-opus-4-6": {
+        "label": "Claude Opus 4.6",
+        "inputPer1M": 15.0,
+        "outputPer1M": 75.0,
+        "cacheReadPer1M": 1.5,
+        "cacheWritePer1M": 18.75
+      },
+      "anthropic/claude-haiku-4-5": {
+        "label": "Claude Haiku 4.5",
+        "inputPer1M": 1.0,
+        "outputPer1M": 5.0,
+        "cacheReadPer1M": 0.1,
+        "cacheWritePer1M": 1.25
+      },
+      "openai-codex/gpt-4o-mini": {
+        "label": "OpenAI GPT-4o mini",
+        "inputPer1M": 0.15,
+        "outputPer1M": 0.6,
+        "cacheReadPer1M": 0.075,
+        "cacheWritePer1M": 0.15
+      },
+      "subagents/default": {
+        "label": "Subagent Runtime (estimated)",
+        "inputPer1M": 5.0,
+        "outputPer1M": 25.0,
+        "cacheReadPer1M": 0.5,
+        "cacheWritePer1M": 6.25
+      }
+    },
+    "assumptions": {
+      "avgOutputTokensPerCall": 800,
+      "heartbeatInputTokensPerCall": 700,
+      "heartbeatOutputTokensPerCall": 140,
+      "cronInputTokensPerCall": 900,
+      "cronOutputTokensPerCall": 180,
+      "subagentShare": 0.18
+    }
+  },
+  "updates": {
+    "autoCheck": true,
+    "autoCheckIntervalHours": 4,
+    "autoApply": false,
+    "notifyOnUpdate": true,
+    "lastCheck": "2026-03-13T11:47:08Z",
+    "lastCheckResult": {
+      "available": false,
+      "behind": 0,
+      "local": "c0969f6e8be1",
+      "remote": "679c596732e5",
+      "branch": "main"
+    }
+  }
+}

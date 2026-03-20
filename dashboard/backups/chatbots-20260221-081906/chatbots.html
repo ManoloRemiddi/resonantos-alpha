@@ -1,0 +1,3611 @@
+{% extends "base.html" %}
+
+{% block title %}Chatbot Manager - ResonantOS Dashboard{% endblock %}
+{% block page_title %}Chatbot Manager{% endblock %}
+
+{% block content %}
+<!-- Tabs -->
+<div class="tab-container">
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('chatbots')">My Chatbots</button>
+        <button class="tab" onclick="switchTab('conversations')">Conversations</button>
+        <button class="tab" onclick="switchTab('addons')">Addons</button>
+        <button class="tab" onclick="switchTab('analytics')">Analytics</button>
+    </div>
+</div>
+
+<!-- Chatbots List Tab -->
+<div class="tab-panel active" id="chatbotsPanel">
+    <!-- Header -->
+    <div class="chatbots-header">
+        <div class="chatbots-header-left">
+            <h2>My Chatbots</h2>
+            <p class="chatbots-subtitle">Manage your AI chatbots</p>
+        </div>
+    </div>
+    
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+        <div class="stat-item">
+            <span class="stat-value" id="totalBots">-</span>
+            <span class="stat-label">Total Chatbots</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-value green" id="activeBots">-</span>
+            <span class="stat-label">Active</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-value blue" id="totalConvos">-</span>
+            <span class="stat-label">Conversations</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-value" id="avgSatisfaction">-</span>
+            <span class="stat-label">Satisfaction</span>
+        </div>
+    </div>
+    
+    <!-- Chatbots Grid -->
+    <div class="chatbots-grid" id="chatbotsGrid">
+        <!-- Populated by JS -->
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <span>Loading chatbots...</span>
+        </div>
+    </div>
+</div>
+
+<!-- Conversations Tab -->
+<div class="tab-panel" id="conversationsPanel">
+    <div class="conversations-container">
+        <!-- Header with filters -->
+        <div class="conversations-header">
+            <div class="conversations-header-left">
+                <h2>Conversations</h2>
+                <p class="conversations-subtitle">View all user discussions with your chatbots</p>
+            </div>
+        </div>
+        
+        <!-- Filters -->
+        <div class="conversations-filters">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>Chatbot</label>
+                    <select id="convChatbotFilter" onchange="loadConversations()">
+                        <option value="">All Chatbots</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Search Messages</label>
+                    <input type="text" id="convSearchFilter" placeholder="Search in messages..." onkeyup="debounceConvSearch()">
+                </div>
+                <div class="filter-group">
+                    <label>Date Range</label>
+                    <div class="date-range">
+                        <input type="date" id="convStartDate" onchange="loadConversations()">
+                        <span>to</span>
+                        <input type="date" id="convEndDate" onchange="loadConversations()">
+                    </div>
+                </div>
+                <button class="btn-secondary" onclick="clearConvFilters()">Clear Filters</button>
+            </div>
+        </div>
+        
+        <!-- Stats Summary -->
+        <div class="conv-stats-bar">
+            <div class="stat-item">
+                <span class="stat-value" id="totalConversations">-</span>
+                <span class="stat-label">Total Conversations</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value" id="todayConversations">-</span>
+                <span class="stat-label">Today</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value" id="totalMessages">-</span>
+                <span class="stat-label">Total Messages</span>
+            </div>
+        </div>
+        
+        <!-- Conversations List -->
+        <div class="conversations-list" id="conversationsList">
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <span>Loading conversations...</span>
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        <div class="conversations-pagination" id="convPagination">
+            <button class="btn-secondary" id="convPrevBtn" onclick="loadConversations(convCurrentOffset - convLimit)" disabled>← Previous</button>
+            <span id="convPageInfo">Page 1</span>
+            <button class="btn-secondary" id="convNextBtn" onclick="loadConversations(convCurrentOffset + convLimit)">Next →</button>
+        </div>
+    </div>
+</div>
+
+<!-- Conversation Detail Modal -->
+<div class="modal-overlay" id="convDetailModal" style="display: none;">
+    <div class="modal conv-detail-modal">
+        <div class="modal-header">
+            <h3 id="convDetailTitle">Conversation Details</h3>
+            <button class="modal-close" onclick="closeConvDetail()">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="conv-detail-info">
+                <div class="conv-info-row">
+                    <span class="conv-info-label">Chatbot:</span>
+                    <span class="conv-info-value" id="convDetailChatbot">-</span>
+                </div>
+                <div class="conv-info-row">
+                    <span class="conv-info-label">Session ID:</span>
+                    <span class="conv-info-value" id="convDetailSession">-</span>
+                </div>
+                <div class="conv-info-row">
+                    <span class="conv-info-label">Started:</span>
+                    <span class="conv-info-value" id="convDetailStarted">-</span>
+                </div>
+                <div class="conv-info-row">
+                    <span class="conv-info-label">Duration:</span>
+                    <span class="conv-info-value" id="convDetailDuration">-</span>
+                </div>
+                <div class="conv-info-row">
+                    <span class="conv-info-label">Messages:</span>
+                    <span class="conv-info-value" id="convDetailMsgCount">-</span>
+                </div>
+            </div>
+            <div class="conv-detail-transcript" id="convDetailTranscript">
+                <!-- Messages will be loaded here -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="exportConversation('csv')">📄 Export CSV</button>
+            <button class="btn-secondary" onclick="exportConversation('json')">📋 Export JSON</button>
+            <button class="btn-primary" onclick="closeConvDetail()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Addons Tab -->
+<div class="tab-panel" id="addonsPanel">
+    <div class="addons-container">
+        <!-- Header -->
+        <div class="addons-header">
+            <div class="addons-header-left">
+                <h2>🛒 Chatbot Addons</h2>
+                <p class="addons-subtitle">Upgrade your chatbots with premium features</p>
+            </div>
+            <div class="addons-header-right">
+                <div class="payment-methods">
+                    <span class="payment-badge sol">SOL</span>
+                    <span class="payment-badge usdt">USDT</span>
+                    <span class="payment-badge usdc">USDC</span>
+                    <span class="payment-badge token coming">$RES</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Your Active Addons -->
+        <div class="active-addons-section">
+            <h3>Your Active Addons</h3>
+            <div id="activeAddonsList" class="active-addons-list">
+                <p class="no-addons">No active addons. Purchase below to upgrade!</p>
+            </div>
+        </div>
+        
+        <!-- Available Addons -->
+        <div class="available-addons-section">
+            <h3>Available Addons</h3>
+            <div class="addons-grid" id="addonsGrid">
+                <!-- Addon Cards populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Analytics Tab -->
+<div class="tab-panel" id="analyticsPanel">
+    <!-- Date Range Selector -->
+    <div class="analytics-header">
+        <div class="date-range-picker">
+            <button class="range-btn active" data-range="7d">7 Days</button>
+            <button class="range-btn" data-range="30d">30 Days</button>
+            <button class="range-btn" data-range="90d">90 Days</button>
+            <button class="range-btn" data-range="all">All Time</button>
+        </div>
+        <div class="analytics-actions">
+            <select id="analyticsChatbotFilter" onchange="loadAnalyticsData()">
+                <option value="all">All Chatbots</option>
+            </select>
+            <button class="btn-secondary" onclick="exportAnalyticsData()">
+                📥 Export Data
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="analytics-stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">💬</div>
+            <div class="stat-content">
+                <span class="stat-value" id="analyticsTotalConversations">-</span>
+                <span class="stat-label">Total Conversations</span>
+                <span class="stat-change positive" id="analyticsConversationsChange">-</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📨</div>
+            <div class="stat-content">
+                <span class="stat-value" id="analyticsTotalMessages">-</span>
+                <span class="stat-label">Messages Exchanged</span>
+                <span class="stat-change positive" id="analyticsMessagesChange">-</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">⚡</div>
+            <div class="stat-content">
+                <span class="stat-value" id="analyticsAvgResponseTime">-</span>
+                <span class="stat-label">Avg Response Time</span>
+                <span class="stat-change" id="analyticsResponseTimeChange">-</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">😊</div>
+            <div class="stat-content">
+                <span class="stat-value" id="analyticsSatisfactionRate">-</span>
+                <span class="stat-label">Satisfaction Rate</span>
+                <span class="stat-change positive" id="analyticsSatisfactionChange">-</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conversations Over Time Chart -->
+    <div class="card chart-card">
+        <div class="card-header">
+            <h2 class="card-title">Conversations Over Time</h2>
+            <div class="chart-legend">
+                <span class="legend-item"><span class="dot" style="background: #4ade80;"></span> Conversations</span>
+                <span class="legend-item"><span class="dot" style="background: #60a5fa;"></span> Messages</span>
+            </div>
+        </div>
+        <div class="card-content">
+            <div class="chart-container" id="analyticsConversationsChart">
+                <div class="chart-placeholder" id="analyticsChartPlaceholder">
+                    <span class="placeholder-icon">📊</span>
+                    <p>Analytics data will appear here once chatbots are active</p>
+                </div>
+                <canvas id="analyticsConversationsCanvas" style="display: none;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Two Column Layout -->
+    <div class="analytics-columns">
+        <!-- Popular Questions -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Popular Questions</h2>
+            </div>
+            <div class="card-content">
+                <div class="popular-list" id="analyticsPopularQuestions">
+                    <div class="empty-placeholder">
+                        <span>📝</span>
+                        <p>No questions recorded yet</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Response Metrics -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Response Metrics</h2>
+            </div>
+            <div class="card-content">
+                <div class="metrics-grid">
+                    <div class="metric-item">
+                        <span class="metric-label">User Messages</span>
+                        <span class="metric-value" id="analyticsUserMessages">-</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Bot Responses</span>
+                        <span class="metric-value" id="analyticsBotResponses">-</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Error Rate</span>
+                        <span class="metric-value" id="analyticsErrorRate">-</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Avg Conversation Length</span>
+                        <span class="metric-value" id="analyticsAvgConvLength">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Satisfaction -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">User Satisfaction</h2>
+        </div>
+        <div class="card-content">
+            <div class="satisfaction-container" id="analyticsSatisfactionContainer">
+                <div class="satisfaction-bars">
+                    <div class="satisfaction-row">
+                        <span class="rating-label">😍 Very Satisfied</span>
+                        <div class="rating-bar">
+                            <div class="rating-fill" id="analyticsRating5" style="width: 0%;"></div>
+                        </div>
+                        <span class="rating-percent" id="analyticsRating5Percent">0%</span>
+                    </div>
+                    <div class="satisfaction-row">
+                        <span class="rating-label">😊 Satisfied</span>
+                        <div class="rating-bar">
+                            <div class="rating-fill" id="analyticsRating4" style="width: 0%;"></div>
+                        </div>
+                        <span class="rating-percent" id="analyticsRating4Percent">0%</span>
+                    </div>
+                    <div class="satisfaction-row">
+                        <span class="rating-label">😐 Neutral</span>
+                        <div class="rating-bar">
+                            <div class="rating-fill" id="analyticsRating3" style="width: 0%;"></div>
+                        </div>
+                        <span class="rating-percent" id="analyticsRating3Percent">0%</span>
+                    </div>
+                    <div class="satisfaction-row">
+                        <span class="rating-label">😕 Dissatisfied</span>
+                        <div class="rating-bar">
+                            <div class="rating-fill" id="analyticsRating2" style="width: 0%;"></div>
+                        </div>
+                        <span class="rating-percent" id="analyticsRating2Percent">0%</span>
+                    </div>
+                    <div class="satisfaction-row">
+                        <span class="rating-label">😠 Very Dissatisfied</span>
+                        <div class="rating-bar">
+                            <div class="rating-fill" id="analyticsRating1" style="width: 0%;"></div>
+                        </div>
+                        <span class="rating-percent" id="analyticsRating1Percent">0%</span>
+                    </div>
+                </div>
+                <div class="satisfaction-summary">
+                    <div class="summary-stat">
+                        <span class="summary-value" id="analyticsTotalRatings">0</span>
+                        <span class="summary-label">Total Ratings</span>
+                    </div>
+                    <div class="summary-stat">
+                        <span class="summary-value" id="analyticsFeedbackRate">0%</span>
+                        <span class="summary-label">Feedback Rate</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity Table -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Recent Conversations</h2>
+            <a href="#" class="card-link" onclick="switchTab('conversations'); return false;">View All →</a>
+        </div>
+        <div class="card-content">
+            <div class="table-container">
+                <table class="data-table" id="analyticsRecentConversations">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Chatbot</th>
+                            <th>Messages</th>
+                            <th>Duration</th>
+                            <th>Rating</th>
+                        </tr>
+                    </thead>
+                    <tbody id="analyticsConversationsTableBody">
+                        <tr>
+                            <td colspan="5" class="empty-row">No conversations recorded yet</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Widget Generator Tab (Settings) -->
+<div class="tab-panel" id="widgetPanel">
+    <div class="widget-builder">
+        <!-- Builder Tabs -->
+        <div class="builder-tabs">
+            <button class="builder-tab active" onclick="switchBuilderTab('settings')">⚙️ Settings</button>
+            <button class="builder-tab" onclick="switchBuilderTab('appearance')">🎨 Appearance</button>
+            <button class="builder-tab" onclick="switchBuilderTab('knowledge')">📚 Knowledge</button>
+            <button class="builder-tab" onclick="switchBuilderTab('deploy')">🚀 Deploy</button>
+        </div>
+        
+        <div class="builder-content">
+            <!-- Appearance Tab -->
+            <div class="builder-panel" id="appearancePanel">
+                <div class="appearance-layout">
+                    <!-- Left: Settings -->
+                    <div class="appearance-settings">
+                        <div class="form-section">
+                            <h3>Widget Position</h3>
+                            <div class="position-picker">
+                                <label class="position-option">
+                                    <input type="radio" name="position" value="bottom-right" checked>
+                                    <span class="position-box"><span class="dot br"></span></span>
+                                    <span>Bottom Right</span>
+                                </label>
+                                <label class="position-option">
+                                    <input type="radio" name="position" value="bottom-left">
+                                    <span class="position-box"><span class="dot bl"></span></span>
+                                    <span>Bottom Left</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h3>Colors</h3>
+                            <div class="color-pickers">
+                                <div class="color-picker">
+                                    <label>Primary Color</label>
+                                    <input type="color" id="primaryColor" value="#4ade80">
+                                </div>
+                                <div class="color-picker">
+                                    <label>Background</label>
+                                    <input type="color" id="bgColor" value="#1a1a1a">
+                                </div>
+                                <div class="color-picker">
+                                    <label>Text Color</label>
+                                    <input type="color" id="textColor" value="#e0e0e0">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h3>Theme</h3>
+                            <div class="theme-options">
+                                <label class="theme-option">
+                                    <input type="radio" name="theme" value="dark" checked>
+                                    <span class="theme-preview dark">🌙 Dark</span>
+                                </label>
+                                <label class="theme-option">
+                                    <input type="radio" name="theme" value="light">
+                                    <span class="theme-preview light">☀️ Light</span>
+                                </label>
+                                <label class="theme-option">
+                                    <input type="radio" name="theme" value="auto">
+                                    <span class="theme-preview auto">🔄 Auto</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h3>Initial Greeting</h3>
+                            <textarea id="greeting" rows="2" placeholder="Hi! How can I help you today?">Hi! How can I help you today?</textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Right: Live Preview (#36) -->
+                    <div class="appearance-preview">
+                        <h3>Live Preview</h3>
+                        <div class="widget-preview-container" id="appearancePreviewContainer">
+                            <div class="preview-frame">
+                                <div class="preview-website-mock">
+                                    <div class="mock-header">
+                                        <div class="mock-dots">
+                                            <span></span><span></span><span></span>
+                                        </div>
+                                        <div class="mock-url">yourwebsite.com</div>
+                                    </div>
+                                    <div class="mock-content">
+                                        <div class="mock-line w60"></div>
+                                        <div class="mock-line w80"></div>
+                                        <div class="mock-line w40"></div>
+                                    </div>
+                                </div>
+                                <div class="preview-widget position-bottom-right theme-dark" id="appearancePreviewWidget">
+                                    <div class="widget-button" onclick="ChatbotPreview.toggleChat(this.closest('.widget-preview-container'))">
+                                        <span>💬</span>
+                                    </div>
+                                    <div class="widget-chat open">
+                                        <div class="chat-header">
+                                            <span class="chat-title">ResonantOS Assistant</span>
+                                            <button class="chat-close" onclick="ChatbotPreview.toggleChat(this.closest('.widget-preview-container'))">×</button>
+                                        </div>
+                                        <div class="chat-messages">
+                                            <div class="message bot preview-greeting">Hi! How can I help you today?</div>
+                                        </div>
+                                        <div class="chat-input">
+                                            <input type="text" placeholder="Type a message..." readonly>
+                                            <button>→</button>
+                                        </div>
+                                        <div class="chat-watermark">Powered by <a href="https://resonantos.com" target="_blank">ResonantOS</a></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Knowledge Tab -->
+            <div class="builder-panel" id="knowledgePanel">
+                <div class="form-section">
+                    <h3>Knowledge Base Files</h3>
+                    <p class="form-hint">Upload documents to train your chatbot on. The chatbot will search these files to answer questions.</p>
+                    
+                    <!-- Existing Files -->
+                    <div class="kb-existing-files" id="kbExistingFiles">
+                        <div class="kb-files-header">
+                            <span>Uploaded Files</span>
+                            <button class="btn-small" onclick="refreshKnowledgeFiles()" title="Refresh file list">🔄 Refresh</button>
+                        </div>
+                        <div class="kb-files-list" id="kbFilesList">
+                            <p class="kb-no-files">No files uploaded yet. Upload documents below.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Upload Area -->
+                    <div class="file-upload-area" id="dropZone">
+                        <span class="upload-icon">📁</span>
+                        <p>Drag & drop files here or <button class="link-btn" onclick="document.getElementById('fileInput').click()">browse</button></p>
+                        <p class="upload-hint">Supported: .md, .txt, .pdf, .docx (Max 10MB per file)</p>
+                        <input type="file" id="fileInput" multiple accept=".md,.txt,.pdf,.docx" style="display:none" onchange="handleKnowledgeUpload(this.files)">
+                    </div>
+                    
+                    <!-- Upload Progress -->
+                    <div class="kb-upload-progress" id="kbUploadProgress" style="display: none;">
+                        <div class="progress-bar"><div class="progress-fill" id="kbProgressFill"></div></div>
+                        <span id="kbUploadStatus">Uploading...</span>
+                    </div>
+                    
+                    <!-- Pending files for new chatbots -->
+                    <div class="uploaded-files" id="uploadedFiles">
+                        <!-- Pending uploads listed here for new chatbots -->
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h3>System Prompt</h3>
+                    <p class="form-hint">Define your chatbot's personality and behavior.</p>
+                    <textarea id="systemPrompt" rows="6" placeholder="You are a helpful assistant...">You are a helpful assistant for ResonantOS.
+
+Your role:
+- Answer questions about the platform
+- Be friendly and informative
+- Admit when you don't know something</textarea>
+                </div>
+                
+                <div class="form-section">
+                    <h3>Suggested Prompts</h3>
+                    <p class="form-hint">Quick questions shown when chat opens (max 5).</p>
+                    <div class="suggested-prompts" id="suggestedPrompts">
+                        <div class="prompt-input">
+                            <input type="text" placeholder="What is ResonantOS?" value="What is ResonantOS?">
+                            <button class="remove-btn" onclick="removePrompt(this)">×</button>
+                        </div>
+                        <div class="prompt-input">
+                            <input type="text" placeholder="How do I get started?" value="How do I get started?">
+                            <button class="remove-btn" onclick="removePrompt(this)">×</button>
+                        </div>
+                    </div>
+                    <button class="btn-secondary" onclick="addPrompt()">+ Add Prompt</button>
+                </div>
+            </div>
+            
+            <!-- Settings Tab -->
+            <div class="builder-panel active" id="settingsPanel">
+                <div class="form-section">
+                    <h3>Widget Name</h3>
+                    <input type="text" id="widgetName" placeholder="My Chatbot" value="ResonantOS Assistant">
+                </div>
+                
+                <!-- Icon Picker -->
+                <div class="form-section">
+                    <h3>Chatbot Icon</h3>
+                    <p class="form-hint">Choose an icon for your chatbot. Select from presets or enter a custom emoji.</p>
+                    <div class="icon-picker">
+                        <div class="icon-picker-selected" id="iconPickerSelected" onclick="toggleIconPicker()">
+                            <span class="icon-picker-preview" id="iconPreview">💬</span>
+                            <span class="icon-picker-label">Click to change</span>
+                        </div>
+                        <div class="icon-picker-dropdown" id="iconPickerDropdown">
+                            <div class="icon-picker-section">
+                                <div class="icon-section-label">ResonantOS Icons</div>
+                                <div class="icon-grid" id="iconGridImages">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                            <div class="icon-picker-section">
+                                <div class="icon-section-label">Emoji</div>
+                                <div class="icon-grid" id="iconGridEmoji">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                            <div class="icon-picker-section">
+                                <div class="icon-section-label">Custom</div>
+                                <div class="icon-custom-input">
+                                    <input type="text" id="iconCustomEmoji" placeholder="Paste emoji or URL..." maxlength="64" onkeyup="previewCustomIcon(this.value)">
+                                    <button class="btn-small" onclick="selectCustomIcon()">Apply</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="chatbotIcon" value="💬">
+                    <input type="hidden" id="chatbotIconType" value="emoji">
+                </div>
+                
+                <!-- AI Configuration Section -->
+                <div class="form-section ai-config-section">
+                    <h3>🤖 AI Configuration</h3>
+                    <p class="form-hint">Configure which AI model powers your chatbot.</p>
+                    
+                    <div class="api-type-selector">
+                        <label class="api-option">
+                            <input type="radio" name="apiType" value="internal" checked onchange="handleApiTypeChange()">
+                            <div class="api-option-card">
+                                <div class="api-option-header">
+                                    <span class="api-icon">🏠</span>
+                                    <span class="api-name">Use System Keys</span>
+                                </div>
+                                <p class="api-description">Use API keys already configured in your ResonantOS system.</p>
+                                <span class="api-badge included">Recommended</span>
+                            </div>
+                        </label>
+                        <label class="api-option">
+                            <input type="radio" name="apiType" value="custom" onchange="handleApiTypeChange()">
+                            <div class="api-option-card">
+                                <div class="api-option-header">
+                                    <span class="api-icon">🔑</span>
+                                    <span class="api-name">Use Custom Key</span>
+                                </div>
+                                <p class="api-description">Bring your own API key from Anthropic, OpenAI, or Google.</p>
+                                <span class="api-badge custom">Your Key</span>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <!-- System Keys Section (shown when using system keys) -->
+                    <div class="system-keys-section" id="systemKeysSection">
+                        <div class="system-keys-status" id="systemKeysStatus">
+                            <div class="loading-spinner-small"></div>
+                            <span>Loading available API keys...</span>
+                        </div>
+                        <div class="system-keys-list" id="systemKeysList" style="display: none;">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                    
+                    <!-- Model Selector -->
+                    <div class="model-selector-section">
+                        <label>AI Model</label>
+                        <select id="modelSelector" onchange="handleModelChange()">
+                            <optgroup label="Anthropic (Claude)">
+                                <option value="claude-sonnet">Claude Sonnet 4 - Fast and capable</option>
+                                <option value="claude-opus">Claude Opus 4 - Most capable</option>
+                                <option value="claude-haiku">Claude Haiku 4 - Fastest</option>
+                            </optgroup>
+                            <optgroup label="OpenAI" id="openaiModels" style="display: none;">
+                                <option value="gpt-4o">GPT-4o - OpenAI flagship</option>
+                                <option value="gpt-4o-mini">GPT-4o Mini - Faster, cheaper</option>
+                            </optgroup>
+                            <optgroup label="Google" id="googleModels" style="display: none;">
+                                <option value="gemini-pro">Gemini Pro - Google AI</option>
+                                <option value="gemini-flash">Gemini Flash - Fast Google AI</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    
+                    <!-- Custom API Key Section (hidden by default) -->
+                    <div class="custom-api-section" id="customApiSection" style="display: none;">
+                        <label>Provider</label>
+                        <select id="customProvider" onchange="handleProviderChange()">
+                            <option value="anthropic">Anthropic (Claude)</option>
+                            <option value="openai">OpenAI (GPT)</option>
+                            <option value="google">Google (Gemini)</option>
+                        </select>
+                        
+                        <label>API Key</label>
+                        <div class="api-key-input-wrapper">
+                            <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off">
+                            <button type="button" class="toggle-visibility" onclick="toggleApiKeyVisibility()">👁️</button>
+                        </div>
+                        <p class="form-hint" id="apiKeyHint">Enter your Anthropic API key</p>
+                        
+                        <div class="api-key-status" id="apiKeyStatus" style="display: none;">
+                            <span class="status-icon"></span>
+                            <span class="status-text"></span>
+                        </div>
+                        
+                        <button type="button" class="btn-secondary btn-test" onclick="testApiConnection()">
+                            🔌 Test Connection
+                        </button>
+                    </div>
+                    
+                    <!-- Internal API Notice -->
+                    <div class="internal-api-notice" id="internalApiNotice">
+                        <span class="notice-icon">✓</span>
+                        <div class="notice-content">
+                            <strong>Using System API Keys</strong>
+                            <p>Your chatbot will use API keys configured in your ResonantOS system.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h3>Allowed Domains</h3>
+                    <p class="form-hint">Leave empty for any domain, or specify domains for security.</p>
+                    <input type="text" id="allowedDomains" placeholder="example.com, www.example.com">
+                </div>
+                
+                <div class="form-section">
+                    <h3>Rate Limiting</h3>
+                    <div class="rate-limits">
+                        <div class="limit-input">
+                            <label>Messages per minute</label>
+                            <input type="number" id="ratePerMinute" value="10" min="1" max="60">
+                        </div>
+                        <div class="limit-input">
+                            <label>Messages per hour</label>
+                            <input type="number" id="ratePerHour" value="100" min="1" max="1000">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h3>Analytics</h3>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="enableAnalytics" checked>
+                        <span class="slider"></span>
+                        <span class="toggle-label">Enable analytics tracking</span>
+                    </label>
+                </div>
+                
+                <div class="form-section">
+                    <h3>Watermark</h3>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="showWatermark" checked>
+                        <span class="slider"></span>
+                        <span class="toggle-label">Show "Powered by ResonantOS"</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Deploy Tab -->
+            <div class="builder-panel" id="deployPanel">
+                <div class="form-section">
+                    <h3>Live Preview</h3>
+                    <div class="widget-preview-container" id="deployPreviewContainer">
+                        <div class="preview-frame">
+                            <div class="preview-website-mock">
+                                <div class="mock-header">
+                                    <div class="mock-dots">
+                                        <span></span><span></span><span></span>
+                                    </div>
+                                    <div class="mock-url">yourwebsite.com</div>
+                                </div>
+                                <div class="mock-content">
+                                    <div class="mock-line w60"></div>
+                                    <div class="mock-line w80"></div>
+                                    <div class="mock-line w40"></div>
+                                </div>
+                            </div>
+                            <div class="preview-widget position-bottom-right theme-dark" id="deployPreviewWidget">
+                                <div class="widget-button" id="previewButton" onclick="togglePreviewChat()">
+                                    <span>💬</span>
+                                </div>
+                                <div class="widget-chat" id="previewChat">
+                                    <div class="chat-header">
+                                        <span class="chat-title" id="previewTitle">ResonantOS Assistant</span>
+                                        <button class="chat-close" onclick="togglePreviewChat()">×</button>
+                                    </div>
+                                    <div class="chat-messages" id="previewMessages">
+                                        <div class="message bot preview-greeting" id="previewGreeting">Hi! How can I help you today?</div>
+                                    </div>
+                                    <div class="chat-input">
+                                        <input type="text" id="previewInput" placeholder="Type a message..." onkeypress="if(event.key==='Enter')sendPreviewMessage()">
+                                        <button onclick="sendPreviewMessage()">→</button>
+                                    </div>
+                                    <div class="chat-watermark" id="previewWatermark">Powered by <a href="https://resonantos.com" target="_blank">ResonantOS</a></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h3>Embed Code</h3>
+                    <p class="form-hint">Copy this code and paste it before the &lt;/body&gt; tag on your website.</p>
+                    <div class="code-block">
+                        <pre id="embedCode">&lt;!-- ResonantOS Chat Widget --&gt;
+&lt;script&gt;
+  (function() {
+    var widget = document.createElement('script');
+    widget.src = 'https://resonantos.com/widget.js';
+    widget.dataset.widgetId = 'demo-widget';
+    widget.dataset.position = 'bottom-right';
+    widget.dataset.theme = 'dark';
+    widget.dataset.primaryColor = '#4ade80';
+    document.body.appendChild(widget);
+  })();
+&lt;/script&gt;</pre>
+                        <button class="copy-btn" onclick="copyEmbedCode()">📋 Copy</button>
+                    </div>
+                </div>
+                
+                <div class="deploy-actions">
+                    <button class="btn-primary" id="generateWidgetBtn" onclick="generateWidget()">🚀 Generate Widget</button>
+                    <button class="btn-secondary" onclick="downloadPackage()">📦 Download Package</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/chatbot-preview.js"></script>
+<script>
+let currentWidgetId = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadChatbots();
+    setupDragDrop();
+    
+    // Initialize the unified preview module
+    if (window.ChatbotPreview) {
+        ChatbotPreview.init();
+    }
+});
+
+function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    
+    event.target.classList.add('active');
+    document.getElementById(tab + 'Panel').classList.add('active');
+    
+    // Load conversations when switching to that tab
+    if (tab === 'conversations') {
+        initConversationsTab();
+    }
+}
+
+// ============================================================================
+// Conversations Tab
+// ============================================================================
+
+let convCurrentOffset = 0;
+let convLimit = 20;
+let convTotal = 0;
+let convSearchTimeout = null;
+let currentConversationId = null;
+let convChatbotsLoaded = false;
+
+function initConversationsTab() {
+    if (!convChatbotsLoaded) {
+        loadChatbotsForFilter();
+        convChatbotsLoaded = true;
+    }
+    loadConversations();
+}
+
+async function loadChatbotsForFilter() {
+    try {
+        const res = await fetch('/api/chatbots');
+        const data = await res.json();
+        const select = document.getElementById('convChatbotFilter');
+        
+        data.chatbots.forEach(bot => {
+            const option = document.createElement('option');
+            option.value = bot.id;
+            option.textContent = bot.name;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading chatbots for filter:', error);
+    }
+}
+
+function debounceConvSearch() {
+    clearTimeout(convSearchTimeout);
+    convSearchTimeout = setTimeout(() => loadConversations(0), 300);
+}
+
+function clearConvFilters() {
+    document.getElementById('convChatbotFilter').value = '';
+    document.getElementById('convSearchFilter').value = '';
+    document.getElementById('convStartDate').value = '';
+    document.getElementById('convEndDate').value = '';
+    loadConversations(0);
+}
+
+async function loadConversations(offset = 0) {
+    convCurrentOffset = offset;
+    
+    const chatbotId = document.getElementById('convChatbotFilter').value;
+    const search = document.getElementById('convSearchFilter').value;
+    const startDate = document.getElementById('convStartDate').value;
+    const endDate = document.getElementById('convEndDate').value;
+    
+    let url = `/api/conversations?limit=${convLimit}&offset=${offset}`;
+    if (chatbotId) url += `&chatbot_id=${chatbotId}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (startDate) url += `&start_date=${new Date(startDate).getTime()}`;
+    if (endDate) url += `&end_date=${new Date(endDate).getTime() + 86400000}`;
+    
+    const list = document.getElementById('conversationsList');
+    list.innerHTML = '<div class="loading-state"><div class="spinner"></div><span>Loading conversations...</span></div>';
+    
+    try {
+        const res = await fetch(url);
+        const data = await res.json();
+        
+        convTotal = data.total;
+        
+        // Update stats
+        document.getElementById('totalConversations').textContent = data.total.toLocaleString();
+        
+        // Calculate total messages from conversations
+        let totalMsgs = 0;
+        data.conversations.forEach(c => totalMsgs += c.message_count || 0);
+        document.getElementById('totalMessages').textContent = totalMsgs.toLocaleString();
+        
+        // Count today's conversations
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayTs = today.getTime();
+        const todayCount = data.conversations.filter(c => c.started_at >= todayTs).length;
+        document.getElementById('todayConversations').textContent = todayCount;
+        
+        renderConversations(data.conversations);
+        updateConvPagination();
+        
+    } catch (error) {
+        console.error('Error loading conversations:', error);
+        list.innerHTML = '<div class="empty-state"><h3>Error loading conversations</h3><p>' + error.message + '</p></div>';
+    }
+}
+
+function renderConversations(conversations) {
+    const list = document.getElementById('conversationsList');
+    
+    if (!conversations || conversations.length === 0) {
+        list.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📜</div>
+                <h3>No conversations yet</h3>
+                <p>Conversations will appear here when users chat with your chatbots.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    list.innerHTML = `
+        <table class="conversations-table">
+            <thead>
+                <tr>
+                    <th>Chatbot</th>
+                    <th>User/Session</th>
+                    <th>First Message</th>
+                    <th>Messages</th>
+                    <th>Started</th>
+                    <th>Duration</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${conversations.map(conv => {
+                    const started = conv.started_at ? new Date(conv.started_at).toLocaleString() : '-';
+                    const duration = conv.duration_seconds 
+                        ? formatDuration(conv.duration_seconds) 
+                        : 'Active';
+                    const firstMsg = conv.first_message 
+                        ? (conv.first_message.length > 50 ? conv.first_message.substring(0, 50) + '...' : conv.first_message)
+                        : '-';
+                    const sessionShort = conv.session_id 
+                        ? (conv.session_id.length > 15 ? conv.session_id.substring(0, 15) + '...' : conv.session_id)
+                        : '-';
+                    
+                    return `
+                        <tr onclick="viewConversation(${conv.id})" class="conv-row">
+                            <td><span class="chatbot-badge">${escapeHtml(conv.chatbot_name || 'Unknown')}</span></td>
+                            <td title="${escapeHtml(conv.session_id)}">${escapeHtml(sessionShort)}</td>
+                            <td class="first-message">${escapeHtml(firstMsg)}</td>
+                            <td><span class="msg-count">${conv.message_count || 0}</span></td>
+                            <td class="timestamp">${started}</td>
+                            <td>${duration}</td>
+                            <td>
+                                <button class="btn-small" onclick="event.stopPropagation(); viewConversation(${conv.id})">View</button>
+                                <button class="btn-small" onclick="event.stopPropagation(); exportConversationDirect(${conv.id}, 'csv')">Export</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function formatDuration(seconds) {
+    if (seconds < 60) return seconds + 's';
+    if (seconds < 3600) return Math.floor(seconds / 60) + 'm';
+    return Math.floor(seconds / 3600) + 'h ' + Math.floor((seconds % 3600) / 60) + 'm';
+}
+
+function updateConvPagination() {
+    const prevBtn = document.getElementById('convPrevBtn');
+    const nextBtn = document.getElementById('convNextBtn');
+    const pageInfo = document.getElementById('convPageInfo');
+    
+    const currentPage = Math.floor(convCurrentOffset / convLimit) + 1;
+    const totalPages = Math.ceil(convTotal / convLimit);
+    
+    pageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
+    prevBtn.disabled = convCurrentOffset === 0;
+    nextBtn.disabled = convCurrentOffset + convLimit >= convTotal;
+}
+
+async function viewConversation(conversationId) {
+    currentConversationId = conversationId;
+    
+    try {
+        const res = await fetch(`/api/conversations/${conversationId}`);
+        const conv = await res.json();
+        
+        if (conv.error) {
+            showToast('Error: ' + conv.error, 'error');
+            return;
+        }
+        
+        // Populate modal
+        document.getElementById('convDetailTitle').textContent = 
+            `Conversation #${conv.id} - ${conv.chatbot_name || 'Unknown Chatbot'}`;
+        document.getElementById('convDetailChatbot').textContent = conv.chatbot_name || '-';
+        document.getElementById('convDetailSession').textContent = conv.session_id || '-';
+        document.getElementById('convDetailStarted').textContent = 
+            conv.started_at ? new Date(conv.started_at).toLocaleString() : '-';
+        document.getElementById('convDetailDuration').textContent = 
+            conv.duration_seconds ? formatDuration(conv.duration_seconds) : 'Active';
+        document.getElementById('convDetailMsgCount').textContent = conv.message_count || 0;
+        
+        // Render transcript
+        const transcript = document.getElementById('convDetailTranscript');
+        if (conv.messages && conv.messages.length > 0) {
+            transcript.innerHTML = conv.messages.map(msg => {
+                const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : '';
+                const roleClass = msg.role === 'user' ? 'user' : 'bot';
+                const roleLabel = msg.role === 'user' ? 'User' : 'Bot';
+                return `
+                    <div class="transcript-message ${roleClass}">
+                        <div class="transcript-meta">
+                            <span class="transcript-role">${roleLabel}</span>
+                            <span class="transcript-time">${time}</span>
+                        </div>
+                        <div class="transcript-content">${escapeHtml(msg.content)}</div>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            transcript.innerHTML = '<p class="no-messages">No messages in this conversation.</p>';
+        }
+        
+        // Show modal
+        document.getElementById('convDetailModal').style.display = 'flex';
+        
+    } catch (error) {
+        console.error('Error loading conversation:', error);
+        showToast('Error loading conversation', 'error');
+    }
+}
+
+function closeConvDetail() {
+    document.getElementById('convDetailModal').style.display = 'none';
+    currentConversationId = null;
+}
+
+function exportConversation(format) {
+    if (!currentConversationId) return;
+    exportConversationDirect(currentConversationId, format);
+}
+
+function exportConversationDirect(id, format) {
+    window.open(`/api/conversations/${id}/export?format=${format}`, '_blank');
+}
+
+function switchBuilderTab(tab) {
+    document.querySelectorAll('.builder-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.builder-panel').forEach(p => p.classList.remove('active'));
+    
+    event.target.classList.add('active');
+    document.getElementById(tab + 'Panel').classList.add('active');
+}
+
+async function loadChatbots() {
+    try {
+        const res = await fetch('/api/chatbots');
+        const data = await res.json();
+        
+        // Update stats with real data or "No data yet"
+        document.getElementById('totalBots').textContent = data.total || 0;
+        document.getElementById('activeBots').textContent = data.active || 0;
+        
+        if (data.total === 0) {
+            document.getElementById('totalConvos').textContent = '-';
+            document.getElementById('avgSatisfaction').textContent = '-';
+        } else {
+            document.getElementById('totalConvos').textContent = 
+                data.totalConversations > 0 ? data.totalConversations.toLocaleString() : '0';
+            document.getElementById('avgSatisfaction').textContent = 
+                data.avgSatisfaction > 0 ? Math.round(data.avgSatisfaction) + '%' : '-';
+        }
+        
+        renderChatbots(data.chatbots || []);
+        
+    } catch (error) {
+        console.error('Error loading chatbots:', error);
+        document.getElementById('totalBots').textContent = '0';
+        document.getElementById('activeBots').textContent = '0';
+        document.getElementById('totalConvos').textContent = '-';
+        document.getElementById('avgSatisfaction').textContent = '-';
+        renderChatbots([]);
+    }
+}
+
+function renderChatbots(chatbots) {
+    const grid = document.getElementById('chatbotsGrid');
+    
+    // Create "Add New" card that always appears first (#33)
+    const createNewCard = `
+        <div class="chatbot-card create-new-card" onclick="createNewChatbot()">
+            <div class="create-new-content">
+                <div class="create-new-icon">➕</div>
+                <h3>Create New Chatbot</h3>
+                <p>Build a custom AI chatbot for your website</p>
+            </div>
+        </div>
+    `;
+    
+    if (!chatbots || chatbots.length === 0) {
+        // Show just the create new card when no chatbots exist
+        grid.innerHTML = createNewCard;
+        return;
+    }
+    
+    // Render create new card + existing chatbots side by side
+    grid.innerHTML = createNewCard + chatbots.map(bot => {
+        const lastUsed = bot.last_used_at ? formatTimeAgo(bot.last_used_at) : 'Never';
+        const modelName = getModelDisplayName(bot.model_id || 'claude-sonnet');
+        const apiIcon = bot.api_type === 'custom' ? '🔑' : '🏠';
+        
+        return `
+            <div class="chatbot-card" onclick="editChatbot('${bot.id}')">
+                <div class="chatbot-header">
+                    <div class="chatbot-icon">${chatbotIconHtml(bot)}</div>
+                    <div class="chatbot-info">
+                        <h3>${escapeHtml(bot.name)}</h3>
+                        <div class="chatbot-meta">
+                            <span class="status-badge status-${bot.status || 'active'}">${bot.status || 'active'}</span>
+                            <span class="model-badge" title="AI Model">${apiIcon} ${modelName}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chatbot-stats">
+                    <div class="stat">
+                        <span class="stat-value">${(bot.conversations || 0).toLocaleString()}</span>
+                        <span class="stat-label">Conversations</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value">${bot.avgResponseTime || '< 2s'}</span>
+                        <span class="stat-label">Avg Response</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value">${bot.satisfaction_rate > 0 ? Math.round(bot.satisfaction_rate) + '%' : '-'}</span>
+                        <span class="stat-label">Satisfaction</span>
+                    </div>
+                </div>
+                <div class="chatbot-footer">
+                    <span class="last-used">Last used: ${lastUsed}</span>
+                    <div class="chatbot-actions">
+                        <button class="btn-small" onclick="event.stopPropagation(); editChatbot('${bot.id}')">Edit</button>
+                        <button class="btn-small" onclick="event.stopPropagation(); viewAnalytics('${bot.id}')">Analytics</button>
+                        <button class="btn-small btn-danger-small" onclick="event.stopPropagation(); deleteChatbot('${bot.id}', '${escapeHtml(bot.name)}')">Delete</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function formatTimeAgo(timestamp) {
+    if (!timestamp) return 'Never';
+    const now = Date.now();
+    const diff = now - timestamp;
+    
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+    if (diff < 604800000) return Math.floor(diff / 86400000) + 'd ago';
+    return new Date(timestamp).toLocaleDateString();
+}
+
+function chatbotIconHtml(bot) {
+    if (bot.icon_type === 'image' && bot.icon) {
+        return `<img src="${escapeHtml(bot.icon)}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">`;
+    }
+    return bot.icon || '💬';
+}
+
+function getModelDisplayName(modelId) {
+    const models = {
+        'claude-sonnet': 'Sonnet',
+        'claude-opus': 'Opus',
+        'claude-haiku': 'Haiku',
+        'gpt-4o': 'GPT-4o',
+        'gpt-4o-mini': 'GPT-4o Mini',
+        'gemini-pro': 'Gemini Pro',
+        'gemini-flash': 'Gemini Flash'
+    };
+    return models[modelId] || modelId;
+}
+
+function createNewChatbot() {
+    // Reset form and switch to widget tab
+    currentWidgetId = null;
+    document.getElementById('widgetName').value = 'My Chatbot';
+    document.getElementById('greeting').value = 'Hi! How can I help you today?';
+    document.getElementById('systemPrompt').value = 'You are a helpful assistant.';
+    document.getElementById('primaryColor').value = '#4ade80';
+    document.getElementById('bgColor').value = '#1a1a1a';
+    document.getElementById('textColor').value = '#e0e0e0';
+    document.getElementById('allowedDomains').value = '';
+    document.getElementById('ratePerMinute').value = 10;
+    document.getElementById('ratePerHour').value = 100;
+    document.getElementById('enableAnalytics').checked = true;
+    document.getElementById('showWatermark').checked = true;
+    
+    // Reset icon
+    document.getElementById('chatbotIcon').value = '💬';
+    document.getElementById('chatbotIconType').value = 'emoji';
+    document.getElementById('iconPreview').textContent = '💬';
+    document.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
+    
+    // Reset AI config
+    document.querySelector('input[name="apiType"][value="internal"]').checked = true;
+    document.getElementById('modelSelector').value = 'claude-sonnet';
+    document.getElementById('apiKeyInput').value = '';
+    handleApiTypeChange();
+    
+    // Reset suggested prompts
+    document.getElementById('suggestedPrompts').innerHTML = `
+        <div class="prompt-input">
+            <input type="text" placeholder="Enter a prompt...">
+            <button class="remove-btn" onclick="removePrompt(this)">×</button>
+        </div>
+    `;
+    
+    // Reset knowledge base
+    uploadedFiles = [];
+    knowledgeFiles = [];
+    document.getElementById('uploadedFiles').innerHTML = '';
+    document.getElementById('kbFilesList').innerHTML = 
+        '<p class="kb-no-files">Save the chatbot first to upload knowledge files.</p>';
+    
+    updatePreview();
+    switchToWidgetTab();
+}
+
+function switchToWidgetTab() {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('widgetPanel').classList.add('active');
+    
+    // Open Settings builder tab by default
+    switchBuilderTab('settings');
+}
+
+async function deleteChatbot(id, name) {
+    if (!confirm(`Are you sure you want to delete "${name}"? This cannot be undone.`)) {
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/chatbots/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        
+        if (data.success) {
+            showToast('Chatbot deleted', 'success');
+            loadChatbots();
+        } else {
+            showToast('Error: ' + (data.error || 'Failed to delete'), 'error');
+        }
+    } catch (error) {
+        showToast('Error deleting chatbot', 'error');
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function setupDragDrop() {
+    const dropZone = document.getElementById('dropZone');
+    
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+    
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+    
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        handleFileUpload(e.dataTransfer.files);
+    });
+}
+
+let uploadedFiles = [];
+let knowledgeFiles = []; // Server-side files
+
+// ============================================================================
+// Knowledge Base Functions
+// ============================================================================
+
+async function loadKnowledgeFiles() {
+    if (!currentWidgetId) {
+        document.getElementById('kbFilesList').innerHTML = 
+            '<p class="kb-no-files">Save the chatbot first to upload knowledge files.</p>';
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/chatbots/${currentWidgetId}/knowledge`);
+        const data = await res.json();
+        
+        knowledgeFiles = data.files || [];
+        renderKnowledgeFiles();
+    } catch (error) {
+        console.error('Error loading knowledge files:', error);
+        document.getElementById('kbFilesList').innerHTML = 
+            '<p class="kb-error">Error loading files</p>';
+    }
+}
+
+function renderKnowledgeFiles() {
+    const list = document.getElementById('kbFilesList');
+    
+    if (!knowledgeFiles || knowledgeFiles.length === 0) {
+        list.innerHTML = '<p class="kb-no-files">No files uploaded yet. Upload documents below.</p>';
+        return;
+    }
+    
+    list.innerHTML = knowledgeFiles.map(file => `
+        <div class="kb-file-item" data-id="${file.id}">
+            <div class="kb-file-info">
+                <span class="kb-file-icon">${getFileIcon(file.filename)}</span>
+                <div class="kb-file-details">
+                    <span class="kb-file-name">${escapeHtml(file.filename)}</span>
+                    <span class="kb-file-meta">${formatFileSize(file.file_size)} • ${formatTimeAgo(file.uploaded_at)}</span>
+                </div>
+            </div>
+            <button class="kb-delete-btn" onclick="deleteKnowledgeFile(${file.id}, '${escapeHtml(file.filename)}')" title="Delete file">🗑️</button>
+        </div>
+    `).join('');
+}
+
+function getFileIcon(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    const icons = {
+        'pdf': '📕',
+        'txt': '📄',
+        'md': '📝',
+        'docx': '📘',
+        'doc': '📘'
+    };
+    return icons[ext] || '📄';
+}
+
+function formatFileSize(bytes) {
+    if (!bytes) return '0 B';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+async function handleKnowledgeUpload(files) {
+    if (!currentWidgetId) {
+        // For new chatbots, store files locally until saved
+        handleLocalFileUpload(files);
+        return;
+    }
+    
+    // Upload to server for existing chatbots
+    const progressDiv = document.getElementById('kbUploadProgress');
+    const progressFill = document.getElementById('kbProgressFill');
+    const statusText = document.getElementById('kbUploadStatus');
+    
+    progressDiv.style.display = 'block';
+    const totalFiles = files.length;
+    let uploadedCount = 0;
+    
+    for (const file of files) {
+        if (file.size > 10 * 1024 * 1024) {
+            showToast(`File too large: ${file.name} (max 10MB)`, 'error');
+            continue;
+        }
+        
+        statusText.textContent = `Uploading ${file.name}...`;
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+            const res = await fetch(`/api/chatbots/${currentWidgetId}/knowledge`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await res.json();
+            
+            if (data.success) {
+                uploadedCount++;
+                progressFill.style.width = `${(uploadedCount / totalFiles) * 100}%`;
+                showToast(`Uploaded: ${file.name}`, 'success');
+            } else {
+                showToast(`Failed to upload ${file.name}: ${data.error}`, 'error');
+            }
+        } catch (error) {
+            showToast(`Error uploading ${file.name}`, 'error');
+        }
+    }
+    
+    progressDiv.style.display = 'none';
+    progressFill.style.width = '0%';
+    
+    // Refresh file list
+    loadKnowledgeFiles();
+    
+    // Clear file input
+    document.getElementById('fileInput').value = '';
+}
+
+function handleLocalFileUpload(files) {
+    // For new chatbots - store in memory until chatbot is saved
+    const container = document.getElementById('uploadedFiles');
+    
+    Array.from(files).forEach(file => {
+        if (file.size > 10 * 1024 * 1024) {
+            showToast('File too large: ' + file.name, 'error');
+            return;
+        }
+        
+        uploadedFiles.push(file);
+        
+        const fileEl = document.createElement('div');
+        fileEl.className = 'uploaded-file pending-upload';
+        fileEl.innerHTML = `
+            <span class="file-icon">${getFileIcon(file.name)}</span>
+            <span class="file-name">${escapeHtml(file.name)}</span>
+            <span class="file-size">${formatFileSize(file.size)}</span>
+            <span class="pending-badge">Pending</span>
+            <button class="remove-btn" onclick="removeLocalFile(this, '${escapeHtml(file.name)}')">×</button>
+        `;
+        container.appendChild(fileEl);
+    });
+    
+    if (uploadedFiles.length > 0) {
+        showToast('Files will be uploaded when you save the chatbot', 'info');
+    }
+}
+
+function removeLocalFile(btn, filename) {
+    uploadedFiles = uploadedFiles.filter(f => f.name !== filename);
+    btn.parentElement.remove();
+}
+
+async function deleteKnowledgeFile(fileId, filename) {
+    if (!confirm(`Delete "${filename}"? This cannot be undone.`)) {
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/chatbots/${currentWidgetId}/knowledge/${fileId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            showToast('File deleted', 'success');
+            loadKnowledgeFiles();
+        } else {
+            showToast('Failed to delete: ' + data.error, 'error');
+        }
+    } catch (error) {
+        showToast('Error deleting file', 'error');
+    }
+}
+
+function refreshKnowledgeFiles() {
+    loadKnowledgeFiles();
+    showToast('Refreshed', 'info');
+}
+
+// Upload pending files after chatbot is created
+async function uploadPendingFiles(chatbotId) {
+    if (uploadedFiles.length === 0) return;
+    
+    for (const file of uploadedFiles) {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+            await fetch(`/api/chatbots/${chatbotId}/knowledge`, {
+                method: 'POST',
+                body: formData
+            });
+        } catch (error) {
+            console.error('Error uploading pending file:', error);
+        }
+    }
+    
+    // Clear pending files
+    uploadedFiles = [];
+    document.getElementById('uploadedFiles').innerHTML = '';
+}
+
+// Legacy function for backward compatibility
+function handleFileUpload(files) {
+    handleKnowledgeUpload(files);
+}
+
+function removeFile(btn, filename) {
+    removeLocalFile(btn, filename);
+}
+
+function addPrompt() {
+    const container = document.getElementById('suggestedPrompts');
+    if (container.children.length >= 5) {
+        alert('Maximum 5 prompts allowed');
+        return;
+    }
+    
+    const div = document.createElement('div');
+    div.className = 'prompt-input';
+    div.innerHTML = `
+        <input type="text" placeholder="Enter a prompt...">
+        <button class="remove-btn" onclick="removePrompt(this)">×</button>
+    `;
+    container.appendChild(div);
+}
+
+function removePrompt(btn) {
+    btn.parentElement.remove();
+}
+
+function updatePreview() {
+    // Delegate to the unified preview module
+    if (window.ChatbotPreview) {
+        ChatbotPreview.updateAllPreviews();
+    }
+}
+
+function togglePreviewChat() {
+    const container = document.getElementById('deployPreviewContainer');
+    if (window.ChatbotPreview && container) {
+        ChatbotPreview.toggleChat(container);
+    } else {
+        // Fallback
+        const chat = document.getElementById('previewChat');
+        if (chat) chat.classList.toggle('open');
+    }
+}
+
+function sendPreviewMessage() {
+    const input = document.getElementById('previewInput');
+    const message = input.value.trim();
+    if (!message) return;
+    
+    const messagesContainer = document.getElementById('previewMessages');
+    
+    // Add user message
+    const userMsg = document.createElement('div');
+    userMsg.className = 'message user';
+    userMsg.textContent = message;
+    messagesContainer.appendChild(userMsg);
+    
+    input.value = '';
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    // Simulate bot response (or use real endpoint if widget is generated)
+    const loadingMsg = document.createElement('div');
+    loadingMsg.className = 'message bot typing';
+    loadingMsg.innerHTML = '<span class="typing-dots">...</span>';
+    messagesContainer.appendChild(loadingMsg);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    // If we have a widget ID, use the real chat API
+    if (currentWidgetId) {
+        fetch(`/api/chat/${currentWidgetId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: message })
+        })
+        .then(res => res.json())
+        .then(data => {
+            loadingMsg.remove();
+            const botMsg = document.createElement('div');
+            botMsg.className = 'message bot';
+            botMsg.textContent = data.response || 'I received your message!';
+            messagesContainer.appendChild(botMsg);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        })
+        .catch(() => {
+            loadingMsg.remove();
+            const botMsg = document.createElement('div');
+            botMsg.className = 'message bot';
+            botMsg.textContent = 'Sorry, there was an error processing your message.';
+            messagesContainer.appendChild(botMsg);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        });
+    } else {
+        // Mock response for preview
+        setTimeout(() => {
+            loadingMsg.remove();
+            const responses = [
+                "Thanks for your message! I'm here to help.",
+                "I understand. Let me assist you with that.",
+                "Great question! Here's what I can tell you...",
+                "I'd be happy to help with that!",
+            ];
+            const botMsg = document.createElement('div');
+            botMsg.className = 'message bot';
+            botMsg.textContent = responses[Math.floor(Math.random() * responses.length)];
+            messagesContainer.appendChild(botMsg);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }, 800);
+    }
+}
+
+async function generateWidget() {
+    const config = {
+        name: document.getElementById('widgetName').value,
+        position: document.querySelector('input[name="position"]:checked').value,
+        theme: document.querySelector('input[name="theme"]:checked').value,
+        primaryColor: document.getElementById('primaryColor').value,
+        bgColor: document.getElementById('bgColor').value,
+        textColor: document.getElementById('textColor').value,
+        greeting: document.getElementById('greeting').value,
+        systemPrompt: document.getElementById('systemPrompt').value,
+        suggestedPrompts: Array.from(document.querySelectorAll('#suggestedPrompts input')).map(i => i.value).filter(v => v),
+        allowedDomains: document.getElementById('allowedDomains').value,
+        ratePerMinute: parseInt(document.getElementById('ratePerMinute').value) || 10,
+        ratePerHour: parseInt(document.getElementById('ratePerHour').value) || 100,
+        enableAnalytics: document.getElementById('enableAnalytics').checked,
+        showWatermark: document.getElementById('showWatermark').checked,
+        icon: document.getElementById('chatbotIcon').value,
+        iconType: document.getElementById('chatbotIconType').value
+    };
+    
+    // Check if we're updating an existing chatbot (#40)
+    const isUpdate = currentWidgetId !== null;
+    const endpoint = isUpdate ? `/api/chatbots/${currentWidgetId}` : '/api/widget/generate';
+    const method = isUpdate ? 'PUT' : 'POST';
+    
+    try {
+        const res = await fetch(endpoint, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config)
+        });
+        
+        const data = await res.json();
+        
+        if (data.success || data.id) {
+            const widgetId = data.widgetId || data.id || currentWidgetId;
+            currentWidgetId = widgetId;
+            
+            // Upload any pending knowledge base files
+            if (!isUpdate && uploadedFiles.length > 0) {
+                showToast('Uploading knowledge base files...', 'info');
+                await uploadPendingFiles(widgetId);
+                showToast('Knowledge base files uploaded', 'success');
+            }
+            
+            // Update preview module state
+            if (window.ChatbotPreview) {
+                ChatbotPreview.setEditMode(widgetId, config);
+            }
+            
+            document.getElementById('embedCode').textContent = data.embedCode || generateEmbedCode(widgetId, config);
+            
+            const action = isUpdate ? 'updated' : 'generated';
+            showToast(`Widget ${action} successfully! ID: ${widgetId}`, 'success');
+            
+            // Reload chatbots list and knowledge files
+            loadChatbots();
+            loadKnowledgeFiles();
+        } else {
+            showToast('Error: ' + (data.error || 'Failed to save widget'), 'error');
+        }
+        
+    } catch (error) {
+        console.error('Error saving widget:', error);
+        showToast('Error saving widget: ' + error.message, 'error');
+    }
+}
+
+function generateEmbedCode(widgetId, config) {
+    return `<!-- ResonantOS Chat Widget -->
+<script>
+  (function() {
+    var widget = document.createElement('script');
+    widget.src = 'https://resonantos.com/widget.js';
+    widget.dataset.widgetId = '${widgetId}';
+    widget.dataset.position = '${config.position}';
+    widget.dataset.theme = '${config.theme}';
+    widget.dataset.primaryColor = '${config.primaryColor}';
+    widget.dataset.bgColor = '${config.bgColor}';
+    widget.dataset.textColor = '${config.textColor}';
+    document.body.appendChild(widget);
+  })();
+<\/script>`;
+}
+
+function resetWidgetForm() {
+    // Reset to create mode
+    currentWidgetId = null;
+    
+    // Reset form fields to defaults
+    document.getElementById('widgetName').value = 'ResonantOS Assistant';
+    document.getElementById('greeting').value = 'Hi! How can I help you today?';
+    document.getElementById('systemPrompt').value = `You are a helpful assistant for ResonantOS.
+
+Your role:
+- Answer questions about the platform
+- Be friendly and informative
+- Admit when you don't know something`;
+    document.getElementById('primaryColor').value = '#4ade80';
+    document.getElementById('bgColor').value = '#1a1a1a';
+    document.getElementById('textColor').value = '#e0e0e0';
+    document.getElementById('allowedDomains').value = '';
+    document.getElementById('ratePerMinute').value = 10;
+    document.getElementById('ratePerHour').value = 100;
+    document.getElementById('enableAnalytics').checked = true;
+    document.getElementById('showWatermark').checked = true;
+    
+    // Reset position and theme radios
+    document.querySelector('input[name="position"][value="bottom-right"]').checked = true;
+    document.querySelector('input[name="theme"][value="dark"]').checked = true;
+    
+    // Reset suggested prompts
+    const promptsContainer = document.getElementById('suggestedPrompts');
+    promptsContainer.innerHTML = `
+        <div class="prompt-input">
+            <input type="text" placeholder="What is ResonantOS?" value="What is ResonantOS?">
+            <button class="remove-btn" onclick="removePrompt(this)">×</button>
+        </div>
+        <div class="prompt-input">
+            <input type="text" placeholder="How do I get started?" value="How do I get started?">
+            <button class="remove-btn" onclick="removePrompt(this)">×</button>
+        </div>
+    `;
+    
+    // Update preview module
+    if (window.ChatbotPreview) {
+        ChatbotPreview.setCreateMode();
+        ChatbotPreview.updateAllPreviews();
+    }
+}
+
+function copyEmbedCode() {
+    const code = document.getElementById('embedCode').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+        showToast('Embed code copied!', 'success');
+    }).catch(() => {
+        // Fallback for older browsers
+        const textarea = document.createElement('textarea');
+        textarea.value = code;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showToast('Embed code copied!', 'success');
+    });
+}
+
+async function downloadPackage() {
+    if (!currentWidgetId) {
+        // Generate widget first
+        await generateWidget();
+    }
+    
+    if (!currentWidgetId) {
+        showToast('Please generate a widget first', 'error');
+        return;
+    }
+    
+    showToast('Preparing download...', 'info');
+    
+    try {
+        const response = await fetch(`/api/widget/download/${currentWidgetId}`);
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Download failed');
+        }
+        
+        // Get the blob and download
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `widget-${currentWidgetId}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        showToast('Widget package downloaded!', 'success');
+    } catch (error) {
+        console.error('Download error:', error);
+        showToast('Download failed: ' + error.message, 'error');
+    }
+}
+
+function editChatbot(id) {
+    // Switch to widget tab and load chatbot data
+    currentWidgetId = id;
+    
+    fetch(`/api/chatbots/${id}`)
+        .then(res => res.json())
+        .then(bot => {
+            if (bot.error) {
+                showToast('Error loading chatbot: ' + bot.error, 'error');
+                return;
+            }
+            
+            // Populate form fields
+            document.getElementById('widgetName').value = bot.name || '';
+            document.getElementById('greeting').value = bot.greeting || '';
+            document.getElementById('systemPrompt').value = bot.system_prompt || '';
+            document.getElementById('primaryColor').value = bot.primary_color || '#4ade80';
+            document.getElementById('bgColor').value = bot.bg_color || '#1a1a1a';
+            document.getElementById('textColor').value = bot.text_color || '#e0e0e0';
+            document.getElementById('allowedDomains').value = bot.allowed_domains || '';
+            document.getElementById('ratePerMinute').value = bot.rate_per_minute || 10;
+            document.getElementById('ratePerHour').value = bot.rate_per_hour || 100;
+            document.getElementById('enableAnalytics').checked = bot.enable_analytics;
+            document.getElementById('showWatermark').checked = bot.show_watermark !== false;
+            
+            // Set position radio
+            const positionRadio = document.querySelector(`input[name="position"][value="${bot.position || 'bottom-right'}"]`);
+            if (positionRadio) positionRadio.checked = true;
+            
+            // Set theme radio
+            const themeRadio = document.querySelector(`input[name="theme"][value="${bot.theme || 'dark'}"]`);
+            if (themeRadio) themeRadio.checked = true;
+            
+            // Load icon
+            const botIcon = bot.icon || '💬';
+            const botIconType = bot.icon_type || 'emoji';
+            document.getElementById('chatbotIcon').value = botIcon;
+            document.getElementById('chatbotIconType').value = botIconType;
+            if (botIconType === 'image') {
+                document.getElementById('iconPreview').innerHTML = `<img src="${botIcon}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">`;
+            } else {
+                document.getElementById('iconPreview').textContent = botIcon;
+            }
+            
+            // Load AI configuration
+            const apiTypeRadio = document.querySelector(`input[name="apiType"][value="${bot.api_type || 'internal'}"]`);
+            if (apiTypeRadio) apiTypeRadio.checked = true;
+            document.getElementById('modelSelector').value = bot.model_id || 'claude-sonnet';
+            document.getElementById('apiKeyInput').value = '';  // Clear - never send actual key to frontend
+            document.getElementById('apiKeyInput').placeholder = bot.api_key_encrypted ? '••••••••' : 'sk-ant-...';
+            handleApiTypeChange();
+            
+            // Load suggested prompts
+            const prompts = JSON.parse(bot.suggested_prompts || '[]');
+            const promptsContainer = document.getElementById('suggestedPrompts');
+            promptsContainer.innerHTML = '';
+            if (prompts.length === 0) {
+                // Add one empty prompt input
+                const div = document.createElement('div');
+                div.className = 'prompt-input';
+                div.innerHTML = `
+                    <input type="text" placeholder="Enter a prompt...">
+                    <button class="remove-btn" onclick="removePrompt(this)">×</button>
+                `;
+                promptsContainer.appendChild(div);
+            } else {
+                prompts.forEach(prompt => {
+                    const div = document.createElement('div');
+                    div.className = 'prompt-input';
+                    div.innerHTML = `
+                        <input type="text" value="${escapeHtml(prompt)}">
+                        <button class="remove-btn" onclick="removePrompt(this)">×</button>
+                    `;
+                    promptsContainer.appendChild(div);
+                });
+            }
+            
+            // Update preview module with edit mode (#40 - Smart button label)
+            if (window.ChatbotPreview) {
+                ChatbotPreview.setEditMode(id, bot);
+            }
+            
+            // Load knowledge base files
+            loadKnowledgeFiles();
+            
+            // Clear any pending local files
+            uploadedFiles = [];
+            document.getElementById('uploadedFiles').innerHTML = '';
+            
+            // Switch to widget panel and Settings builder tab
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById('widgetPanel').classList.add('active');
+            
+            // Open Settings builder tab by default when editing
+            switchBuilderTab('settings');
+            
+            showToast('Editing chatbot: ' + bot.name, 'info');
+        })
+        .catch(err => {
+            showToast('Error loading chatbot', 'error');
+            console.error(err);
+        });
+}
+
+function viewAnalytics(id) {
+    // For now, show a modal with basic stats
+    fetch(`/api/chatbots/${id}`)
+        .then(res => res.json())
+        .then(bot => {
+            alert(`Analytics for ${bot.name}\n\nConversations: ${bot.conversations || 0}\nSatisfaction: ${bot.satisfaction_rate || 0}%\n\nDetailed analytics coming soon!`);
+        })
+        .catch(() => {
+            showToast('Error loading analytics', 'error');
+        });
+}
+
+// ============================================================================
+// AI Configuration Functions
+// ============================================================================
+
+let systemKeysCache = null;
+
+function handleApiTypeChange() {
+    const apiType = document.querySelector('input[name="apiType"]:checked').value;
+    const customSection = document.getElementById('customApiSection');
+    const systemKeysSection = document.getElementById('systemKeysSection');
+    const internalNotice = document.getElementById('internalApiNotice');
+    
+    if (apiType === 'custom') {
+        customSection.style.display = 'block';
+        systemKeysSection.style.display = 'none';
+        internalNotice.style.display = 'none';
+        
+        // Load custom models (all providers)
+        loadModels('custom');
+        
+        // Show provider-specific models based on custom provider selection
+        handleProviderChange();
+    } else {
+        customSection.style.display = 'none';
+        systemKeysSection.style.display = 'block';
+        internalNotice.style.display = 'flex';
+        
+        // Load system keys and their available models
+        loadSystemKeys();
+    }
+    
+    updateApiKeyHint();
+}
+
+async function loadSystemKeys() {
+    const statusEl = document.getElementById('systemKeysStatus');
+    const listEl = document.getElementById('systemKeysList');
+    
+    statusEl.style.display = 'flex';
+    listEl.style.display = 'none';
+    
+    try {
+        const res = await fetch('/api/system-keys');
+        const data = await res.json();
+        
+        systemKeysCache = data;
+        
+        statusEl.style.display = 'none';
+        listEl.style.display = 'block';
+        
+        if (!data.hasSystemKeys || data.providers.length === 0) {
+            listEl.innerHTML = `
+                <div class="no-system-keys">
+                    <span class="warning-icon">⚠️</span>
+                    <p>No system API keys configured.</p>
+                    <p class="hint">Configure API keys in your clawdbot.json or use a custom key.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Show available providers
+        listEl.innerHTML = `
+            <div class="system-keys-available">
+                <span class="success-icon">✓</span>
+                <span>Available providers:</span>
+                <div class="provider-badges">
+                    ${data.providers.map(p => `
+                        <span class="provider-badge ${p.id}">${p.name}</span>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        
+        // Update model selector to only show available models
+        updateModelSelectorForSystemKeys(data.providers);
+        
+    } catch (error) {
+        console.error('Error loading system keys:', error);
+        statusEl.innerHTML = `
+            <span class="error-icon">⚠️</span>
+            <span>Could not load system keys</span>
+        `;
+    }
+}
+
+function updateModelSelectorForSystemKeys(providers) {
+    const selector = document.getElementById('modelSelector');
+    const currentValue = selector.value;
+    
+    // Build model options from available providers
+    let html = '';
+    
+    providers.forEach(provider => {
+        html += `<optgroup label="${provider.name}">`;
+        provider.models.forEach(model => {
+            html += `<option value="${model.id}">${model.name}</option>`;
+        });
+        html += '</optgroup>';
+    });
+    
+    if (html) {
+        selector.innerHTML = html;
+        
+        // Try to preserve selection if still valid
+        const allModels = providers.flatMap(p => p.models.map(m => m.id));
+        if (allModels.includes(currentValue)) {
+            selector.value = currentValue;
+        }
+    }
+}
+
+async function loadModels(apiType) {
+    try {
+        const res = await fetch(`/api/models?apiType=${apiType}`);
+        const data = await res.json();
+        
+        const selector = document.getElementById('modelSelector');
+        const currentValue = selector.value;
+        
+        selector.innerHTML = data.models.map(model => 
+            `<option value="${model.id}">${model.name} - ${model.description}</option>`
+        ).join('');
+        
+        // Try to preserve the current selection
+        if (data.models.find(m => m.id === currentValue)) {
+            selector.value = currentValue;
+        }
+    } catch (error) {
+        console.error('Error loading models:', error);
+    }
+}
+
+function handleProviderChange() {
+    const provider = document.getElementById('customProvider')?.value || 'anthropic';
+    const modelSelector = document.getElementById('modelSelector');
+    
+    // Define models for each provider
+    const providerModels = {
+        anthropic: [
+            { id: 'claude-sonnet', name: 'Claude Sonnet 4 - Fast and capable' },
+            { id: 'claude-opus', name: 'Claude Opus 4 - Most capable' },
+            { id: 'claude-haiku', name: 'Claude Haiku 4 - Fastest' },
+        ],
+        openai: [
+            { id: 'gpt-4o', name: 'GPT-4o - OpenAI flagship' },
+            { id: 'gpt-4o-mini', name: 'GPT-4o Mini - Faster, cheaper' },
+        ],
+        google: [
+            { id: 'gemini-pro', name: 'Gemini Pro - Google AI' },
+            { id: 'gemini-flash', name: 'Gemini Flash - Fast Google AI' },
+        ]
+    };
+    
+    const models = providerModels[provider] || providerModels.anthropic;
+    modelSelector.innerHTML = models.map(m => 
+        `<option value="${m.id}">${m.name}</option>`
+    ).join('');
+    
+    updateApiKeyHint();
+}
+
+function handleModelChange() {
+    updateApiKeyHint();
+}
+
+function updateApiKeyHint() {
+    const modelId = document.getElementById('modelSelector').value;
+    const hint = document.getElementById('apiKeyHint');
+    
+    if (!hint) return;
+    
+    if (modelId.startsWith('claude')) {
+        hint.textContent = 'Enter your Anthropic API key (starts with sk-ant-)';
+    } else if (modelId.startsWith('gpt')) {
+        hint.textContent = 'Enter your OpenAI API key (starts with sk-)';
+    } else if (modelId.startsWith('gemini')) {
+        hint.textContent = 'Enter your Google AI API key';
+    } else {
+        hint.textContent = 'Enter your API key';
+    }
+}
+
+function toggleApiKeyVisibility() {
+    const input = document.getElementById('apiKeyInput');
+    const btn = event.currentTarget;
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🙈';
+    } else {
+        input.type = 'password';
+        btn.textContent = '👁️';
+    }
+}
+
+async function testApiConnection() {
+    const apiType = document.querySelector('input[name="apiType"]:checked').value;
+    const modelId = document.getElementById('modelSelector').value;
+    const apiKey = document.getElementById('apiKeyInput').value;
+    
+    const statusEl = document.getElementById('apiKeyStatus');
+    statusEl.style.display = 'flex';
+    statusEl.className = 'api-key-status testing';
+    statusEl.querySelector('.status-icon').textContent = '⏳';
+    statusEl.querySelector('.status-text').textContent = 'Testing connection...';
+    
+    try {
+        const res = await fetch(`/api/chatbots/${currentWidgetId || 'new'}/test-connection`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ apiType, modelId, apiKey })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            statusEl.className = 'api-key-status success';
+            statusEl.querySelector('.status-icon').textContent = '✓';
+            statusEl.querySelector('.status-text').textContent = data.message;
+        } else {
+            statusEl.className = 'api-key-status error';
+            statusEl.querySelector('.status-icon').textContent = '✗';
+            statusEl.querySelector('.status-text').textContent = data.error;
+        }
+    } catch (error) {
+        statusEl.className = 'api-key-status error';
+        statusEl.querySelector('.status-icon').textContent = '✗';
+        statusEl.querySelector('.status-text').textContent = 'Connection test failed';
+    }
+}
+
+async function loadAiConfig(chatbotId) {
+    try {
+        const res = await fetch(`/api/chatbots/${chatbotId}/ai-config`);
+        const config = await res.json();
+        
+        // Set API type
+        const apiTypeRadio = document.querySelector(`input[name="apiType"][value="${config.apiType || 'internal'}"]`);
+        if (apiTypeRadio) apiTypeRadio.checked = true;
+        
+        // Set model
+        document.getElementById('modelSelector').value = config.modelId || 'claude-sonnet';
+        
+        // Show masked key if exists
+        if (config.hasApiKey && config.apiKeyMasked) {
+            document.getElementById('apiKeyInput').placeholder = config.apiKeyMasked;
+        }
+        
+        handleApiTypeChange();
+    } catch (error) {
+        console.error('Error loading AI config:', error);
+    }
+}
+
+async function saveAiConfig(chatbotId) {
+    const apiType = document.querySelector('input[name="apiType"]:checked').value;
+    const modelId = document.getElementById('modelSelector').value;
+    const apiKey = document.getElementById('apiKeyInput').value;
+    
+    try {
+        const res = await fetch(`/api/chatbots/${chatbotId}/ai-config`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ apiType, modelId, apiKey: apiKey || undefined })
+        });
+        
+        const data = await res.json();
+        if (!data.success) {
+            throw new Error(data.error);
+        }
+        return true;
+    } catch (error) {
+        console.error('Error saving AI config:', error);
+        showToast('Error saving AI configuration', 'error');
+        return false;
+    }
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-' + type;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Add some CSS for toasts and preview
+const style = document.createElement('style');
+style.textContent = `
+    .toast { position: fixed; bottom: 20px; right: 20px; padding: 12px 24px; border-radius: 8px; background: #333; color: white; opacity: 0; transform: translateY(20px); transition: all 0.3s; z-index: 10000; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast-success { background: #22c55e; }
+    .toast-error { background: #ef4444; }
+    .toast-info { background: #3b82f6; }
+    
+    .widget-chat { display: none; }
+    .widget-chat.open { display: flex !important; flex-direction: column; }
+    
+    .message.user { background: var(--primary-color, #4ade80); color: white; margin-left: auto; }
+    .message.bot { background: rgba(255,255,255,0.1); }
+    .message { max-width: 80%; padding: 8px 12px; border-radius: 12px; margin: 4px 0; }
+    
+    .typing-dots { animation: blink 1s infinite; }
+    @keyframes blink { 50% { opacity: 0.5; } }
+    
+    .empty-state { text-align: center; padding: 60px 20px; background: rgba(255,255,255,0.05); border-radius: 12px; }
+    .empty-icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-state h3 { margin-bottom: 8px; }
+    .empty-state p { opacity: 0.7; margin-bottom: 20px; }
+    
+    /* Create New Card (#33) */
+    .create-new-card { 
+        border: 2px dashed rgba(74, 222, 128, 0.5) !important; 
+        background: rgba(74, 222, 128, 0.05) !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 200px;
+        transition: all 0.3s ease;
+    }
+    .create-new-card:hover { 
+        border-color: #4ade80 !important; 
+        background: rgba(74, 222, 128, 0.1) !important;
+        transform: translateY(-2px);
+    }
+    .create-new-content { text-align: center; }
+    .create-new-icon { 
+        font-size: 48px; 
+        margin-bottom: 12px;
+        opacity: 0.8;
+    }
+    .create-new-card h3 { 
+        color: #4ade80; 
+        margin-bottom: 8px;
+        font-size: 1.1rem;
+    }
+    .create-new-card p { 
+        opacity: 0.6; 
+        font-size: 0.85rem;
+        margin: 0;
+    }
+    
+    /* Conversations Tab Styles */
+    .conversations-container { padding: 0; }
+    .conversations-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .conversations-header-left h2 { margin: 0 0 5px 0; }
+    .conversations-subtitle { color: #888; font-size: 0.9rem; margin: 0; }
+    
+    .conversations-filters { 
+        background: rgba(255,255,255,0.03); 
+        padding: 20px; 
+        border-radius: 12px; 
+        margin-bottom: 20px; 
+    }
+    .filter-row { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-end; }
+    .filter-group { display: flex; flex-direction: column; gap: 6px; }
+    .filter-group label { font-size: 0.85rem; color: #888; }
+    .filter-group input, .filter-group select { 
+        padding: 8px 12px; 
+        border: 1px solid #333; 
+        border-radius: 6px; 
+        background: #252525; 
+        color: #fff; 
+        min-width: 150px;
+    }
+    .filter-group input:focus, .filter-group select:focus { border-color: #4ade80; outline: none; }
+    .date-range { display: flex; gap: 8px; align-items: center; }
+    .date-range span { color: #666; }
+    
+    .conv-stats-bar { 
+        display: flex; 
+        gap: 30px; 
+        margin-bottom: 20px; 
+        padding: 15px 20px; 
+        background: rgba(255,255,255,0.03); 
+        border-radius: 8px; 
+    }
+    
+    .conversations-list { margin-bottom: 20px; overflow-x: auto; }
+    .conversations-table { 
+        width: 100%; 
+        border-collapse: collapse; 
+        background: rgba(255,255,255,0.02); 
+        border-radius: 8px; 
+        overflow: hidden;
+    }
+    .conversations-table th { 
+        text-align: left; 
+        padding: 12px 15px; 
+        background: rgba(255,255,255,0.05); 
+        font-weight: 600; 
+        font-size: 0.85rem; 
+        color: #888;
+        border-bottom: 1px solid #333;
+    }
+    .conversations-table td { 
+        padding: 12px 15px; 
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        font-size: 0.9rem;
+    }
+    .conv-row { cursor: pointer; transition: background 0.2s; }
+    .conv-row:hover { background: rgba(74, 222, 128, 0.05); }
+    
+    .chatbot-badge { 
+        display: inline-block;
+        padding: 3px 8px; 
+        background: rgba(74, 222, 128, 0.2); 
+        color: #4ade80; 
+        border-radius: 4px; 
+        font-size: 0.8rem;
+    }
+    .msg-count { 
+        display: inline-block;
+        min-width: 28px;
+        padding: 2px 8px; 
+        background: rgba(59, 130, 246, 0.2); 
+        color: #3b82f6; 
+        border-radius: 12px; 
+        text-align: center;
+        font-size: 0.85rem;
+    }
+    .first-message { 
+        max-width: 250px; 
+        overflow: hidden; 
+        text-overflow: ellipsis; 
+        white-space: nowrap;
+        color: #aaa;
+    }
+    .timestamp { color: #888; font-size: 0.85rem; }
+    
+    .conversations-pagination { 
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        gap: 15px; 
+    }
+    #convPageInfo { color: #888; font-size: 0.9rem; }
+    
+    /* Conversation Detail Modal */
+    .modal-overlay { 
+        position: fixed; 
+        inset: 0; 
+        background: rgba(0,0,0,0.7); 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        z-index: 1000;
+    }
+    .conv-detail-modal { 
+        width: 90%; 
+        max-width: 700px; 
+        max-height: 85vh; 
+        background: #1e1e1e; 
+        border-radius: 12px; 
+        display: flex; 
+        flex-direction: column;
+    }
+    .modal-header { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        padding: 20px; 
+        border-bottom: 1px solid #333;
+    }
+    .modal-header h3 { margin: 0; }
+    .modal-close { 
+        background: none; 
+        border: none; 
+        color: #888; 
+        font-size: 24px; 
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+    }
+    .modal-close:hover { color: #fff; }
+    .modal-body { 
+        flex: 1; 
+        overflow-y: auto; 
+        padding: 20px;
+    }
+    .modal-footer { 
+        display: flex; 
+        gap: 10px; 
+        justify-content: flex-end; 
+        padding: 15px 20px; 
+        border-top: 1px solid #333;
+    }
+    
+    .conv-detail-info { 
+        display: grid; 
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+        gap: 10px; 
+        margin-bottom: 20px;
+        padding: 15px;
+        background: rgba(255,255,255,0.03);
+        border-radius: 8px;
+    }
+    .conv-info-row { display: flex; gap: 10px; }
+    .conv-info-label { color: #888; font-size: 0.85rem; }
+    .conv-info-value { color: #fff; font-weight: 500; }
+    
+    .conv-detail-transcript { 
+        display: flex; 
+        flex-direction: column; 
+        gap: 12px;
+    }
+    .transcript-message { 
+        padding: 12px 15px; 
+        border-radius: 10px;
+        max-width: 85%;
+    }
+    .transcript-message.user { 
+        background: rgba(74, 222, 128, 0.15); 
+        border: 1px solid rgba(74, 222, 128, 0.3);
+        margin-left: auto;
+    }
+    .transcript-message.bot { 
+        background: rgba(255,255,255,0.05); 
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+    .transcript-meta { 
+        display: flex; 
+        justify-content: space-between; 
+        margin-bottom: 6px; 
+        font-size: 0.75rem;
+    }
+    .transcript-role { 
+        font-weight: 600; 
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .transcript-message.user .transcript-role { color: #4ade80; }
+    .transcript-message.bot .transcript-role { color: #888; }
+    .transcript-time { color: #666; }
+    .transcript-content { line-height: 1.5; }
+    .no-messages { color: #666; text-align: center; padding: 30px; }
+    
+    /* Icon Picker */
+    .icon-picker { position: relative; }
+    .icon-picker-selected {
+        display: flex; align-items: center; gap: 12px;
+        padding: 10px 16px; border: 1px solid #333; border-radius: 8px;
+        background: #252525; cursor: pointer; transition: border-color 0.2s;
+    }
+    .icon-picker-selected:hover { border-color: #4ade80; }
+    .icon-picker-preview { font-size: 32px; line-height: 1; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; }
+    .icon-picker-label { color: #888; font-size: 0.85rem; }
+    .icon-picker-dropdown {
+        display: none; position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+        background: #1e1e1e; border: 1px solid #444; border-radius: 10px;
+        padding: 12px; z-index: 100; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        max-height: 360px; overflow-y: auto;
+    }
+    .icon-picker-dropdown.open { display: block; }
+    .icon-section-label { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .icon-picker-section { margin-bottom: 14px; }
+    .icon-picker-section:last-child { margin-bottom: 0; }
+    .icon-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+    .icon-option {
+        width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+        border-radius: 8px; border: 2px solid transparent; cursor: pointer;
+        background: rgba(255,255,255,0.05); transition: all 0.15s;
+    }
+    .icon-option:hover { border-color: #4ade80; background: rgba(74,222,128,0.1); }
+    .icon-option.selected { border-color: #4ade80; background: rgba(74,222,128,0.15); }
+    .icon-option img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+    .icon-option span { font-size: 22px; }
+    .icon-custom-input { display: flex; gap: 8px; }
+    .icon-custom-input input { flex: 1; padding: 8px 12px; border: 1px solid #333; border-radius: 6px; background: #252525; color: #fff; }
+    .icon-custom-input input:focus { border-color: #4ade80; outline: none; }
+
+    /* Knowledge Base Styles */
+    .kb-existing-files { 
+        margin-bottom: 20px; 
+        background: rgba(255,255,255,0.03); 
+        border-radius: 8px; 
+        padding: 15px;
+    }
+    .kb-files-header { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        margin-bottom: 12px;
+        font-weight: 600;
+        color: #888;
+    }
+    .kb-files-list { }
+    .kb-no-files, .kb-error { 
+        color: #666; 
+        font-size: 0.9rem; 
+        text-align: center;
+        padding: 20px;
+    }
+    .kb-error { color: #ef4444; }
+    .kb-file-item { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center;
+        padding: 10px 12px;
+        background: rgba(255,255,255,0.02);
+        border-radius: 6px;
+        margin-bottom: 8px;
+        transition: background 0.2s;
+    }
+    .kb-file-item:hover { background: rgba(255,255,255,0.05); }
+    .kb-file-info { display: flex; align-items: center; gap: 12px; }
+    .kb-file-icon { font-size: 1.5rem; }
+    .kb-file-details { display: flex; flex-direction: column; gap: 2px; }
+    .kb-file-name { font-weight: 500; }
+    .kb-file-meta { font-size: 0.8rem; color: #666; }
+    .kb-delete-btn { 
+        background: none; 
+        border: none; 
+        cursor: pointer; 
+        opacity: 0.5;
+        transition: opacity 0.2s;
+        font-size: 1rem;
+    }
+    .kb-delete-btn:hover { opacity: 1; }
+    .kb-upload-progress { 
+        margin-top: 15px;
+        padding: 10px;
+        background: rgba(255,255,255,0.03);
+        border-radius: 6px;
+    }
+    .progress-bar { 
+        height: 6px; 
+        background: #333; 
+        border-radius: 3px; 
+        overflow: hidden;
+        margin-bottom: 8px;
+    }
+    .progress-fill { 
+        height: 100%; 
+        background: #4ade80; 
+        width: 0%; 
+        transition: width 0.3s;
+    }
+    #kbUploadStatus { font-size: 0.85rem; color: #888; }
+    .pending-upload { border-left: 3px solid #f59e0b; }
+    .pending-badge { 
+        font-size: 0.7rem; 
+        background: #f59e0b; 
+        color: #000; 
+        padding: 2px 6px; 
+        border-radius: 3px;
+        text-transform: uppercase;
+    }
+    
+    /* Analytics Tab Styles */
+    .analytics-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+    
+    .date-range-picker {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .range-btn {
+        padding: 8px 16px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-secondary, #888);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .range-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .range-btn.active {
+        background: var(--accent, #4ade80);
+        color: #000;
+        border-color: var(--accent, #4ade80);
+    }
+    
+    .analytics-actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+    
+    #analyticsChatbotFilter {
+        padding: 8px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-primary, #fff);
+        border-radius: 8px;
+        min-width: 150px;
+    }
+    
+    .analytics-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+    
+    #analyticsPanel .stat-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    
+    #analyticsPanel .stat-icon {
+        font-size: 32px;
+        opacity: 0.9;
+    }
+    
+    #analyticsPanel .stat-content {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    #analyticsPanel .stat-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--text-primary, #fff);
+    }
+    
+    #analyticsPanel .stat-label {
+        font-size: 13px;
+        color: var(--text-secondary, #888);
+        margin-top: 4px;
+    }
+    
+    #analyticsPanel .stat-change {
+        font-size: 12px;
+        margin-top: 4px;
+    }
+    
+    #analyticsPanel .stat-change.positive {
+        color: var(--success, #22c55e);
+    }
+    
+    #analyticsPanel .stat-change.negative {
+        color: var(--error, #ef4444);
+    }
+    
+    .chart-card {
+        margin-bottom: 24px;
+    }
+    
+    .chart-container {
+        height: 300px;
+        position: relative;
+    }
+    
+    .chart-placeholder {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: var(--text-secondary, #888);
+    }
+    
+    .placeholder-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+    
+    .chart-legend {
+        display: flex;
+        gap: 16px;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        color: var(--text-secondary, #888);
+    }
+    
+    .legend-item .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+    
+    .analytics-columns {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 24px;
+        margin-bottom: 24px;
+    }
+    
+    .popular-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .popular-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 8px;
+    }
+    
+    .popular-question {
+        flex: 1;
+        font-size: 14px;
+        color: var(--text-primary, #fff);
+    }
+    
+    .popular-count {
+        font-size: 13px;
+        color: var(--text-secondary, #888);
+        background: rgba(255, 255, 255, 0.1);
+        padding: 4px 10px;
+        border-radius: 12px;
+    }
+    
+    #analyticsPanel .empty-placeholder {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--text-secondary, #888);
+    }
+    
+    #analyticsPanel .empty-placeholder span {
+        font-size: 32px;
+        display: block;
+        margin-bottom: 12px;
+    }
+    
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+    
+    .metric-item {
+        display: flex;
+        flex-direction: column;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 8px;
+    }
+    
+    .metric-label {
+        font-size: 13px;
+        color: var(--text-secondary, #888);
+        margin-bottom: 8px;
+    }
+    
+    .metric-value {
+        font-size: 24px;
+        font-weight: 600;
+        color: var(--text-primary, #fff);
+    }
+    
+    .satisfaction-container {
+        display: flex;
+        gap: 40px;
+        align-items: flex-start;
+    }
+    
+    .satisfaction-bars {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .satisfaction-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .rating-label {
+        width: 140px;
+        font-size: 13px;
+        color: var(--text-secondary, #888);
+    }
+    
+    .rating-bar {
+        flex: 1;
+        height: 24px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    
+    .rating-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--accent, #4ade80), #22c55e);
+        border-radius: 12px;
+        transition: width 0.5s ease;
+    }
+    
+    .rating-percent {
+        width: 50px;
+        text-align: right;
+        font-size: 13px;
+        color: var(--text-secondary, #888);
+    }
+    
+    .satisfaction-summary {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        padding: 20px;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 12px;
+        min-width: 150px;
+    }
+    
+    .summary-stat {
+        text-align: center;
+    }
+    
+    .summary-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: var(--accent, #4ade80);
+    }
+    
+    .summary-label {
+        font-size: 12px;
+        color: var(--text-secondary, #888);
+        display: block;
+        margin-top: 4px;
+    }
+    
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 12px 16px;
+        text-align: left;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .data-table th {
+        font-size: 12px;
+        text-transform: uppercase;
+        color: var(--text-secondary, #888);
+        font-weight: 600;
+    }
+    
+    .data-table td {
+        font-size: 14px;
+        color: var(--text-primary, #fff);
+    }
+    
+    .data-table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.03);
+    }
+    
+    .data-table .empty-row {
+        text-align: center;
+        color: var(--text-secondary, #888);
+        padding: 40px !important;
+    }
+    
+    .rating-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+    }
+    
+    .rating-badge.good {
+        background: rgba(34, 197, 94, 0.2);
+        color: #22c55e;
+    }
+    
+    .rating-badge.neutral {
+        background: rgba(234, 179, 8, 0.2);
+        color: #eab308;
+    }
+    
+    .rating-badge.bad {
+        background: rgba(239, 68, 68, 0.2);
+        color: #ef4444;
+    }
+    
+    @media (max-width: 768px) {
+        .analytics-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .date-range-picker {
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+        
+        .satisfaction-container {
+            flex-direction: column;
+        }
+        
+        .satisfaction-summary {
+            flex-direction: row;
+            justify-content: space-around;
+        }
+    }
+`;
+document.head.appendChild(style);
+
+// ============================================
+// CHATBOT ADDONS FUNCTIONALITY
+// ============================================
+
+const CHATBOT_ADDONS = [
+    {
+        id: 'remove-watermark-profile',
+        name: 'Remove Watermark + Profile Pic',
+        description: 'Remove the ResonantOS watermark from your chatbot widget and add a custom profile picture.',
+        icon: '🖼️',
+        price: 2,
+        currency: 'USD',
+        period: 'month',
+        popular: true,
+        purchased: false
+    },
+    {
+        id: 'custom-watermark',
+        name: 'Add Custom Watermark',
+        description: 'Replace the default watermark with your own brand logo or text.',
+        icon: '✏️',
+        price: 2,
+        currency: 'USD',
+        period: 'month',
+        popular: false,
+        purchased: false
+    },
+    {
+        id: 'extra-chatbots-3',
+        name: '3 Extra Chatbots',
+        description: 'Create up to 3 additional chatbots for different websites or use cases.',
+        icon: '🤖',
+        price: 1,
+        currency: 'USD',
+        period: 'month',
+        popular: false,
+        purchased: false
+    },
+    {
+        id: 'extra-chatbots-10',
+        name: '10 Extra Chatbots',
+        description: 'Create up to 10 additional chatbots. Perfect for agencies and multi-site owners.',
+        icon: '🤖🤖',
+        price: 3,
+        currency: 'USD',
+        period: 'month',
+        popular: false,
+        purchased: false
+    },
+    {
+        id: 'unlimited-bundle',
+        name: 'Unlimited Bundle',
+        description: 'Unlimited chatbots + Remove watermark + Custom profile pic + Custom watermark. Everything included!',
+        icon: '👑',
+        price: 20,
+        currency: 'USD',
+        period: 'month',
+        popular: true,
+        bundle: true,
+        purchased: false
+    }
+];
+
+// Token coming soon
+const RESONANT_TOKEN = {
+    symbol: '$RES',
+    name: 'Resonant Token',
+    status: 'coming_soon'
+};
+
+let addons = [...CHATBOT_ADDONS];
+
+function loadAddons() {
+    renderAddons();
+    renderActiveAddons();
+}
+
+function renderAddons() {
+    const grid = document.getElementById('addonsGrid');
+    if (!grid) return;
+    
+    grid.innerHTML = addons.filter(a => !a.purchased).map(addon => `
+        <div class="addon-card ${addon.popular ? 'popular' : ''} ${addon.bundle ? 'bundle' : ''}" data-id="${addon.id}">
+            ${addon.popular ? '<div class="popular-badge">Popular</div>' : ''}
+            <div class="addon-icon">${addon.icon}</div>
+            <div class="addon-info">
+                <h3>${addon.name}</h3>
+                <p>${addon.description}</p>
+            </div>
+            <div class="addon-pricing">
+                <span class="addon-price">$${addon.price}</span>
+                <span class="addon-period">/${addon.period}</span>
+            </div>
+            <div class="addon-actions">
+                <button class="btn-addon btn-purchase" onclick="purchaseAddon('${addon.id}')">
+                    Subscribe
+                </button>
+            </div>
+            <div class="payment-options">
+                <span class="pay-with">Pay with:</span>
+                <div class="crypto-options">
+                    <button class="crypto-btn" onclick="payWithCrypto('${addon.id}', 'SOL')">SOL</button>
+                    <button class="crypto-btn" onclick="payWithCrypto('${addon.id}', 'USDT')">USDT</button>
+                    <button class="crypto-btn" onclick="payWithCrypto('${addon.id}', 'USDC')">USDC</button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderActiveAddons() {
+    const list = document.getElementById('activeAddonsList');
+    if (!list) return;
+    
+    const active = addons.filter(a => a.purchased);
+    
+    if (active.length === 0) {
+        list.innerHTML = '<p class="no-addons">No active addons. Purchase below to upgrade!</p>';
+        return;
+    }
+    
+    list.innerHTML = active.map(addon => `
+        <div class="active-addon-item">
+            <span class="addon-icon">${addon.icon}</span>
+            <span class="addon-name">${addon.name}</span>
+            <span class="addon-status">Active</span>
+            <button class="btn-manage" onclick="manageAddon('${addon.id}')">Manage</button>
+        </div>
+    `).join('');
+}
+
+function purchaseAddon(id) {
+    const addon = addons.find(a => a.id === id);
+    if (addon) {
+        showToast(`Connect wallet to subscribe to ${addon.name} for $${addon.price}/${addon.period}`, 'info');
+    }
+}
+
+function payWithCrypto(id, currency) {
+    const addon = addons.find(a => a.id === id);
+    if (addon) {
+        // Calculate crypto equivalent (placeholder - would use real price feed)
+        let cryptoAmount;
+        if (currency === 'SOL') {
+            cryptoAmount = (addon.price / 150).toFixed(4); // Placeholder SOL price
+        } else {
+            cryptoAmount = addon.price.toFixed(2); // USDT/USDC = USD
+        }
+        showToast(`Pay ${cryptoAmount} ${currency} to subscribe to ${addon.name}`, 'info');
+        // Future: Open crypto payment modal with QR code
+    }
+}
+
+function manageAddon(id) {
+    const addon = addons.find(a => a.id === id);
+    if (addon) {
+        showToast(`Managing ${addon.name} - Cancel or modify subscription`, 'info');
+    }
+}
+
+// Tab switching
+const originalSwitchTab = window.switchTab;
+window.switchTab = function(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    
+    if (tab === 'chatbots') {
+        document.querySelector('.tab:nth-child(1)').classList.add('active');
+        document.getElementById('chatbotsPanel').classList.add('active');
+        loadChatbots();
+    } else if (tab === 'conversations') {
+        document.querySelector('.tab:nth-child(2)').classList.add('active');
+        document.getElementById('conversationsPanel').classList.add('active');
+        loadConversations();
+    } else if (tab === 'addons') {
+        document.querySelector('.tab:nth-child(3)').classList.add('active');
+        document.getElementById('addonsPanel').classList.add('active');
+        loadAddons();
+    } else if (tab === 'analytics') {
+        document.querySelector('.tab:nth-child(4)').classList.add('active');
+        document.getElementById('analyticsPanel').classList.add('active');
+        initAnalyticsTab();
+    } else if (tab === 'widget') {
+        document.getElementById('widgetPanel').classList.add('active');
+    }
+};
+
+// ============================================
+// ANALYTICS TAB FUNCTIONALITY
+// ============================================
+
+let analyticsCurrentRange = '7d';
+let analyticsCurrentChatbot = 'all';
+let analyticsChartInstance = null;
+let analyticsInitialized = false;
+
+function initAnalyticsTab() {
+    if (!analyticsInitialized) {
+        loadAnalyticsChatbotFilter();
+        setupAnalyticsRangeButtons();
+        analyticsInitialized = true;
+    }
+    loadAnalyticsData();
+}
+
+function setupAnalyticsRangeButtons() {
+    document.querySelectorAll('#analyticsPanel .range-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('#analyticsPanel .range-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            analyticsCurrentRange = this.dataset.range;
+            loadAnalyticsData();
+        });
+    });
+}
+
+async function loadAnalyticsChatbotFilter() {
+    try {
+        const res = await fetch('/api/chatbots');
+        const data = await res.json();
+        
+        const select = document.getElementById('analyticsChatbotFilter');
+        if (!select) return;
+        
+        // Clear existing options except first
+        while (select.options.length > 1) {
+            select.remove(1);
+        }
+        
+        data.chatbots.forEach(bot => {
+            const option = document.createElement('option');
+            option.value = bot.id;
+            option.textContent = bot.name;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading chatbots for analytics filter:', error);
+    }
+}
+
+async function loadAnalyticsData() {
+    const filterEl = document.getElementById('analyticsChatbotFilter');
+    analyticsCurrentChatbot = filterEl ? filterEl.value : 'all';
+    
+    try {
+        const params = new URLSearchParams({
+            range: analyticsCurrentRange,
+            chatbot_id: analyticsCurrentChatbot !== 'all' ? analyticsCurrentChatbot : ''
+        });
+        
+        const res = await fetch(`/api/analytics?${params}`);
+        const data = await res.json();
+        
+        updateAnalyticsStats(data);
+        updateAnalyticsChart(data.chartData || []);
+        updateAnalyticsPopularQuestions(data.popularQuestions || []);
+        updateAnalyticsMetrics(data);
+        updateAnalyticsSatisfaction(data.satisfaction || {});
+        updateAnalyticsRecentConversations(data.recentConversations || []);
+        
+    } catch (error) {
+        console.error('Error loading analytics:', error);
+        showAnalyticsPlaceholder();
+    }
+}
+
+function updateAnalyticsStats(data) {
+    document.getElementById('analyticsTotalConversations').textContent = 
+        data.totalConversations?.toLocaleString() || '0';
+    document.getElementById('analyticsTotalMessages').textContent = 
+        data.totalMessages?.toLocaleString() || '0';
+    document.getElementById('analyticsAvgResponseTime').textContent = 
+        data.avgResponseTime || '< 2s';
+    document.getElementById('analyticsSatisfactionRate').textContent = 
+        data.satisfactionRate ? Math.round(data.satisfactionRate) + '%' : '-';
+    
+    // Update change indicators
+    updateAnalyticsChangeIndicator('analyticsConversationsChange', data.conversationsChange);
+    updateAnalyticsChangeIndicator('analyticsMessagesChange', data.messagesChange);
+    updateAnalyticsChangeIndicator('analyticsResponseTimeChange', data.responseTimeChange, true);
+    updateAnalyticsChangeIndicator('analyticsSatisfactionChange', data.satisfactionChange);
+}
+
+function updateAnalyticsChangeIndicator(elementId, change, invertPositive = false) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    
+    if (change === undefined || change === null) {
+        el.textContent = '-';
+        el.className = 'stat-change';
+        return;
+    }
+    
+    const isPositive = invertPositive ? change < 0 : change > 0;
+    const arrow = change > 0 ? '↑' : change < 0 ? '↓' : '';
+    
+    el.textContent = `${arrow} ${Math.abs(change)}%`;
+    el.className = 'stat-change ' + (isPositive ? 'positive' : 'negative');
+}
+
+function updateAnalyticsChart(chartData) {
+    const canvas = document.getElementById('analyticsConversationsCanvas');
+    const placeholder = document.getElementById('analyticsChartPlaceholder');
+    const container = document.getElementById('analyticsConversationsChart');
+    
+    if (!canvas || !placeholder || !container) return;
+    
+    if (!chartData || chartData.length === 0) {
+        canvas.style.display = 'none';
+        placeholder.style.display = 'flex';
+        return;
+    }
+    
+    placeholder.style.display = 'none';
+    canvas.style.display = 'block';
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Get dimensions from the container, with safety bounds
+    const rect = container.getBoundingClientRect();
+    const maxHeight = 210; // card-content is 250px with 20px padding on each side
+    const canvasWidth = Math.max(100, Math.min(rect.width, 2000));
+    const canvasHeight = Math.max(100, Math.min(rect.height, maxHeight));
+    
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    canvas.style.width = canvasWidth + 'px';
+    canvas.style.height = canvasHeight + 'px';
+    canvas.style.position = 'absolute';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Create a clipping region to ensure nothing draws outside the canvas
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, canvasWidth, canvasHeight);
+    ctx.clip();
+    
+    const maxConv = Math.max(...chartData.map(d => d.conversations || 0), 1);
+    const padding = 40;
+    const chartWidth = canvas.width - padding * 2;
+    const chartHeight = canvas.height - padding * 2;
+    
+    // Draw grid
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+        const y = padding + (chartHeight / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(padding, y);
+        ctx.lineTo(canvas.width - padding, y);
+        ctx.stroke();
+    }
+    
+    // Helper to clamp Y within chart bounds
+    const clampY = (y) => Math.max(padding, Math.min(canvas.height - padding, y));
+    
+    // Draw line
+    ctx.strokeStyle = '#4ade80';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    
+    chartData.forEach((point, i) => {
+        const x = padding + (chartWidth / (chartData.length - 1 || 1)) * i;
+        const rawY = canvas.height - padding - ((point.conversations || 0) / maxConv) * chartHeight;
+        const y = clampY(rawY);
+        
+        if (i === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    });
+    
+    ctx.stroke();
+    
+    // Draw points
+    ctx.fillStyle = '#4ade80';
+    chartData.forEach((point, i) => {
+        const x = padding + (chartWidth / (chartData.length - 1 || 1)) * i;
+        const rawY = canvas.height - padding - ((point.conversations || 0) / maxConv) * chartHeight;
+        const y = clampY(rawY);
+        
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    
+    // Restore context (removes clipping)
+    ctx.restore();
+}
+
+function updateAnalyticsPopularQuestions(questions) {
+    const container = document.getElementById('analyticsPopularQuestions');
+    if (!container) return;
+    
+    if (!questions || questions.length === 0) {
+        container.innerHTML = `
+            <div class="empty-placeholder">
+                <span>📝</span>
+                <p>No questions recorded yet</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = questions.slice(0, 10).map(q => `
+        <div class="popular-item">
+            <span class="popular-question">${escapeHtml(q.question)}</span>
+            <span class="popular-count">${q.count} times</span>
+        </div>
+    `).join('');
+}
+
+function updateAnalyticsMetrics(data) {
+    const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    
+    setEl('analyticsUserMessages', data.userMessages?.toLocaleString() || '0');
+    setEl('analyticsBotResponses', data.botResponses?.toLocaleString() || '0');
+    setEl('analyticsErrorRate', data.errorRate ? data.errorRate.toFixed(1) + '%' : '0%');
+    setEl('analyticsAvgConvLength', data.avgConvLength ? data.avgConvLength.toFixed(1) + ' msgs' : '-');
+}
+
+function updateAnalyticsSatisfaction(satisfaction) {
+    const total = satisfaction.total || 0;
+    
+    for (let i = 1; i <= 5; i++) {
+        const count = satisfaction[`rating${i}`] || 0;
+        const percent = total > 0 ? (count / total * 100) : 0;
+        
+        const bar = document.getElementById(`analyticsRating${i}`);
+        const percentEl = document.getElementById(`analyticsRating${i}Percent`);
+        
+        if (bar) bar.style.width = percent + '%';
+        if (percentEl) percentEl.textContent = percent.toFixed(0) + '%';
+    }
+    
+    const totalRatingsEl = document.getElementById('analyticsTotalRatings');
+    const feedbackRateEl = document.getElementById('analyticsFeedbackRate');
+    
+    if (totalRatingsEl) totalRatingsEl.textContent = total.toLocaleString();
+    if (feedbackRateEl) feedbackRateEl.textContent = satisfaction.feedbackRate ? satisfaction.feedbackRate.toFixed(0) + '%' : '0%';
+}
+
+function updateAnalyticsRecentConversations(conversations) {
+    const tbody = document.getElementById('analyticsConversationsTableBody');
+    if (!tbody) return;
+    
+    if (!conversations || conversations.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="empty-row">No conversations recorded yet</td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = conversations.slice(0, 10).map(conv => {
+        const ratingClass = conv.rating >= 4 ? 'good' : conv.rating >= 3 ? 'neutral' : 'bad';
+        const ratingText = conv.rating ? '⭐'.repeat(conv.rating) : '-';
+        
+        return `
+            <tr>
+                <td>${formatTimeAgo(conv.started_at)}</td>
+                <td>${escapeHtml(conv.chatbot_name || 'Unknown')}</td>
+                <td>${conv.message_count || 0}</td>
+                <td>${formatAnalyticsDuration(conv.duration_ms)}</td>
+                <td><span class="rating-badge ${ratingClass}">${ratingText}</span></td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function formatAnalyticsDuration(ms) {
+    if (!ms) return '-';
+    if (ms < 60000) return Math.floor(ms / 1000) + 's';
+    return Math.floor(ms / 60000) + 'm';
+}
+
+function showAnalyticsPlaceholder() {
+    const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    
+    setEl('analyticsTotalConversations', '0');
+    setEl('analyticsTotalMessages', '0');
+    setEl('analyticsAvgResponseTime', '-');
+    setEl('analyticsSatisfactionRate', '-');
+}
+
+async function exportAnalyticsData() {
+    try {
+        const params = new URLSearchParams({
+            range: analyticsCurrentRange,
+            chatbot_id: analyticsCurrentChatbot !== 'all' ? analyticsCurrentChatbot : '',
+            format: 'csv'
+        });
+        
+        const res = await fetch(`/api/analytics/export?${params}`);
+        
+        if (!res.ok) {
+            throw new Error('Export failed');
+        }
+        
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `analytics-${analyticsCurrentRange}-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        showToast('Analytics exported successfully!', 'success');
+    } catch (error) {
+        console.error('Export error:', error);
+        showToast('Export failed: ' + error.message, 'error');
+    }
+}
+
+// ============================================================================
+// Icon Picker
+// ============================================================================
+
+const RESONANTOS_ICONS = [
+    { id: 'augmentor', src: '/static/img/augmentor-icon.jpg', label: 'Augmentor' },
+    { id: 'dao', src: '/static/img/dao-icon.webp', label: 'DAO' },
+    { id: 'youtube', src: '/static/img/youtube-icon.webp', label: 'YouTube' },
+    { id: 'website', src: '/static/img/website-icon.webp', label: 'Website' },
+    { id: 'watchdog', src: '/static/img/watchdog-icon.webp', label: 'Watchdog' },
+    { id: 'doer', src: '/static/img/doer-icon.webp', label: 'Doer' },
+    { id: 'decoder', src: '/static/img/decoder-icon.webp', label: 'Decoder' },
+];
+
+const EMOJI_PRESETS = ['💬','🤖','🧠','⚡','🎯','🛡️','🔮','🌐','📡','🎭','🦾','🐕','🏛️','🎬','💡','🔥','✨','🚀'];
+
+function initIconPicker() {
+    const imgGrid = document.getElementById('iconGridImages');
+    const emojiGrid = document.getElementById('iconGridEmoji');
+
+    imgGrid.innerHTML = RESONANTOS_ICONS.map(ic => `
+        <div class="icon-option" onclick="selectIcon('image', '${ic.src}', this)" title="${ic.label}">
+            <img src="${ic.src}" alt="${ic.label}">
+        </div>
+    `).join('');
+
+    emojiGrid.innerHTML = EMOJI_PRESETS.map(e => `
+        <div class="icon-option" onclick="selectIcon('emoji', '${e}', this)">
+            <span>${e}</span>
+        </div>
+    `).join('');
+}
+
+function toggleIconPicker() {
+    document.getElementById('iconPickerDropdown').classList.toggle('open');
+}
+
+function selectIcon(type, value, el) {
+    document.getElementById('chatbotIcon').value = value;
+    document.getElementById('chatbotIconType').value = type;
+
+    const preview = document.getElementById('iconPreview');
+    if (type === 'image') {
+        preview.innerHTML = `<img src="${value}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">`;
+    } else {
+        preview.textContent = value;
+    }
+
+    // highlight
+    document.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
+    if (el) el.classList.add('selected');
+
+    document.getElementById('iconPickerDropdown').classList.remove('open');
+}
+
+function previewCustomIcon(val) {
+    if (!val) return;
+    const preview = document.getElementById('iconPreview');
+    if (val.startsWith('http') || val.startsWith('/')) {
+        preview.innerHTML = `<img src="${val}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">`;
+    } else {
+        preview.textContent = val;
+    }
+}
+
+function selectCustomIcon() {
+    const val = document.getElementById('iconCustomEmoji').value.trim();
+    if (!val) return;
+    const type = (val.startsWith('http') || val.startsWith('/')) ? 'image' : 'emoji';
+    selectIcon(type, val, null);
+}
+
+// Close picker when clicking outside
+document.addEventListener('click', function(e) {
+    const picker = document.getElementById('iconPickerDropdown');
+    const selected = document.getElementById('iconPickerSelected');
+    if (picker && !picker.contains(e.target) && !selected.contains(e.target)) {
+        picker.classList.remove('open');
+    }
+});
+
+// Init on load
+document.addEventListener('DOMContentLoaded', initIconPicker);
+</script>
+{% endblock %}

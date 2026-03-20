@@ -1,0 +1,56 @@
+{
+  "id": "content-brand",
+  "name": "Content & Brand",
+  "description": "Rejects the \"Unicorn\" growth model in favor of a \"Sovereignty\" model \u2014 specific thresholds of freedom that maintain the \"Pioneer\" mindset without existential financial stress. Brand fragmentation. Powerful but disconnected projects creating a fractured narrative. Solution: unify around philosophy, not product. **Note:** \"Think with AI\" (old Substack subtitle) is officially **deprecated**.",
+  "status": "planning",
+  "priority": "high",
+  "icon": "\ud83c\udfac",
+  "color": "#e17055",
+  "createdAt": "2026-02-23T10:13:16Z",
+  "updatedAt": "2026-02-23T10:13:16Z",
+  "deadline": null,
+  "tags": [
+    "youtube",
+    "brand",
+    "content",
+    "community"
+  ],
+  "tasks": [
+    {
+      "id": "r-d-channel------the-forge",
+      "title": "| **R&D Channel** | #the-forge \u2014 co-creation channel in Discord",
+      "description": "Source: brand/SSOT-L2-BRAND-REGISTRY.md",
+      "status": "done",
+      "priority": "medium",
+      "assignee": null,
+      "deadline": null,
+      "blockedBy": null,
+      "createdAt": "2026-02-23T10:13:16Z",
+      "updatedAt": "2026-02-23T10:13:16Z",
+      "completedAt": "2026-02-23T10:13:16Z"
+    },
+    {
+      "id": "living-archive",
+      "title": "| **Living Archive** \u2014 memory of collaboration: decisions, insights, failures, protocols",
+      "description": "Source: brand/SSOT-L2-RESONANT-LEXICON.md",
+      "status": "done",
+      "priority": "medium",
+      "assignee": null,
+      "deadline": null,
+      "blockedBy": null,
+      "createdAt": "2026-02-23T10:13:16Z",
+      "updatedAt": "2026-02-23T10:13:16Z",
+      "completedAt": "2026-02-23T10:13:16Z"
+    }
+  ],
+  "_generated": true,
+  "_generatedAt": "2026-02-23T10:13:16Z",
+  "_sources": [
+    "content-strategy/SSOT-L2-CONTENT-STRATEGY.md",
+    "brand/SSOT-L2-BRAND-NARRATIVE-GUIDE.md",
+    "brand/SSOT-L2-BRAND-REGISTRY.md",
+    "brand/SSOT-L2-RESONANT-LEXICON.md",
+    "creative-dna/SSOT-L2-CREATIVE-DNA.md",
+    "community/SSOT-L2-COMMUNITY.md"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "heuristic-auditor",
+  "name": "Heuristic Auditor",
+  "description": "Post-response philosophical heuristic violation detector",
+  "version": "1.0.0",
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "enabled": { "type": "boolean" },
+      "model": { "type": "string" },
+      "minResponseTokens": { "type": "number" }
+    }
+  }
+}

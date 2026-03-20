@@ -1,0 +1,1608 @@
+{% extends "base.html" %}
+
+{% block title %}Projects - ResonantOS Dashboard{% endblock %}
+{% block page_title %}Projects{% endblock %}
+
+{% block extra_css %}
+<!-- Cytoscape.js for graph visualization -->
+<link href="https://cdn.jsdelivr.net/npm/vis-timeline@7.7.3/styles/vis-timeline-graph2d.min.css" rel="stylesheet" />
+<style>
+/* ══════════════════════════════════════════════
+   PROJECTS — Futuristic Constellation UI
+   ══════════════════════════════════════════════ */
+
+/* ── View Switcher ── */
+.projects-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.view-tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--bg-tertiary, #333);
+    border-radius: 8px;
+    padding: 3px;
+}
+.view-tab {
+    padding: 0.45rem 1rem;
+    border: none;
+    background: transparent;
+    color: var(--text-muted, #6b7280);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+}
+.view-tab:hover { color: var(--text-primary, #e0e0e0); }
+.view-tab.active {
+    background: var(--accent, #4ade80);
+    color: #111;
+}
+.view-tab svg { width: 14px; height: 14px; }
+
+.projects-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+.projects-actions input[type="text"] {
+    background: var(--bg-tertiary, #333);
+    border: 1px solid var(--border, #3a3a3a);
+    color: var(--text-primary);
+    padding: 0.45rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    width: 180px;
+}
+.btn-glow {
+    background: linear-gradient(135deg, #6C5CE7, #a29bfe);
+    color: #fff;
+    border: none;
+    padding: 0.45rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    box-shadow: 0 0 12px rgba(108, 92, 231, 0.3);
+    transition: all 0.2s;
+}
+.btn-glow:hover {
+    box-shadow: 0 0 20px rgba(108, 92, 231, 0.5);
+    transform: translateY(-1px);
+}
+
+/* ── Stats Ribbon ── */
+.stats-ribbon {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+.stat-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--bg-secondary, #2a2a2a);
+    border: 1px solid var(--border, #3a3a3a);
+    border-radius: 8px;
+    padding: 0.5rem 0.85rem;
+    white-space: nowrap;
+    transition: all 0.2s;
+    cursor: default;
+}
+.stat-chip .stat-num {
+    font-size: 1.1rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.stat-chip .stat-lbl {
+    font-size: 0.7rem;
+    color: var(--text-muted, #6b7280);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.stat-chip.green .stat-num { color: var(--success, #4ade80); }
+.stat-chip.blue .stat-num { color: var(--info, #60a5fa); }
+.stat-chip.orange .stat-num { color: var(--warning, #fbbf24); }
+.stat-chip.purple .stat-num { color: #a29bfe; }
+
+/* ══════════════════════════════════════════════
+   VIEW: Constellation (Graph)
+   ══════════════════════════════════════════════ */
+.view-panel { display: none; }
+.view-panel.active { display: block; }
+
+#constellationContainer {
+    position: relative;
+    width: 100%;
+    height: calc(100vh - 220px);
+    min-height: 500px;
+    background: radial-gradient(ellipse at center, #1a1a2e 0%, #0f0f1a 70%);
+    border: 1px solid var(--border, #3a3a3a);
+    border-radius: 12px;
+    overflow: hidden;
+}
+#cy {
+    width: 100%;
+    height: 100%;
+}
+
+/* Starfield background effect */
+#constellationContainer::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.15) 0%, transparent 100%),
+        radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.1) 0%, transparent 100%),
+        radial-gradient(1px 1px at 50% 40%, rgba(255,255,255,0.12) 0%, transparent 100%),
+        radial-gradient(1px 1px at 70% 80%, rgba(255,255,255,0.08) 0%, transparent 100%),
+        radial-gradient(1px 1px at 90% 10%, rgba(255,255,255,0.1) 0%, transparent 100%),
+        radial-gradient(1px 1px at 15% 90%, rgba(255,255,255,0.06) 0%, transparent 100%),
+        radial-gradient(1px 1px at 85% 50%, rgba(255,255,255,0.09) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Graph controls overlay */
+.graph-controls {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    display: flex;
+    gap: 4px;
+    z-index: 10;
+}
+.graph-controls button {
+    background: rgba(30, 30, 50, 0.85);
+    border: 1px solid rgba(108, 92, 231, 0.3);
+    color: var(--text-secondary, #9ca3af);
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    backdrop-filter: blur(8px);
+}
+.graph-controls button:hover {
+    background: rgba(108, 92, 231, 0.3);
+    color: #fff;
+    border-color: rgba(108, 92, 231, 0.6);
+}
+
+/* Layer toggle pills */
+.graph-layers {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    display: flex;
+    gap: 4px;
+    z-index: 10;
+}
+.layer-pill {
+    background: rgba(30, 30, 50, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-muted, #6b7280);
+    padding: 0.3rem 0.7rem;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    backdrop-filter: blur(8px);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.layer-pill.active {
+    background: rgba(108, 92, 231, 0.25);
+    border-color: rgba(108, 92, 231, 0.5);
+    color: #a29bfe;
+}
+.layer-pill:hover { border-color: rgba(108, 92, 231, 0.4); color: #e0e0e0; }
+
+/* Node info panel (appears on click) */
+.node-info-panel {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 280px;
+    max-height: calc(100% - 60px);
+    overflow-y: auto;
+    background: rgba(20, 20, 35, 0.92);
+    border: 1px solid rgba(108, 92, 231, 0.3);
+    border-radius: 10px;
+    padding: 1rem;
+    z-index: 20;
+    backdrop-filter: blur(12px);
+    display: none;
+    animation: panelSlideIn 0.2s ease;
+}
+@keyframes panelSlideIn {
+    from { opacity: 0; transform: translateX(10px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+.node-info-panel.visible { display: block; }
+.node-info-panel .panel-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+}
+.node-info-panel h3 {
+    font-size: 0.95rem;
+    margin: 0 0 0.5rem;
+    padding-right: 1.5rem;
+    color: var(--text-primary);
+}
+.node-info-panel .info-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    padding: 0.3rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.node-info-panel .info-row .label { color: var(--text-muted); }
+.node-info-panel .info-row .value { color: var(--text-primary); font-weight: 500; }
+.node-info-panel .info-desc {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+    line-height: 1.4;
+}
+.node-info-panel .info-progress {
+    margin-top: 0.6rem;
+}
+.info-progress-bar {
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 0.3rem;
+}
+.info-progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #6C5CE7, #a29bfe);
+    transition: width 0.3s;
+}
+.node-info-panel .task-list {
+    margin-top: 0.75rem;
+    max-height: 200px;
+    overflow-y: auto;
+}
+.node-info-panel .task-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    padding: 0.3rem 0;
+    color: var(--text-secondary);
+}
+.task-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.task-status-dot.todo { background: #636e72; }
+.task-status-dot.in_progress { background: #0984e3; }
+.task-status-dot.blocked { background: #e74c3c; }
+.task-status-dot.done { background: #00b894; }
+
+.info-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+.info-actions button {
+    flex: 1;
+    padding: 0.4rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    transition: all 0.2s;
+}
+.info-actions button:hover {
+    border-color: #6C5CE7;
+    background: rgba(108, 92, 231, 0.15);
+}
+.info-actions button.primary {
+    background: linear-gradient(135deg, #6C5CE7, #a29bfe);
+    border: none;
+    color: #fff;
+}
+
+/* ── Status badges ── */
+.status-badge-sm {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.status-badge-sm.active { background: rgba(0,184,148,0.15); color: #00b894; }
+.status-badge-sm.planning { background: rgba(9,132,227,0.15); color: #0984e3; }
+.status-badge-sm.paused { background: rgba(225,112,85,0.15); color: #e17055; }
+.status-badge-sm.archived { background: rgba(99,110,114,0.15); color: #636e72; }
+.status-badge-sm.todo { background: rgba(99,110,114,0.15); color: #636e72; }
+.status-badge-sm.in_progress { background: rgba(9,132,227,0.15); color: #0984e3; }
+.status-badge-sm.blocked { background: rgba(231,76,60,0.15); color: #e74c3c; }
+.status-badge-sm.done { background: rgba(0,184,148,0.15); color: #00b894; }
+
+/* ══════════════════════════════════════════════
+   VIEW: Timeline
+   ══════════════════════════════════════════════ */
+#timelineContainer {
+    width: 100%;
+    height: calc(100vh - 220px);
+    min-height: 400px;
+    border: 1px solid var(--border, #3a3a3a);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--bg-secondary, #2a2a2a);
+}
+/* vis-timeline dark theme overrides */
+#timelineContainer .vis-timeline {
+    border: none;
+}
+#timelineContainer .vis-panel.vis-bottom,
+#timelineContainer .vis-panel.vis-center,
+#timelineContainer .vis-panel.vis-left,
+#timelineContainer .vis-panel.vis-right {
+    border-color: var(--border, #3a3a3a);
+}
+#timelineContainer .vis-time-axis .vis-text {
+    color: var(--text-muted, #6b7280);
+    font-size: 0.75rem;
+}
+#timelineContainer .vis-time-axis .vis-grid.vis-minor {
+    border-color: rgba(255,255,255,0.04);
+}
+#timelineContainer .vis-time-axis .vis-grid.vis-major {
+    border-color: rgba(255,255,255,0.08);
+}
+#timelineContainer .vis-labelset .vis-label {
+    color: var(--text-primary, #e0e0e0);
+    background: var(--bg-secondary, #2a2a2a);
+    border-bottom: 1px solid var(--border, #3a3a3a);
+}
+#timelineContainer .vis-foreground .vis-group {
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+#timelineContainer .vis-item {
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border: none;
+}
+#timelineContainer .vis-item.vis-selected {
+    border: 2px solid #a29bfe;
+}
+#timelineContainer .vis-item .vis-item-content {
+    padding: 2px 8px;
+    color: #fff;
+}
+#timelineContainer .vis-current-time {
+    background-color: rgba(108, 92, 231, 0.5);
+}
+
+/* ══════════════════════════════════════════════
+   VIEW: List (compact table)
+   ══════════════════════════════════════════════ */
+.list-view-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+.list-view-table thead th {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg-secondary);
+    z-index: 2;
+}
+.list-view-table tbody tr {
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.list-view-table tbody tr:hover { background: var(--bg-hover, #3a3a3a); }
+.list-view-table td {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.82rem;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 250px;
+}
+.list-progress-mini {
+    width: 60px;
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    display: inline-block;
+    vertical-align: middle;
+    overflow: hidden;
+}
+.list-progress-mini .fill {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #6C5CE7, #a29bfe);
+}
+
+/* ══════════════════════════════════════════════
+   VIEW: Kanban (kept for task management)
+   ══════════════════════════════════════════════ */
+.kanban-project-select {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+.kanban-project-select select {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 0.45rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+}
+.kanban-board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+    min-height: 400px;
+}
+@media(max-width:900px) { .kanban-board { grid-template-columns: 1fr 1fr; } }
+@media(max-width:600px) { .kanban-board { grid-template-columns: 1fr; } }
+.kanban-col {
+    background: var(--bg-secondary, #2a2a2a);
+    border: 1px solid var(--border, #3a3a3a);
+    border-radius: 10px;
+    padding: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 280px);
+}
+.kanban-col-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 2px solid var(--border);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+.kanban-col.col-todo .kanban-col-header { border-bottom-color: #636e72; }
+.kanban-col.col-in_progress .kanban-col-header { border-bottom-color: #0984e3; }
+.kanban-col.col-blocked .kanban-col-header { border-bottom-color: #e74c3c; }
+.kanban-col.col-done .kanban-col-header { border-bottom-color: #00b894; }
+.kanban-col-header .count {
+    background: var(--bg-tertiary);
+    border-radius: 10px;
+    padding: 0.1rem 0.5rem;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+.kanban-col-body {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 60px;
+}
+.kanban-card {
+    background: var(--bg-primary, #1a1a1a);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.6rem 0.75rem;
+    margin-bottom: 0.5rem;
+    cursor: grab;
+    transition: all 0.15s;
+    font-size: 0.8rem;
+}
+.kanban-card:hover { border-color: #6C5CE7; transform: translateY(-1px); }
+.kanban-card.dragging { opacity: 0.4; }
+.kanban-card-title { font-weight: 600; margin-bottom: 0.25rem; }
+.kanban-card-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+.kanban-card-project {
+    font-size: 0.65rem;
+    color: #a29bfe;
+    margin-bottom: 0.2rem;
+}
+.kanban-add-btn {
+    width: 100%;
+    background: transparent;
+    border: 1px dashed var(--border);
+    color: var(--text-muted);
+    padding: 0.4rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+}
+.kanban-add-btn:hover { border-color: #6C5CE7; color: #a29bfe; }
+
+/* ══════════════════════════════════════════════
+   Modals (shared)
+   ══════════════════════════════════════════════ */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(4px);
+}
+.modal-overlay.active { display: flex; }
+.modal-box {
+    background: var(--bg-secondary, #2a2a2a);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    width: 480px;
+    max-width: 92vw;
+    max-height: 85vh;
+    overflow-y: auto;
+}
+.modal-box h3 { margin: 0 0 1rem; font-size: 1rem; }
+.form-group { margin-bottom: 0.85rem; }
+.form-group label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    background: var(--bg-primary, #1a1a1a);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 0.5rem 0.65rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #6C5CE7;
+}
+.form-group textarea { resize: vertical; min-height: 60px; }
+.form-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem; }
+.btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+.btn-ghost:hover { border-color: var(--text-primary); color: var(--text-primary); }
+.btn-primary {
+    background: #6C5CE7;
+    color: #fff;
+    border: none;
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+.btn-primary:hover { background: #5b4bd5; }
+.btn-danger {
+    background: #e74c3c;
+    color: #fff;
+    border: none;
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+/* ── Pulse animation for live nodes ── */
+@keyframes nodePulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(108,92,231,0.3); }
+    50% { box-shadow: 0 0 0 6px rgba(108,92,231,0); }
+}
+
+/* ── Loading state ── */
+.loading-constellation {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    gap: 0.5rem;
+}
+.loading-constellation .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(108,92,231,0.2);
+    border-top-color: #6C5CE7;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Top Bar -->
+<div class="projects-top-bar">
+    <div class="view-tabs">
+        <button class="view-tab active" data-view="constellation" onclick="switchView('constellation')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><circle cx="5" cy="5" r="1.5"/><circle cx="19" cy="5" r="1.5"/><circle cx="5" cy="19" r="1.5"/><circle cx="19" cy="19" r="1.5"/><line x1="12" y1="12" x2="5" y2="5" opacity="0.4"/><line x1="12" y1="12" x2="19" y2="5" opacity="0.4"/><line x1="12" y1="12" x2="5" y2="19" opacity="0.4"/><line x1="12" y1="12" x2="19" y2="19" opacity="0.4"/></svg>
+            Constellation
+        </button>
+        <button class="view-tab" data-view="timeline" onclick="switchView('timeline')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="12" x2="22" y2="12"/><circle cx="6" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="18" cy="12" r="2"/></svg>
+            Timeline
+        </button>
+        <button class="view-tab" data-view="kanban" onclick="switchView('kanban')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="12" rx="1"/><rect x="17" y="3" width="5" height="15" rx="1"/></svg>
+            Kanban
+        </button>
+        <button class="view-tab" data-view="list" onclick="switchView('list')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            List
+        </button>
+    </div>
+    <div class="projects-actions">
+        <input type="text" id="searchInput" placeholder="Search..." oninput="onSearchChange()">
+        <button class="btn-glow" onclick="showProjectModal()">+ New Project</button>
+    </div>
+</div>
+
+<!-- Stats Ribbon -->
+<div class="stats-ribbon" id="statsRibbon"></div>
+
+<!-- ═══ VIEW: Constellation ═══ -->
+<div class="view-panel active" id="view-constellation">
+    <div id="constellationContainer">
+        <div class="loading-constellation" id="graphLoading">
+            <div class="spinner"></div>
+            <span>Mapping constellation...</span>
+        </div>
+        <div id="cy"></div>
+
+        <!-- Layer toggles -->
+        <div class="graph-layers">
+            <button class="layer-pill active" data-layer="projects" onclick="toggleLayer('projects')">Projects</button>
+            <button class="layer-pill active" data-layer="tasks" onclick="toggleLayer('tasks')">Tasks</button>
+            <button class="layer-pill active" data-layer="tags" onclick="toggleLayer('tags')">Tags</button>
+        </div>
+
+        <!-- Zoom controls -->
+        <div class="graph-controls">
+            <button onclick="cy && cy.zoom(cy.zoom()*1.3)" title="Zoom In">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <button onclick="cy && cy.zoom(cy.zoom()*0.7)" title="Zoom Out">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <button onclick="cy && cy.fit(null, 40)" title="Fit All">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>
+            </button>
+            <button onclick="reLayoutGraph()" title="Re-layout">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15A9 9 0 115.64 5.64L1 10"/></svg>
+            </button>
+        </div>
+
+        <!-- Info Panel (shown on node click) -->
+        <div class="node-info-panel" id="nodeInfoPanel">
+            <button class="panel-close" onclick="closeInfoPanel()">&times;</button>
+            <div id="nodeInfoContent"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ VIEW: Timeline ═══ -->
+<div class="view-panel" id="view-timeline">
+    <div id="timelineContainer"></div>
+</div>
+
+<!-- ═══ VIEW: Kanban ═══ -->
+<div class="view-panel" id="view-kanban">
+    <div class="kanban-project-select">
+        <label style="font-size:0.8rem;color:var(--text-muted);">Project:</label>
+        <select id="kanbanProjectSelect" onchange="renderKanban()"></select>
+    </div>
+    <div class="kanban-board" id="kanbanBoard"></div>
+</div>
+
+<!-- ═══ VIEW: List ═══ -->
+<div class="view-panel" id="view-list">
+    <div style="overflow-x:auto; border:1px solid var(--border); border-radius:10px; background:var(--bg-secondary);">
+        <table class="list-view-table">
+            <thead>
+                <tr>
+                    <th>Project</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Progress</th>
+                    <th>Tasks</th>
+                    <th>Tags</th>
+                </tr>
+            </thead>
+            <tbody id="listTableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ═══ Project Modal ═══ -->
+<div class="modal-overlay" id="projectModal">
+    <div class="modal-box">
+        <h3 id="projectModalTitle">New Project</h3>
+        <div class="form-group"><label>Name</label><input type="text" id="pName" placeholder="Project name"></div>
+        <div class="form-group"><label>Description</label><textarea id="pDesc" placeholder="What is this project about?"></textarea></div>
+        <div style="display:flex;gap:0.75rem;">
+            <div class="form-group" style="flex:1"><label>Status</label>
+                <select id="pStatus"><option value="planning">Planning</option><option value="active">Active</option><option value="paused">Paused</option></select>
+            </div>
+            <div class="form-group" style="flex:1"><label>Priority</label>
+                <select id="pPriority"><option value="medium">Medium</option><option value="critical">Critical</option><option value="high">High</option><option value="low">Low</option></select>
+            </div>
+        </div>
+        <div style="display:flex;gap:0.75rem;">
+            <div class="form-group" style="flex:1"><label>Color</label><input type="color" id="pColor" value="#6C5CE7" style="height:36px;padding:2px;"></div>
+            <div class="form-group" style="flex:1"><label>Deadline</label><input type="date" id="pDeadline"></div>
+        </div>
+        <div class="form-group"><label>Tags (comma-separated)</label><input type="text" id="pTags" placeholder="core, platform, ai"></div>
+        <div class="form-actions">
+            <button class="btn-ghost" onclick="closeModal('projectModal')">Cancel</button>
+            <button class="btn-primary" id="projectSaveBtn" onclick="saveProject()">Create</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ Task Modal ═══ -->
+<div class="modal-overlay" id="taskModal">
+    <div class="modal-box">
+        <h3 id="taskModalTitle">New Task</h3>
+        <input type="hidden" id="tProjectId"><input type="hidden" id="tTaskId">
+        <div class="form-group"><label>Title</label><input type="text" id="tTitle" placeholder="Task title"></div>
+        <div class="form-group"><label>Description</label><textarea id="tDesc" placeholder="Details..."></textarea></div>
+        <div style="display:flex;gap:0.75rem;">
+            <div class="form-group" style="flex:1"><label>Status</label>
+                <select id="tStatus" onchange="toggleBlockedField()"><option value="todo">To Do</option><option value="in_progress">In Progress</option><option value="blocked">Blocked</option><option value="done">Done</option></select>
+            </div>
+            <div class="form-group" style="flex:1"><label>Priority</label>
+                <select id="tPriority"><option value="medium">Medium</option><option value="critical">Critical</option><option value="high">High</option><option value="low">Low</option></select>
+            </div>
+        </div>
+        <div style="display:flex;gap:0.75rem;">
+            <div class="form-group" style="flex:1"><label>Deadline</label><input type="date" id="tDeadline"></div>
+            <div class="form-group" style="flex:1"><label>Assignee</label><input type="text" id="tAssignee" placeholder="(optional)"></div>
+        </div>
+        <div class="form-group" id="blockedByGroup" style="display:none"><label>Blocked by</label><textarea id="tBlockedBy" placeholder="What's blocking?"></textarea></div>
+        <div class="form-actions">
+            <button class="btn-danger" id="taskDeleteBtn" onclick="deleteTask()" style="margin-right:auto;display:none">Delete</button>
+            <button class="btn-ghost" onclick="closeModal('taskModal')">Cancel</button>
+            <button class="btn-primary" id="taskSaveBtn" onclick="saveTask()">Create</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Libraries (CDN) -->
+<script src="https://cdn.jsdelivr.net/npm/cytoscape@3.30.4/dist/cytoscape.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vis-timeline@7.7.3/standalone/umd/vis-timeline-graph2d.min.js"></script>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════════
+let allProjects = [];
+let graphData = null;
+let cy = null;
+let timeline = null;
+let currentView = 'constellation';
+let editingProjectId = null;
+let layers = { projects: true, tasks: true, tags: true };
+
+// ════════════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadAllData();
+    initGraph();
+    renderStats();
+    renderList();
+    populateKanbanSelect();
+});
+
+async function loadAllData() {
+    try {
+        const [projRes, graphRes] = await Promise.all([
+            fetch('/api/projects'),
+            fetch('/api/projects/graph')
+        ]);
+        const projData = await projRes.json();
+        allProjects = projData.projects || [];
+        graphData = await graphRes.json();
+    } catch (e) {
+        console.error('Failed to load project data:', e);
+        allProjects = [];
+        graphData = { nodes: [], edges: [] };
+    }
+}
+
+// ════════════════════════════════════════════════════════════════
+// STATS RIBBON
+// ════════════════════════════════════════════════════════════════
+function renderStats() {
+    const total = allProjects.length;
+    const active = allProjects.filter(p => p.status === 'active').length;
+    const totalTasks = allProjects.reduce((s, p) => s + (p.metrics?.totalTasks || 0), 0);
+    const doneTasks = allProjects.reduce((s, p) => s + (p.metrics?.completedTasks || 0), 0);
+    const blockedTasks = allProjects.reduce((s, p) => s + (p.metrics?.blockedTasks || 0), 0);
+    const pct = totalTasks ? Math.round(doneTasks / totalTasks * 100) : 0;
+
+    document.getElementById('statsRibbon').innerHTML = `
+        <div class="stat-chip purple"><span class="stat-num">${total}</span><span class="stat-lbl">Projects</span></div>
+        <div class="stat-chip green"><span class="stat-num">${active}</span><span class="stat-lbl">Active</span></div>
+        <div class="stat-chip blue"><span class="stat-num">${totalTasks}</span><span class="stat-lbl">Tasks</span></div>
+        <div class="stat-chip green"><span class="stat-num">${pct}%</span><span class="stat-lbl">Done</span></div>
+        <div class="stat-chip orange"><span class="stat-num">${blockedTasks}</span><span class="stat-lbl">Blocked</span></div>
+    `;
+}
+
+// ════════════════════════════════════════════════════════════════
+// VIEW SWITCHING
+// ════════════════════════════════════════════════════════════════
+function switchView(view) {
+    currentView = view;
+    document.querySelectorAll('.view-tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
+    document.querySelectorAll('.view-panel').forEach(p => p.classList.toggle('active', p.id === `view-${view}`));
+
+    if (view === 'constellation' && cy) {
+        cy.resize();
+        cy.fit(null, 40);
+    }
+    if (view === 'timeline') initTimeline();
+    if (view === 'kanban') renderKanban();
+}
+
+// ════════════════════════════════════════════════════════════════
+// CONSTELLATION (Cytoscape.js Graph)
+// ════════════════════════════════════════════════════════════════
+const STATUS_COLORS = {
+    active: '#00b894', planning: '#0984e3', paused: '#e17055', archived: '#636e72',
+    todo: '#636e72', in_progress: '#0984e3', blocked: '#e74c3c', done: '#00b894'
+};
+const PRIORITY_SIZE = { critical: 1.3, high: 1.15, medium: 1, low: 0.85 };
+
+function initGraph() {
+    if (!graphData) return;
+    const loading = document.getElementById('graphLoading');
+
+    cy = cytoscape({
+        container: document.getElementById('cy'),
+        elements: [...graphData.nodes, ...graphData.edges],
+        minZoom: 0.15,
+        maxZoom: 4,
+        wheelSensitivity: 0.3,
+        style: [
+            // ─── Project nodes ───
+            {
+                selector: 'node[type="project"]',
+                style: {
+                    'label': 'data(label)',
+                    'width': function(ele) { return 50 * (PRIORITY_SIZE[ele.data('priority')] || 1); },
+                    'height': function(ele) { return 50 * (PRIORITY_SIZE[ele.data('priority')] || 1); },
+                    'background-color': 'data(color)',
+                    'background-opacity': 0.85,
+                    'border-width': 3,
+                    'border-color': function(ele) { return STATUS_COLORS[ele.data('status')] || '#6C5CE7'; },
+                    'border-opacity': 0.8,
+                    'color': '#e0e0e0',
+                    'font-size': '11px',
+                    'font-weight': '600',
+                    'text-valign': 'bottom',
+                    'text-margin-y': 8,
+                    'text-outline-width': 2,
+                    'text-outline-color': '#0f0f1a',
+                    'text-outline-opacity': 0.8,
+                    'shadow-blur': 15,
+                    'shadow-color': 'data(color)',
+                    'shadow-opacity': 0.4,
+                    'shadow-offset-x': 0,
+                    'shadow-offset-y': 0,
+                    'transition-property': 'width, height, border-width, shadow-blur',
+                    'transition-duration': '0.2s',
+                    // Pie chart for progress
+                    'pie-size': '100%',
+                    'pie-1-background-color': function(ele) { return ele.data('color') || '#6C5CE7'; },
+                    'pie-1-background-size': function(ele) { return ele.data('progress') || 0; },
+                    'pie-2-background-color': 'rgba(255,255,255,0.08)',
+                    'pie-2-background-size': function(ele) { return 100 - (ele.data('progress') || 0); },
+                }
+            },
+            // ─── Task nodes ───
+            {
+                selector: 'node[type="task"]',
+                style: {
+                    'label': 'data(label)',
+                    'width': 18,
+                    'height': 18,
+                    'background-color': function(ele) { return STATUS_COLORS[ele.data('status')] || '#636e72'; },
+                    'background-opacity': 0.9,
+                    'border-width': 1.5,
+                    'border-color': function(ele) { return STATUS_COLORS[ele.data('status')] || '#636e72'; },
+                    'border-opacity': 0.4,
+                    'color': '#9ca3af',
+                    'font-size': '8px',
+                    'text-valign': 'bottom',
+                    'text-margin-y': 5,
+                    'text-outline-width': 1.5,
+                    'text-outline-color': '#0f0f1a',
+                    'text-outline-opacity': 0.7,
+                    'text-max-width': '80px',
+                    'text-wrap': 'ellipsis',
+                    'shadow-blur': 6,
+                    'shadow-color': function(ele) { return STATUS_COLORS[ele.data('status')] || '#636e72'; },
+                    'shadow-opacity': 0.3,
+                    'transition-property': 'width, height, shadow-blur',
+                    'transition-duration': '0.2s',
+                }
+            },
+            // ─── Tag nodes ───
+            {
+                selector: 'node[type="tag"]',
+                style: {
+                    'label': 'data(label)',
+                    'width': 12,
+                    'height': 12,
+                    'shape': 'diamond',
+                    'background-color': '#a29bfe',
+                    'background-opacity': 0.5,
+                    'border-width': 0,
+                    'color': '#a29bfe',
+                    'font-size': '7px',
+                    'text-valign': 'bottom',
+                    'text-margin-y': 4,
+                    'text-outline-width': 1,
+                    'text-outline-color': '#0f0f1a',
+                    'text-outline-opacity': 0.6,
+                }
+            },
+            // ─── Edges: project→task ───
+            {
+                selector: 'edge[type="has_task"]',
+                style: {
+                    'width': 1.2,
+                    'line-color': 'rgba(108, 92, 231, 0.2)',
+                    'curve-style': 'bezier',
+                    'target-arrow-shape': 'none',
+                    'line-style': 'solid',
+                }
+            },
+            // ─── Edges: project→tag ───
+            {
+                selector: 'edge[type="tagged"]',
+                style: {
+                    'width': 0.8,
+                    'line-color': 'rgba(162, 155, 254, 0.12)',
+                    'curve-style': 'bezier',
+                    'line-style': 'dashed',
+                    'line-dash-pattern': [4, 4],
+                    'target-arrow-shape': 'none',
+                }
+            },
+            // ─── Highlighted state ───
+            {
+                selector: ':selected',
+                style: {
+                    'border-width': 4,
+                    'border-color': '#a29bfe',
+                    'shadow-blur': 25,
+                    'shadow-opacity': 0.6,
+                }
+            },
+            {
+                selector: '.highlighted',
+                style: {
+                    'opacity': 1,
+                }
+            },
+            {
+                selector: '.dimmed',
+                style: {
+                    'opacity': 0.12,
+                }
+            },
+            {
+                selector: '.neighbor-highlight',
+                style: {
+                    'opacity': 1,
+                    'border-width': 3,
+                    'shadow-blur': 12,
+                    'shadow-opacity': 0.5,
+                }
+            },
+            {
+                selector: 'edge.neighbor-highlight',
+                style: {
+                    'opacity': 1,
+                    'width': 2.5,
+                    'line-color': 'rgba(162, 155, 254, 0.5)',
+                }
+            },
+        ],
+        layout: { name: 'preset' } // we'll run layout after
+    });
+
+    // Run layout
+    runLayout();
+
+    // Events
+    cy.on('tap', 'node', function(evt) {
+        const node = evt.target;
+        showNodeInfo(node);
+        highlightNeighborhood(node);
+    });
+
+    cy.on('tap', function(evt) {
+        if (evt.target === cy) {
+            closeInfoPanel();
+            clearHighlights();
+        }
+    });
+
+    // Hover effects
+    cy.on('mouseover', 'node', function(evt) {
+        const n = evt.target;
+        if (n.data('type') === 'project') {
+            n.style({ 'shadow-blur': 25, 'shadow-opacity': 0.6 });
+        } else {
+            n.style({ 'width': n.width() * 1.4, 'height': n.height() * 1.4 });
+        }
+        document.getElementById('cy').style.cursor = 'pointer';
+    });
+    cy.on('mouseout', 'node', function(evt) {
+        const n = evt.target;
+        if (n.data('type') === 'project') {
+            n.style({ 'shadow-blur': 15, 'shadow-opacity': 0.4 });
+        } else {
+            n.style({ 'width': '', 'height': '' });
+        }
+        document.getElementById('cy').style.cursor = 'default';
+    });
+
+    if (loading) loading.style.display = 'none';
+}
+
+function runLayout() {
+    if (!cy) return;
+    cy.layout({
+        name: 'cose',
+        animate: true,
+        animationDuration: 800,
+        animationEasing: 'ease-out',
+        nodeRepulsion: function(node) {
+            if (node.data('type') === 'project') return 80000;
+            if (node.data('type') === 'tag') return 20000;
+            return 30000;
+        },
+        idealEdgeLength: function(edge) {
+            if (edge.data('type') === 'tagged') return 180;
+            return 100;
+        },
+        edgeElasticity: function(edge) {
+            return edge.data('type') === 'tagged' ? 50 : 100;
+        },
+        gravity: 0.4,
+        numIter: 300,
+        padding: 50,
+        randomize: true,
+        nodeDimensionsIncludeLabels: true,
+    }).run();
+}
+
+function reLayoutGraph() {
+    runLayout();
+}
+
+function highlightNeighborhood(node) {
+    clearHighlights();
+    const neighborhood = node.neighborhood().add(node);
+    cy.elements().addClass('dimmed');
+    neighborhood.removeClass('dimmed').addClass('neighbor-highlight');
+    node.removeClass('neighbor-highlight').addClass('highlighted');
+}
+
+function clearHighlights() {
+    cy.elements().removeClass('dimmed neighbor-highlight highlighted');
+}
+
+function toggleLayer(layer) {
+    layers[layer] = !layers[layer];
+    const pill = document.querySelector(`.layer-pill[data-layer="${layer}"]`);
+    if (pill) pill.classList.toggle('active', layers[layer]);
+
+    if (!cy) return;
+    cy.nodes(`[type="${layer === 'projects' ? 'project' : layer === 'tasks' ? 'task' : 'tag'}"]`).forEach(n => {
+        n.style('display', layers[layer] ? 'element' : 'none');
+    });
+    // Also toggle related edges
+    if (layer === 'tasks') {
+        cy.edges('[type="has_task"]').forEach(e => e.style('display', layers.tasks ? 'element' : 'none'));
+    }
+    if (layer === 'tags') {
+        cy.edges('[type="tagged"]').forEach(e => e.style('display', layers.tags ? 'element' : 'none'));
+    }
+}
+
+function showNodeInfo(node) {
+    const d = node.data();
+    const panel = document.getElementById('nodeInfoPanel');
+    const content = document.getElementById('nodeInfoContent');
+
+    if (d.type === 'project') {
+        const proj = allProjects.find(p => p.id === d.id);
+        const tasks = proj?.tasks || [];
+        content.innerHTML = `
+            <h3>${esc(d.icon || '')} ${esc(d.label)}</h3>
+            <div class="info-row"><span class="label">Status</span><span class="value"><span class="status-badge-sm ${d.status}">${d.status}</span></span></div>
+            <div class="info-row"><span class="label">Priority</span><span class="value">${d.priority}</span></div>
+            <div class="info-row"><span class="label">Tasks</span><span class="value">${d.doneTasks}/${d.totalTasks} done</span></div>
+            <div class="info-progress">
+                <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text-muted);">
+                    <span>Progress</span><span>${d.progress}%</span>
+                </div>
+                <div class="info-progress-bar"><div class="info-progress-fill" style="width:${d.progress}%"></div></div>
+            </div>
+            ${d.description ? `<p class="info-desc">${esc(d.description)}</p>` : ''}
+            ${tasks.length ? `
+                <div class="task-list">
+                    ${tasks.slice(0, 8).map(t => `
+                        <div class="task-item">
+                            <span class="task-status-dot ${t.status}"></span>
+                            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(t.title)}</span>
+                        </div>
+                    `).join('')}
+                    ${tasks.length > 8 ? `<div class="task-item" style="color:var(--text-muted);">+${tasks.length - 8} more...</div>` : ''}
+                </div>
+            ` : ''}
+            <div class="info-actions">
+                <button onclick="openKanbanForProject('${d.id}')">Open Kanban</button>
+                <button class="primary" onclick="showEditProjectModalById('${d.id}')">Edit</button>
+            </div>
+        `;
+    } else if (d.type === 'task') {
+        content.innerHTML = `
+            <h3>${esc(d.label)}</h3>
+            <div class="info-row"><span class="label">Status</span><span class="value"><span class="status-badge-sm ${d.status}">${d.status}</span></span></div>
+            <div class="info-row"><span class="label">Priority</span><span class="value">${d.priority}</span></div>
+            <div class="info-row"><span class="label">Project</span><span class="value">${esc(d.parent_project)}</span></div>
+            ${d.assignee ? `<div class="info-row"><span class="label">Assignee</span><span class="value">${esc(d.assignee)}</span></div>` : ''}
+            ${d.blockedBy ? `<div class="info-row"><span class="label">Blocked by</span><span class="value" style="color:#e74c3c;">${esc(d.blockedBy)}</span></div>` : ''}
+            ${d.deadline ? `<div class="info-row"><span class="label">Deadline</span><span class="value">${new Date(d.deadline).toLocaleDateString()}</span></div>` : ''}
+        `;
+    } else if (d.type === 'tag') {
+        const connected = node.neighborhood('node[type="project"]');
+        content.innerHTML = `
+            <h3>#${esc(d.label)}</h3>
+            <div class="info-row"><span class="label">Projects</span><span class="value">${d.count}</span></div>
+            <div class="task-list">
+                ${connected.map(n => `<div class="task-item"><span class="task-status-dot ${n.data('status')}"></span>${esc(n.data('label'))}</div>`).toArray().join('')}
+            </div>
+        `;
+    }
+
+    panel.classList.add('visible');
+}
+
+function closeInfoPanel() {
+    document.getElementById('nodeInfoPanel').classList.remove('visible');
+}
+
+// ════════════════════════════════════════════════════════════════
+// TIMELINE (vis-timeline)
+// ════════════════════════════════════════════════════════════════
+let timelineInit = false;
+function initTimeline() {
+    if (timelineInit && timeline) {
+        timeline.fit();
+        return;
+    }
+
+    const container = document.getElementById('timelineContainer');
+    const groups = [];
+    const items = [];
+    let itemId = 0;
+
+    allProjects.forEach(p => {
+        groups.push({ id: p.id, content: esc(p.name) });
+        const tasks = p.tasks || [];
+        tasks.forEach(t => {
+            const start = t.createdAt ? new Date(t.createdAt) : new Date();
+            const end = t.deadline ? new Date(t.deadline) : new Date(start.getTime() + 7 * 86400000);
+            const color = STATUS_COLORS[t.status] || '#636e72';
+            items.push({
+                id: itemId++,
+                group: p.id,
+                content: esc(t.title),
+                start: start,
+                end: end,
+                style: `background-color:${color};color:#fff;border:none;`,
+                className: `timeline-${t.status}`,
+                title: `${t.title} (${t.status})`,
+            });
+        });
+    });
+
+    if (!items.length) {
+        container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);">No tasks with dates to display</div>';
+        return;
+    }
+
+    timeline = new vis.Timeline(container, new vis.DataSet(items), new vis.DataSet(groups), {
+        orientation: 'top',
+        stack: true,
+        showCurrentTime: true,
+        zoomMin: 86400000,          // 1 day
+        zoomMax: 365 * 86400000,    // 1 year
+        margin: { item: 4 },
+        editable: false,
+    });
+    timeline.fit();
+    timelineInit = true;
+}
+
+// ════════════════════════════════════════════════════════════════
+// KANBAN
+// ════════════════════════════════════════════════════════════════
+function populateKanbanSelect() {
+    const sel = document.getElementById('kanbanProjectSelect');
+    sel.innerHTML = allProjects.map(p =>
+        `<option value="${p.id}">${esc(p.name)}</option>`
+    ).join('');
+}
+
+function renderKanban() {
+    const pid = document.getElementById('kanbanProjectSelect').value;
+    const proj = allProjects.find(p => p.id === pid);
+    if (!proj) return;
+    const tasks = proj.tasks || [];
+    const cols = { todo: [], in_progress: [], blocked: [], done: [] };
+    tasks.forEach(t => (cols[t.status] || cols.todo).push(t));
+
+    const labels = { todo: 'To Do', in_progress: 'In Progress', blocked: 'Blocked', done: 'Done' };
+    const board = document.getElementById('kanbanBoard');
+    board.innerHTML = Object.entries(cols).map(([status, items]) => `
+        <div class="kanban-col col-${status}" ondragover="event.preventDefault()" ondrop="kanbanDrop(event,'${status}','${pid}')">
+            <div class="kanban-col-header">
+                <span>${labels[status]}</span>
+                <span class="count">${items.length}</span>
+            </div>
+            <div class="kanban-col-body">
+                ${items.map(t => `
+                    <div class="kanban-card" draggable="true" data-task-id="${t.id}"
+                         ondragstart="event.dataTransfer.setData('text/plain','${t.id}');this.classList.add('dragging')"
+                         ondragend="this.classList.remove('dragging')"
+                         onclick="showEditTaskModal('${pid}','${t.id}')">
+                        <div class="kanban-card-title">${esc(t.title)}</div>
+                        <div class="kanban-card-meta">
+                            <span>${t.priority || 'medium'}</span>
+                            ${t.deadline ? `<span>${new Date(t.deadline).toLocaleDateString()}</span>` : ''}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+            <button class="kanban-add-btn" onclick="showNewTaskModal('${pid}','${status}')">+ Add</button>
+        </div>
+    `).join('');
+}
+
+async function kanbanDrop(evt, newStatus, projectId) {
+    evt.preventDefault();
+    const taskId = evt.dataTransfer?.getData('text/plain');
+    if (!taskId) return;
+    await fetch(`/api/projects/${projectId}/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+    });
+    await refreshAll();
+    renderKanban();
+}
+
+function openKanbanForProject(pid) {
+    document.getElementById('kanbanProjectSelect').value = pid;
+    switchView('kanban');
+    renderKanban();
+}
+
+// ════════════════════════════════════════════════════════════════
+// LIST VIEW
+// ════════════════════════════════════════════════════════════════
+function renderList() {
+    const body = document.getElementById('listTableBody');
+    body.innerHTML = allProjects.map(p => {
+        const m = p.metrics || {};
+        const pct = m.completionPercent || 0;
+        return `
+            <tr onclick="focusProjectInGraph('${p.id}')">
+                <td><strong>${esc(p.name)}</strong></td>
+                <td><span class="status-badge-sm ${p.status}">${p.status}</span></td>
+                <td>${p.priority || 'medium'}</td>
+                <td>
+                    <div class="list-progress-mini"><div class="fill" style="width:${pct}%"></div></div>
+                    <span style="margin-left:6px;font-size:0.75rem;color:var(--text-muted);">${pct}%</span>
+                </td>
+                <td>${m.completedTasks || 0}/${m.totalTasks || 0}</td>
+                <td style="font-size:0.72rem;color:#a29bfe;">${(p.tags || []).join(', ')}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function focusProjectInGraph(pid) {
+    switchView('constellation');
+    if (!cy) return;
+    const node = cy.getElementById(pid);
+    if (node && node.length) {
+        cy.animate({ center: { eles: node }, zoom: 1.5 }, { duration: 400 });
+        setTimeout(() => {
+            showNodeInfo(node);
+            highlightNeighborhood(node);
+        }, 450);
+    }
+}
+
+// ════════════════════════════════════════════════════════════════
+// SEARCH
+// ════════════════════════════════════════════════════════════════
+function onSearchChange() {
+    const q = document.getElementById('searchInput').value.toLowerCase().trim();
+    if (!cy) return;
+
+    if (!q) {
+        cy.elements().style('display', 'element');
+        applyLayerVisibility();
+        return;
+    }
+
+    cy.nodes().forEach(n => {
+        const label = (n.data('label') || '').toLowerCase();
+        const match = label.includes(q);
+        n.style('display', match ? 'element' : 'none');
+    });
+    cy.edges().forEach(e => {
+        const srcVisible = e.source().style('display') !== 'none';
+        const tgtVisible = e.target().style('display') !== 'none';
+        e.style('display', srcVisible && tgtVisible ? 'element' : 'none');
+    });
+}
+
+function applyLayerVisibility() {
+    Object.keys(layers).forEach(l => {
+        const type = l === 'projects' ? 'project' : l === 'tasks' ? 'task' : 'tag';
+        cy.nodes(`[type="${type}"]`).style('display', layers[l] ? 'element' : 'none');
+    });
+}
+
+// ════════════════════════════════════════════════════════════════
+// PROJECT CRUD
+// ════════════════════════════════════════════════════════════════
+function showProjectModal(editId) {
+    editingProjectId = editId || null;
+    const modal = document.getElementById('projectModal');
+    if (editId) {
+        const p = allProjects.find(x => x.id === editId);
+        if (!p) return;
+        document.getElementById('projectModalTitle').textContent = 'Edit Project';
+        document.getElementById('projectSaveBtn').textContent = 'Save';
+        document.getElementById('pName').value = p.name;
+        document.getElementById('pDesc').value = p.description || '';
+        document.getElementById('pStatus').value = p.status;
+        document.getElementById('pPriority').value = p.priority || 'medium';
+        document.getElementById('pColor').value = p.color || '#6C5CE7';
+        document.getElementById('pDeadline').value = p.deadline ? p.deadline.split('T')[0] : '';
+        document.getElementById('pTags').value = (p.tags || []).join(', ');
+    } else {
+        document.getElementById('projectModalTitle').textContent = 'New Project';
+        document.getElementById('projectSaveBtn').textContent = 'Create';
+        document.getElementById('pName').value = '';
+        document.getElementById('pDesc').value = '';
+        document.getElementById('pStatus').value = 'planning';
+        document.getElementById('pPriority').value = 'medium';
+        document.getElementById('pColor').value = '#6C5CE7';
+        document.getElementById('pDeadline').value = '';
+        document.getElementById('pTags').value = '';
+    }
+    modal.classList.add('active');
+}
+
+function showEditProjectModalById(id) {
+    closeInfoPanel();
+    showProjectModal(id);
+}
+
+async function saveProject() {
+    const data = {
+        name: document.getElementById('pName').value.trim(),
+        description: document.getElementById('pDesc').value.trim(),
+        status: document.getElementById('pStatus').value,
+        priority: document.getElementById('pPriority').value,
+        color: document.getElementById('pColor').value,
+        deadline: document.getElementById('pDeadline').value ? new Date(document.getElementById('pDeadline').value).toISOString() : null,
+        tags: document.getElementById('pTags').value.split(',').map(s => s.trim()).filter(Boolean)
+    };
+    if (!data.name) return;
+    try {
+        if (editingProjectId) {
+            await fetch(`/api/projects/${editingProjectId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        } else {
+            await fetch('/api/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        }
+        closeModal('projectModal');
+        await refreshAll();
+    } catch (e) { console.error(e); }
+}
+
+// ════════════════════════════════════════════════════════════════
+// TASK CRUD
+// ════════════════════════════════════════════════════════════════
+function showNewTaskModal(pid, status) {
+    document.getElementById('taskModalTitle').textContent = 'New Task';
+    document.getElementById('taskSaveBtn').textContent = 'Create';
+    document.getElementById('taskDeleteBtn').style.display = 'none';
+    document.getElementById('tProjectId').value = pid;
+    document.getElementById('tTaskId').value = '';
+    document.getElementById('tTitle').value = '';
+    document.getElementById('tDesc').value = '';
+    document.getElementById('tStatus').value = status || 'todo';
+    document.getElementById('tPriority').value = 'medium';
+    document.getElementById('tDeadline').value = '';
+    document.getElementById('tAssignee').value = '';
+    document.getElementById('tBlockedBy').value = '';
+    toggleBlockedField();
+    document.getElementById('taskModal').classList.add('active');
+}
+
+function showEditTaskModal(pid, tid) {
+    const proj = allProjects.find(p => p.id === pid);
+    if (!proj) return;
+    const t = proj.tasks.find(x => x.id === tid);
+    if (!t) return;
+    document.getElementById('taskModalTitle').textContent = 'Edit Task';
+    document.getElementById('taskSaveBtn').textContent = 'Save';
+    document.getElementById('taskDeleteBtn').style.display = 'block';
+    document.getElementById('tProjectId').value = pid;
+    document.getElementById('tTaskId').value = tid;
+    document.getElementById('tTitle').value = t.title;
+    document.getElementById('tDesc').value = t.description || '';
+    document.getElementById('tStatus').value = t.status;
+    document.getElementById('tPriority').value = t.priority || 'medium';
+    document.getElementById('tDeadline').value = t.deadline ? t.deadline.split('T')[0] : '';
+    document.getElementById('tAssignee').value = t.assignee || '';
+    document.getElementById('tBlockedBy').value = t.blockedBy || '';
+    toggleBlockedField();
+    document.getElementById('taskModal').classList.add('active');
+}
+
+async function saveTask() {
+    const pid = document.getElementById('tProjectId').value;
+    const tid = document.getElementById('tTaskId').value;
+    const data = {
+        title: document.getElementById('tTitle').value.trim(),
+        description: document.getElementById('tDesc').value.trim(),
+        status: document.getElementById('tStatus').value,
+        priority: document.getElementById('tPriority').value,
+        deadline: document.getElementById('tDeadline').value ? new Date(document.getElementById('tDeadline').value).toISOString() : null,
+        assignee: document.getElementById('tAssignee').value.trim() || null,
+        blockedBy: document.getElementById('tStatus').value === 'blocked' ? document.getElementById('tBlockedBy').value.trim() || null : null
+    };
+    if (!data.title) return;
+    try {
+        if (tid) {
+            await fetch(`/api/projects/${pid}/tasks/${tid}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        } else {
+            await fetch(`/api/projects/${pid}/tasks`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        }
+        closeModal('taskModal');
+        await refreshAll();
+        if (currentView === 'kanban') renderKanban();
+    } catch (e) { console.error(e); }
+}
+
+async function deleteTask() {
+    const pid = document.getElementById('tProjectId').value;
+    const tid = document.getElementById('tTaskId').value;
+    if (!tid || !confirm('Delete this task?')) return;
+    await fetch(`/api/projects/${pid}/tasks/${tid}`, { method: 'DELETE' });
+    closeModal('taskModal');
+    await refreshAll();
+    if (currentView === 'kanban') renderKanban();
+}
+
+function toggleBlockedField() {
+    document.getElementById('blockedByGroup').style.display =
+        document.getElementById('tStatus').value === 'blocked' ? 'block' : 'none';
+}
+
+// ════════════════════════════════════════════════════════════════
+// REFRESH & HELPERS
+// ════════════════════════════════════════════════════════════════
+async function refreshAll() {
+    await loadAllData();
+    renderStats();
+    renderList();
+    populateKanbanSelect();
+    timelineInit = false;
+
+    // Rebuild graph
+    if (cy) {
+        cy.elements().remove();
+        cy.add([...graphData.nodes, ...graphData.edges]);
+        runLayout();
+        applyLayerVisibility();
+    }
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+// Close modals on outside click
+['projectModal', 'taskModal'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', function(e) {
+        if (e.target === this) closeModal(id);
+    });
+});
+
+function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s || '';
+    return d.innerHTML;
+}
+</script>
+{% endblock %}

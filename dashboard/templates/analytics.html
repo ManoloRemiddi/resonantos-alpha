@@ -1,0 +1,923 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics - ResonantOS Dashboard{% endblock %}
+{% block page_title %}Analytics{% endblock %}
+
+{% block content %}
+<!-- Date Range Selector -->
+<div class="analytics-header">
+    <div class="date-range-picker">
+        <button class="range-btn active" data-range="7d">7 Days</button>
+        <button class="range-btn" data-range="30d">30 Days</button>
+        <button class="range-btn" data-range="90d">90 Days</button>
+        <button class="range-btn" data-range="all">All Time</button>
+    </div>
+    <div class="header-actions">
+        <select id="chatbotFilter" onchange="loadAnalytics()">
+            <option value="all">All Chatbots</option>
+        </select>
+        <button class="btn-secondary" onclick="exportAnalytics()">
+            📥 Export Data
+        </button>
+    </div>
+</div>
+
+<!-- Stats Overview -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">💬</div>
+        <div class="stat-content">
+            <span class="stat-value" id="totalConversations">-</span>
+            <span class="stat-label">Total Conversations</span>
+            <span class="stat-change positive" id="conversationsChange">-</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">📨</div>
+        <div class="stat-content">
+            <span class="stat-value" id="totalMessages">-</span>
+            <span class="stat-label">Messages Exchanged</span>
+            <span class="stat-change positive" id="messagesChange">-</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">⚡</div>
+        <div class="stat-content">
+            <span class="stat-value" id="avgResponseTime">-</span>
+            <span class="stat-label">Avg Response Time</span>
+            <span class="stat-change" id="responseTimeChange">-</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">😊</div>
+        <div class="stat-content">
+            <span class="stat-value" id="satisfactionRate">-</span>
+            <span class="stat-label">Satisfaction Rate</span>
+            <span class="stat-change positive" id="satisfactionChange">-</span>
+        </div>
+    </div>
+</div>
+
+<!-- Conversations Over Time Chart -->
+<div class="card chart-card">
+    <div class="card-header">
+        <h2 class="card-title">Conversations Over Time</h2>
+        <div class="chart-legend">
+            <span class="legend-item"><span class="dot" style="background: #4ade80;"></span> Conversations</span>
+            <span class="legend-item"><span class="dot" style="background: #60a5fa;"></span> Messages</span>
+        </div>
+    </div>
+    <div class="card-content">
+        <div class="chart-container" id="conversationsChart">
+            <div class="chart-placeholder" id="chartPlaceholder">
+                <span class="placeholder-icon">📊</span>
+                <p>Analytics data will appear here once chatbots are active</p>
+            </div>
+            <canvas id="conversationsCanvas" style="display: none;"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Two Column Layout -->
+<div class="analytics-columns">
+    <!-- Popular Questions -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Popular Questions</h2>
+        </div>
+        <div class="card-content">
+            <div class="popular-list" id="popularQuestions">
+                <div class="empty-placeholder">
+                    <span>📝</span>
+                    <p>No questions recorded yet</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Response Metrics -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Response Metrics</h2>
+        </div>
+        <div class="card-content">
+            <div class="metrics-grid">
+                <div class="metric-item">
+                    <span class="metric-label">User Messages</span>
+                    <span class="metric-value" id="userMessages">-</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Bot Responses</span>
+                    <span class="metric-value" id="botResponses">-</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Error Rate</span>
+                    <span class="metric-value" id="errorRate">-</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Avg Conversation Length</span>
+                    <span class="metric-value" id="avgConvLength">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- User Satisfaction -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">User Satisfaction</h2>
+    </div>
+    <div class="card-content">
+        <div class="satisfaction-container" id="satisfactionContainer">
+            <div class="satisfaction-bars">
+                <div class="satisfaction-row">
+                    <span class="rating-label">😍 Very Satisfied</span>
+                    <div class="rating-bar">
+                        <div class="rating-fill" id="rating5" style="width: 0%;"></div>
+                    </div>
+                    <span class="rating-percent" id="rating5Percent">0%</span>
+                </div>
+                <div class="satisfaction-row">
+                    <span class="rating-label">😊 Satisfied</span>
+                    <div class="rating-bar">
+                        <div class="rating-fill" id="rating4" style="width: 0%;"></div>
+                    </div>
+                    <span class="rating-percent" id="rating4Percent">0%</span>
+                </div>
+                <div class="satisfaction-row">
+                    <span class="rating-label">😐 Neutral</span>
+                    <div class="rating-bar">
+                        <div class="rating-fill" id="rating3" style="width: 0%;"></div>
+                    </div>
+                    <span class="rating-percent" id="rating3Percent">0%</span>
+                </div>
+                <div class="satisfaction-row">
+                    <span class="rating-label">😕 Dissatisfied</span>
+                    <div class="rating-bar">
+                        <div class="rating-fill" id="rating2" style="width: 0%;"></div>
+                    </div>
+                    <span class="rating-percent" id="rating2Percent">0%</span>
+                </div>
+                <div class="satisfaction-row">
+                    <span class="rating-label">😠 Very Dissatisfied</span>
+                    <div class="rating-bar">
+                        <div class="rating-fill" id="rating1" style="width: 0%;"></div>
+                    </div>
+                    <span class="rating-percent" id="rating1Percent">0%</span>
+                </div>
+            </div>
+            <div class="satisfaction-summary">
+                <div class="summary-stat">
+                    <span class="summary-value" id="totalRatings">0</span>
+                    <span class="summary-label">Total Ratings</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="summary-value" id="feedbackRate">0%</span>
+                    <span class="summary-label">Feedback Rate</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity Table -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Recent Conversations</h2>
+        <a href="#" class="card-link" onclick="viewAllConversations()">View All →</a>
+    </div>
+    <div class="card-content">
+        <div class="table-container">
+            <table class="data-table" id="recentConversations">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Chatbot</th>
+                        <th>Messages</th>
+                        <th>Duration</th>
+                        <th>Rating</th>
+                    </tr>
+                </thead>
+                <tbody id="conversationsTableBody">
+                    <tr>
+                        <td colspan="5" class="empty-row">No conversations recorded yet</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.analytics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.date-range-picker {
+    display: flex;
+    gap: 8px;
+}
+
+.range-btn {
+    padding: 8px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.range-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.range-btn.active {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+}
+
+.header-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+#chatbotFilter {
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    border-radius: 8px;
+    min-width: 150px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.stat-icon {
+    font-size: 32px;
+    opacity: 0.9;
+}
+
+.stat-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.stat-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.stat-change {
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.stat-change.positive {
+    color: var(--success);
+}
+
+.stat-change.negative {
+    color: var(--error);
+}
+
+.chart-card {
+    margin-bottom: 24px;
+}
+
+.chart-container {
+    height: 300px;
+    position: relative;
+}
+
+.chart-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-secondary);
+}
+
+.placeholder-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.chart-legend {
+    display: flex;
+    gap: 16px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.legend-item .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.analytics-columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.popular-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.popular-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+}
+
+.popular-question {
+    flex: 1;
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.popular-count {
+    font-size: 13px;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.1);
+    padding: 4px 10px;
+    border-radius: 12px;
+}
+
+.empty-placeholder {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+}
+
+.empty-placeholder span {
+    font-size: 32px;
+    display: block;
+    margin-bottom: 12px;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.metric-item {
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+}
+
+.metric-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.metric-value {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.satisfaction-container {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+}
+
+.satisfaction-bars {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.satisfaction-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.rating-label {
+    width: 140px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.rating-bar {
+    flex: 1;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.rating-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #22c55e);
+    border-radius: 12px;
+    transition: width 0.5s ease;
+}
+
+.rating-percent {
+    width: 50px;
+    text-align: right;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.satisfaction-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    min-width: 150px;
+}
+
+.summary-stat {
+    text-align: center;
+}
+
+.summary-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.summary-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    display: block;
+    margin-top: 4px;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.data-table th {
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.data-table td {
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.data-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.empty-row {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 40px !important;
+}
+
+.rating-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+.rating-badge.good {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+}
+
+.rating-badge.neutral {
+    background: rgba(234, 179, 8, 0.2);
+    color: #eab308;
+}
+
+.rating-badge.bad {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+@media (max-width: 768px) {
+    .analytics-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .date-range-picker {
+        overflow-x: auto;
+        padding-bottom: 8px;
+    }
+    
+    .satisfaction-container {
+        flex-direction: column;
+    }
+    
+    .satisfaction-summary {
+        flex-direction: row;
+        justify-content: space-around;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentRange = '7d';
+let currentChatbot = 'all';
+let chartInstance = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadChatbotFilter();
+    loadAnalytics();
+    setupRangeButtons();
+});
+
+function setupRangeButtons() {
+    document.querySelectorAll('.range-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentRange = this.dataset.range;
+            loadAnalytics();
+        });
+    });
+}
+
+async function loadChatbotFilter() {
+    try {
+        const res = await fetch('/api/chatbots');
+        const data = await res.json();
+        
+        const select = document.getElementById('chatbotFilter');
+        data.chatbots.forEach(bot => {
+            const option = document.createElement('option');
+            option.value = bot.id;
+            option.textContent = bot.name;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading chatbots:', error);
+    }
+}
+
+async function loadAnalytics() {
+    currentChatbot = document.getElementById('chatbotFilter').value;
+    
+    try {
+        const params = new URLSearchParams({
+            range: currentRange,
+            chatbot_id: currentChatbot !== 'all' ? currentChatbot : ''
+        });
+        
+        const res = await fetch(`/api/analytics?${params}`);
+        const data = await res.json();
+        
+        updateStats(data);
+        updateChart(data.chartData || []);
+        updatePopularQuestions(data.popularQuestions || []);
+        updateMetrics(data);
+        updateSatisfaction(data.satisfaction || {});
+        updateRecentConversations(data.recentConversations || []);
+        
+    } catch (error) {
+        console.error('Error loading analytics:', error);
+        showPlaceholder();
+    }
+}
+
+function updateStats(data) {
+    document.getElementById('totalConversations').textContent = 
+        data.totalConversations?.toLocaleString() || '0';
+    document.getElementById('totalMessages').textContent = 
+        data.totalMessages?.toLocaleString() || '0';
+    document.getElementById('avgResponseTime').textContent = 
+        data.avgResponseTime || '< 2s';
+    document.getElementById('satisfactionRate').textContent = 
+        data.satisfactionRate ? Math.round(data.satisfactionRate) + '%' : '-';
+    
+    // Update change indicators
+    updateChangeIndicator('conversationsChange', data.conversationsChange);
+    updateChangeIndicator('messagesChange', data.messagesChange);
+    updateChangeIndicator('responseTimeChange', data.responseTimeChange, true);
+    updateChangeIndicator('satisfactionChange', data.satisfactionChange);
+}
+
+function updateChangeIndicator(elementId, change, invertPositive = false) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    
+    if (change === undefined || change === null) {
+        el.textContent = '-';
+        el.className = 'stat-change';
+        return;
+    }
+    
+    const isPositive = invertPositive ? change < 0 : change > 0;
+    const arrow = change > 0 ? '↑' : change < 0 ? '↓' : '';
+    
+    el.textContent = `${arrow} ${Math.abs(change)}%`;
+    el.className = 'stat-change ' + (isPositive ? 'positive' : 'negative');
+}
+
+function updateChart(chartData) {
+    const canvas = document.getElementById('conversationsCanvas');
+    const placeholder = document.getElementById('chartPlaceholder');
+    
+    if (!chartData || chartData.length === 0) {
+        canvas.style.display = 'none';
+        placeholder.style.display = 'flex';
+        return;
+    }
+    
+    canvas.style.display = 'block';
+    placeholder.style.display = 'none';
+    
+    // Simple chart rendering (in production, use Chart.js)
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw simple line chart
+    const maxConv = Math.max(...chartData.map(d => d.conversations || 0), 1);
+    const padding = 40;
+    const chartWidth = canvas.width - padding * 2;
+    const chartHeight = canvas.height - padding * 2;
+    
+    // Draw grid
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+        const y = padding + (chartHeight / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(padding, y);
+        ctx.lineTo(canvas.width - padding, y);
+        ctx.stroke();
+    }
+    
+    // Draw line
+    ctx.strokeStyle = '#4ade80';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    
+    chartData.forEach((point, i) => {
+        const x = padding + (chartWidth / (chartData.length - 1)) * i;
+        const y = canvas.height - padding - ((point.conversations || 0) / maxConv) * chartHeight;
+        
+        if (i === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    });
+    
+    ctx.stroke();
+    
+    // Draw points
+    ctx.fillStyle = '#4ade80';
+    chartData.forEach((point, i) => {
+        const x = padding + (chartWidth / (chartData.length - 1)) * i;
+        const y = canvas.height - padding - ((point.conversations || 0) / maxConv) * chartHeight;
+        
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+    });
+}
+
+function updatePopularQuestions(questions) {
+    const container = document.getElementById('popularQuestions');
+    
+    if (!questions || questions.length === 0) {
+        container.innerHTML = `
+            <div class="empty-placeholder">
+                <span>📝</span>
+                <p>No questions recorded yet</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = questions.slice(0, 10).map(q => `
+        <div class="popular-item">
+            <span class="popular-question">${escapeHtml(q.question)}</span>
+            <span class="popular-count">${q.count} times</span>
+        </div>
+    `).join('');
+}
+
+function updateMetrics(data) {
+    document.getElementById('userMessages').textContent = 
+        data.userMessages?.toLocaleString() || '0';
+    document.getElementById('botResponses').textContent = 
+        data.botResponses?.toLocaleString() || '0';
+    document.getElementById('errorRate').textContent = 
+        data.errorRate ? data.errorRate.toFixed(1) + '%' : '0%';
+    document.getElementById('avgConvLength').textContent = 
+        data.avgConvLength ? data.avgConvLength.toFixed(1) + ' msgs' : '-';
+}
+
+function updateSatisfaction(satisfaction) {
+    const total = satisfaction.total || 0;
+    
+    for (let i = 1; i <= 5; i++) {
+        const count = satisfaction[`rating${i}`] || 0;
+        const percent = total > 0 ? (count / total * 100) : 0;
+        
+        const bar = document.getElementById(`rating${i}`);
+        const percentEl = document.getElementById(`rating${i}Percent`);
+        
+        if (bar) bar.style.width = percent + '%';
+        if (percentEl) percentEl.textContent = percent.toFixed(0) + '%';
+    }
+    
+    document.getElementById('totalRatings').textContent = total.toLocaleString();
+    document.getElementById('feedbackRate').textContent = 
+        satisfaction.feedbackRate ? satisfaction.feedbackRate.toFixed(0) + '%' : '0%';
+}
+
+function updateRecentConversations(conversations) {
+    const tbody = document.getElementById('conversationsTableBody');
+    
+    if (!conversations || conversations.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="empty-row">No conversations recorded yet</td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = conversations.slice(0, 10).map(conv => {
+        const ratingClass = conv.rating >= 4 ? 'good' : conv.rating >= 3 ? 'neutral' : 'bad';
+        const ratingText = conv.rating ? '⭐'.repeat(conv.rating) : '-';
+        
+        return `
+            <tr>
+                <td>${formatTimeAgo(conv.started_at)}</td>
+                <td>${escapeHtml(conv.chatbot_name || 'Unknown')}</td>
+                <td>${conv.message_count || 0}</td>
+                <td>${formatDuration(conv.duration_ms)}</td>
+                <td><span class="rating-badge ${ratingClass}">${ratingText}</span></td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function showPlaceholder() {
+    document.getElementById('totalConversations').textContent = '0';
+    document.getElementById('totalMessages').textContent = '0';
+    document.getElementById('avgResponseTime').textContent = '-';
+    document.getElementById('satisfactionRate').textContent = '-';
+}
+
+function formatTimeAgo(timestamp) {
+    if (!timestamp) return '-';
+    const date = new Date(timestamp);
+    const diff = Date.now() - date.getTime();
+    
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+    return date.toLocaleDateString();
+}
+
+function formatDuration(ms) {
+    if (!ms) return '-';
+    if (ms < 60000) return Math.floor(ms / 1000) + 's';
+    return Math.floor(ms / 60000) + 'm';
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+async function exportAnalytics() {
+    try {
+        const params = new URLSearchParams({
+            range: currentRange,
+            chatbot_id: currentChatbot !== 'all' ? currentChatbot : '',
+            format: 'csv'
+        });
+        
+        const res = await fetch(`/api/analytics/export?${params}`);
+        
+        if (!res.ok) {
+            throw new Error('Export failed');
+        }
+        
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `analytics-${currentRange}-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        showToast('Analytics exported successfully!', 'success');
+    } catch (error) {
+        console.error('Export error:', error);
+        showToast('Export failed: ' + error.message, 'error');
+    }
+}
+
+function viewAllConversations() {
+    // In the future, this could open a modal or navigate to a detailed view
+    showToast('Full conversation history coming soon!', 'info');
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-' + type;
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed; bottom: 20px; right: 20px; padding: 12px 24px;
+        border-radius: 8px; background: ${type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : '#3b82f6'};
+        color: white; opacity: 0; transform: translateY(20px); transition: all 0.3s; z-index: 10000;
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateY(0)';
+    }, 10);
+    
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(20px)';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+</script>
+{% endblock %}

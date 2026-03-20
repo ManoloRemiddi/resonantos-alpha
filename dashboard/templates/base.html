@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ResonantOS Dashboard{% endblock %}</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link rel="stylesheet" href="/static/css/dashboard-branded.css">
+    <style>
+        /* Symbiotic Shield Status Indicator */
+        .gw-restart-btn-header {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 4px 6px;
+            cursor: pointer;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .gw-restart-btn-header:hover {
+            color: var(--warning);
+            border-color: var(--warning);
+        }
+        .shield-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            margin: 8px 12px 8px 12px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius);
+            font-size: 12px;
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+        
+        .shield-status:hover {
+            background: var(--bg-hover);
+            border-color: var(--border-light);
+        }
+        
+        .shield-icon {
+            display: flex;
+            align-items: center;
+        }
+        
+        .shield-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        
+        .shield-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: auto;
+        }
+        
+        .shield-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            transition: background 0.3s;
+        }
+        
+        .shield-status.active .shield-dot {
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+        
+        .shield-status.inactive .shield-dot {
+            background: var(--error);
+        }
+        
+        .shield-status.warning .shield-dot {
+            background: var(--warning);
+        }
+        
+        .shield-mode {
+            color: var(--text-muted);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .shield-status.active .shield-mode {
+            color: var(--success);
+        }
+        
+        .shield-status.inactive .shield-mode {
+            color: var(--error);
+        }
+
+        /* Shield nav icon: color + pulse based on status */
+        .nav-item .shield-nav-icon {
+            transition: color 0.3s;
+        }
+        .nav-item .shield-nav-icon.shield-on svg {
+            stroke: var(--success);
+            animation: shieldPulse 2s infinite;
+        }
+        .nav-item .shield-nav-icon.shield-off svg {
+            stroke: var(--error);
+        }
+        .setup-nav-item {
+            background: linear-gradient(135deg, rgba(74, 222, 128, 0.14), rgba(96, 165, 250, 0.08));
+            border: 1px solid rgba(74, 222, 128, 0.18);
+            margin-bottom: 8px;
+        }
+        .setup-nav-item:hover {
+            border-color: rgba(74, 222, 128, 0.32);
+        }
+        .setup-nav-item.active {
+            background: rgba(74, 222, 128, 0.18);
+            border-color: var(--accent);
+        }
+        .setup-nav-item .nav-icon {
+            color: var(--accent);
+        }
+        @keyframes shieldPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .version.up-to-date { color: #4ade80; }
+        .version.update-available { color: #f59e0b; }
+        .version.update-behind { color: #ef4444; }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+                    <span class="logo-text">Resonant<span class="accent">OS</span></span>
+                </div>
+                <span class="version" id="versionBadge">{{ resonantos_version }}</span>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="/setup" class="nav-item setup-nav-item {% if active_page == 'setup' %}active{% endif %}" title="Setup & Onboarding">
+                    <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.5-1.5 4.5-1.5 4.5s3 0 4.5-1.5S9 15 9 15s-3 0-4.5 1.5Z"/><path d="M14 10 9 15"/><path d="M15 4h5v5"/><path d="M14 10 20 4"/><path d="M9 6c1.5-1.5 4.5-1.5 4.5-1.5S13.5 7.5 12 9 7.5 10.5 7.5 10.5 7.5 7.5 9 6Z"/></svg></span>
+                    <span class="nav-label">Setup</span>
+                </a>
+                <!-- Shield link: first item, right below header -->
+                <a href="/shield" class="nav-item shield-nav-item {% if active_page == 'shield' %}active{% endif %}" id="shieldStatus" title="Symbiotic Shield">
+                    <span class="nav-icon shield-nav-icon" id="shieldNavIcon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+                    <span class="nav-label">Shield</span>
+                    <span class="shield-mode" id="shieldMode" style="display:none;"></span>
+                </a>
+
+                <!-- Logician indicator (clickable -> rules page) -->
+                <a href="/settings#rules" class="nav-item" id="logicianStatus" title="Logician Engine" onclick="setTimeout(function(){if(typeof showSection==='function')showSection('rules')},100)">
+                    <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
+                    <span class="nav-label">Logician</span>
+                    <span class="shield-mode" id="logicianMode" style="display:none; font-size:10px; margin-left:4px;"></span>
+                </a>
+
+                <div class="nav-section-label">Core</div>
+                <a href="/" class="nav-item {% if active_page == 'overview' or active_page == 'status' %}active{% endif %}">
+                    <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span>
+                    <span class="nav-label">Overview</span>
+                </a>
+                <a href="/agents" class="nav-item {% if active_page == 'agents' or active_page == 'skills' %}active{% endif %}">
+                    <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+                    <span class="nav-label">Agents</span>
+                </a>
+                <a href="/chatbots" class="nav-item {% if active_page == 'chatbots' %}active{% endif %}">
+                    <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+                    <span class="nav-label">Chatbots</span>
+                </a>
+                <!-- R-Memory removed: superseded by SSOT page -->
+                <a href="/ssot" class="nav-item {% if active_page == 'ssot' %}active{% endif %}">
+                    <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></span>
+                    <span class="nav-label">SSOT</span>
+                </a>
+
+                <!-- Shield moved to top of sidebar -->
+
+                <div class="nav-section-label">Workspace</div>
+                <a href="/todo" class="nav-item {% if active_page == 'todo' %}active{% endif %}">
+                    <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+                    <span class="nav-label">TODO</span>
+                </a>
+                <a href="/projects" class="nav-item {% if active_page == 'projects' %}active{% endif %}">
+                    <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+                    <span class="nav-label">Projects</span>
+                </a>
+                <a href="/wallet" class="nav-item {% if active_page == 'wallet' %}active{% endif %}">
+                    <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 10h20"/><circle cx="18" cy="15" r="1"/></svg></span>
+                    <span class="nav-label">Wallet & DAO</span>
+                </a>
+                <a href="/tribes" class="nav-item {% if active_page == 'tribes' %}active{% endif %}">
+                    <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+                    <span class="nav-label">Tribes</span>
+                </a>
+                <a href="/bounties" class="nav-item {% if active_page == 'bounties' %}active{% endif %}">
+                    <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.39 4.84L20 7.76l-4 3.89.94 5.5L12 14.77 7.06 17.15 8 11.65 4 7.76l5.61-.92L12 2z"/></svg></span>
+                    <span class="nav-label">Bounties</span>
+                </a>
+                <a href="/protocol-store" class="nav-item {% if active_page == 'protocol-store' %}active{% endif %}">
+                    <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>
+                    <span class="nav-label">Protocol Store</span>
+                </a>
+                <a href="/docs" class="nav-item {% if active_page == 'docs' %}active{% endif %}">
+                    <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
+                    <span class="nav-label">Documentation</span>
+                </a>
+
+                <div class="nav-section-label">System</div>
+                <a href="/chat-redirect" target="_blank" class="nav-item" title="OpenClaw Webchat">
+                    <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+                    <span class="nav-label">OpenClaw Chat</span>
+                </a>
+                <a href="/policy-graph" class="nav-item {% if active_page == 'policy-graph' %}active{% endif %}">
+                    <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="5" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M7.3 10.9 16.7 6.1"/><path d="M7.3 13.1 16.7 17.9"/></svg></span>
+                    <span class="nav-label">Policy Graph</span>
+                </a>
+                <a href="/settings" class="nav-item {% if active_page == 'settings' or active_page == 'rules' %}active{% endif %}">
+                    <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+                    <span class="nav-label">Settings</span>
+                </a>
+                <a href="/license" class="nav-item {% if active_page == 'license' %}active{% endif %}">
+                    <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
+                    <span class="nav-label">Symbiotic License</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <span class="theme-icon" id="themeIcon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                    </span>
+                    <span class="theme-label">Dark Mode</span>
+                </button>
+                <a href="https://resonantos.com" target="_blank" rel="noopener noreferrer" class="powered-by">
+                    Powered by <strong>ResonantOS</strong>
+                </a>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <h1 class="page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+                <div class="header-actions">
+                    <!-- Daily Claim Icon -->
+                    <a href="javascript:void(0)" onclick="headerDailyClaim(event)" title="Daily Claim — +1 $RCT, +500 $RES" style="position:relative; display:flex; align-items:center; text-decoration:none; margin-right:8px; cursor:pointer;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#14F195" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+                        <span style="position:absolute;top:-2px;right:-4px;width:7px;height:7px;background:#14F195;border-radius:50;"></span>
+                    </a>
+                    <!-- Gateway Status -->
+                    <span class="status-indicator" id="connectionStatus" title="OpenClaw Gateway status">
+                        <span class="status-dot"></span>
+                        <span class="status-text">Gateway</span>
+                    </span>
+                    <button class="gw-restart-btn-header" id="gwRestartBtnHeader" onclick="confirmRestartGateway()" title="Restart Gateway">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                    </button>
+                </div>
+            </header>
+            
+            <div class="content-area">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+    
+    <script src="/static/js/dashboard.js"></script>
+    <script>
+        // Instant shield state restore from cache (runs synchronously)
+        (function() {
+            var cached = null;
+            try { cached = localStorage.getItem('shield-state'); } catch (e) {}
+            if (cached) {
+                var el = document.getElementById('shieldNavIcon');
+                if (el) el.classList.add(cached === 'on' ? 'shield-on' : 'shield-off');
+            }
+        })();
+
+        // Symbiotic Shield Status
+        async function updateShieldStatus() {
+            const navIcon = document.getElementById('shieldNavIcon');
+            const modeEl = document.getElementById('shieldMode');
+            const statusEl = document.getElementById('shieldStatus');
+            
+            function setState(state, text, title) {
+                if (navIcon) {
+                    navIcon.classList.remove('shield-on', 'shield-off');
+                    navIcon.classList.add(state === 'active' ? 'shield-on' : 'shield-off');
+                }
+                if (modeEl) {
+                    modeEl.textContent = text;
+                    modeEl.style.color = state === 'active' ? 'var(--success)' : 'var(--error)';
+                }
+                if (statusEl) statusEl.title = title;
+                // Cache for instant restore on next page load
+                try { localStorage.setItem('shield-state', state === 'active' ? 'on' : 'off'); } catch (e) {}
+            }
+            
+            try {
+                const response = await fetch('/api/shield/status');
+                const data = await response.json();
+                
+                if (data.active) {
+                    setState('active', data.mode || 'active', `Symbiotic Shield: ${data.mode.toUpperCase()} mode\nAlerts: ${data.stats?.total_alerts || 0}`);
+                } else if (data.available) {
+                    setState('off', 'error', `Shield error: ${data.error || 'Unknown'}`);
+                } else {
+                    setState('off', 'off', 'Shield not available');
+                }
+            } catch (e) {
+                setState('off', 'offline', 'Could not reach Shield API');
+            }
+        }
+        
+        // Logician Status
+        async function updateLogicianStatus() {
+            const el = document.getElementById('logicianStatus');
+            const modeEl = document.getElementById('logicianMode');
+            if (!el) return;
+            try {
+                const res = await fetch('/api/logician/status');
+                const data = await res.json();
+                const icon = el.querySelector('.nav-icon');
+                if (data.status === 'healthy') {
+                    el.style.opacity = '1';
+                    if (icon) icon.style.color = 'var(--success)';
+                    if (modeEl) { modeEl.textContent = '●'; modeEl.style.color = 'var(--success)'; modeEl.style.display = 'inline'; }
+                    el.title = 'Logician: healthy — last check ' + (data.lastCheck || 'unknown');
+                } else {
+                    el.style.opacity = '0.7';
+                    if (icon) icon.style.color = 'var(--error)';
+                    if (modeEl) { modeEl.textContent = '●'; modeEl.style.color = 'var(--error)'; modeEl.style.display = 'inline'; }
+                    el.title = 'Logician: ' + (data.status || 'unknown') + ' — ' + (data.lastError || data.error || '');
+                }
+            } catch (e) {
+                el.style.opacity = '0.5';
+                if (modeEl) { modeEl.textContent = '?'; modeEl.style.color = 'var(--warning)'; modeEl.style.display = 'inline'; }
+                el.title = 'Logician: unreachable';
+            }
+        }
+
+        // Version badge update status
+        async function updateVersionBadgeStatus() {
+            const badge = document.getElementById('versionBadge');
+            if (!badge) return;
+
+            function applyState(className, title) {
+                badge.classList.remove('up-to-date', 'update-available', 'update-behind');
+                badge.classList.add(className);
+                badge.title = title;
+            }
+
+            // Default to green/current when no status is available.
+            applyState('up-to-date', 'Up to date');
+
+            try {
+                const response = await fetch('/api/settings/update-config');
+                if (!response.ok) return;
+                const data = await response.json();
+                const result = data && typeof data === 'object' ? data.lastCheckResult : null;
+                if (!result || typeof result !== 'object') return;
+
+                const available = result.available === true;
+                const behindParsed = Number(result.behind);
+                const behind = Number.isFinite(behindParsed) ? behindParsed : 0;
+
+                if (!available) {
+                    applyState('up-to-date', 'Up to date');
+                } else if (behind >= 2) {
+                    applyState('update-behind', `${behind} updates behind`);
+                } else {
+                    applyState('update-available', '1 update available');
+                }
+            } catch (e) {
+                applyState('up-to-date', 'Up to date');
+            }
+        }
+
+        // Gateway Restart (with confirmation)
+        async function confirmRestartGateway() {
+            if (!confirm('Are you sure you want to restart the OpenClaw Gateway? This will briefly disconnect all channels.')) return;
+            const btn = document.getElementById('gwRestartBtnHeader');
+            if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+            try {
+                await fetch('/api/system/restart', { method: 'POST' });
+                setTimeout(() => { if(btn) { btn.disabled = false; btn.style.opacity = '1'; } }, 3000);
+                setTimeout(updateGatewayStatus, 5000);
+            } catch(e) {
+                if(btn) { btn.disabled = false; btn.style.opacity = '1'; }
+            }
+        }
+
+        // Gateway Status
+        async function updateGatewayStatus() {
+            const dot = document.querySelector('#connectionStatus .status-dot');
+            const text = document.querySelector('#connectionStatus .status-text');
+            try {
+                const res = await fetch('/api/gateway/status');
+                const data = await res.json();
+                // Treat as disconnected if lastTick is stale (>90s old)
+                const now = Date.now();
+                const stale = data.lastTick && (now - data.lastTick > 90000);
+                if (data.connected && !stale) {
+                    if (dot) { dot.style.background = 'var(--success)'; dot.style.animation = 'pulse 2s infinite'; }
+                    if (text) text.textContent = 'Gateway Connected';
+                } else {
+                    if (dot) { dot.style.background = 'var(--error)'; dot.style.animation = 'none'; }
+                    if (text) text.textContent = 'Gateway Offline';
+                }
+            } catch (e) {
+                if (dot) { dot.style.background = 'var(--error)'; dot.style.animation = 'none'; }
+                if (text) text.textContent = 'Gateway Offline';
+            }
+        }
+
+        // Daily Claim from header icon (no page reload)
+        async function headerDailyClaim(e) {
+            e.preventDefault();
+            // If on wallet page and dailyClaim() exists, use it directly
+            if (typeof dailyClaim === 'function') {
+                dailyClaim();
+                return;
+            }
+            // Otherwise navigate to wallet page
+            window.location.href = '/wallet#daily-claim';
+        }
+
+        // Initial load and periodic refresh
+        document.addEventListener('DOMContentLoaded', () => {
+            updateShieldStatus();
+            updateGatewayStatus();
+            updateLogicianStatus();
+            updateVersionBadgeStatus();
+            setInterval(updateShieldStatus, 30000);
+            setInterval(updateGatewayStatus, 10000);
+            setInterval(updateLogicianStatus, 60000);
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

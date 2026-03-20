@@ -1,0 +1,79 @@
+// Simple service definition for Mangle deductive databases.
+
+syntax = "proto3";
+
+package mangle;
+
+option go_package = "github.com/burakemir/mangle-service/proto";
+
+// A query request consists of a query and an optional set of
+// declarations and rule definitions ("program").
+message QueryRequest {
+  // A query is a Mangle atom expression like `person(X, Y, /foo)`.
+  // An atom is a predicate applied to variables and constants.
+  // Examples: `foo(42)`, `foo(X)`, `person(X, Y, /foo)`. 
+  // The predicate can either refer to the publicly accessible
+  // relations of the Mangle DDB, or alternatively to the
+  // relations defined in a program that is part of the request.
+  string query = 1; 
+
+  // A program is a set of declarations and Mangle rule definitions 
+  // that defines additional relations. The server is free to use
+  // any evaluation strategy to compute the needed tuples in these
+  // relations, as long as the overall query is evaluated according
+  // to Mangle semantics.
+  string program = 2;
+}
+
+// An update request consists of fact and rule definitions
+// (a "program"). The program will be evaluated on top of
+// the current state. 
+message UpdateRequest {
+  // See QueryRequest for what a program is.
+  string program = 2;
+}
+
+// List of errors encountered during query and program processing.
+// If errors is non-empty, then the answers should not be
+// considered complete.
+message QueryError {
+  // A human-readable error message.
+  string msg = 1;
+
+  // TODO: machine-readable error representation. This should
+  // match an error reporting API in the Mangle repo.
+}
+
+// List of errors encountered during update program processing.
+message UpdateError {
+  // A human-readable error message.
+  string msg = 1;
+
+  // TODO: machine-readable error representation. This should
+  // match an error reporting API in the Mangle repo.
+}
+
+// One answer tuple for a given query and optional program.
+message QueryAnswer { 
+  // For a correct query and optional program, the list of results.
+  string answer = 1; 
+}
+
+// For a successful update, info about updated predicates.
+message UpdateAnswer { 
+  // For a correct update program, lists updated predicates.
+  repeated string updated_predicates = 2; 
+}
+
+service Mangle {
+  // The server answers a query with a stream of responses.
+  // It is possible that the list of results is empty.
+  // In case of errors, no answers are sent and a QueryError
+  // message is included in status response metadata.
+  rpc Query(QueryRequest) returns (stream QueryAnswer); 
+
+  // The server updates its state with result of program.
+  // In case of errors, no update happens and an UpdateError
+  // message is included in status response metadata.
+  rpc Update(UpdateRequest) returns (UpdateAnswer); 
+}

@@ -1,0 +1,213 @@
+/* ResonantOS Dashboard — Brand Override
+   Loaded AFTER dashboard.css to align with website brand identity.
+   Source of truth: ssot/L0/SSOT-L0-BRAND-IDENTITY.md
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+    --accent: #10b981;
+    --accent-hover: #059669;
+    --accent-muted: rgba(16, 185, 129, 0.15);
+    --secondary: #d97706;
+    --secondary-hover: #b45309;
+    --secondary-muted: rgba(217, 119, 6, 0.15);
+    --text-primary: #e8e3d8;
+    --text-secondary: #c4baa8;
+    --text-muted: #8a8070;
+    --success: #34d399;
+    --info: #60a5fa;
+    --solana: #14F195;
+    --gradient-brand: linear-gradient(135deg, #10b981, #d97706);
+}
+
+[data-theme="light"] {
+    --accent: #10b981;
+    --accent-hover: #059669;
+    --accent-muted: rgba(16, 185, 129, 0.12);
+    --text-primary: #1f2937;
+    --text-secondary: #4b5563;
+    --text-muted: #9ca3af;
+    --secondary: #d97706;
+    --secondary-muted: rgba(217, 119, 6, 0.12);
+}
+
+html, body {
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+}
+
+code, pre, .docs-path, .info-value.mono, .file-name {
+    font-family: 'JetBrains Mono', 'SF Mono', Monaco, Consolas, monospace;
+}
+
+.activity-feed {
+    font-family: 'JetBrains Mono', 'SF Mono', Monaco, Consolas, monospace;
+    background: #0d0f0e;
+}
+
+.logo .accent {
+    background: var(--gradient-brand);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.nav-item.active {
+    background: var(--accent-muted);
+    color: var(--accent);
+    border-left: 3px solid var(--accent);
+    padding-left: 13px;
+}
+
+.page-title {
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.card {
+    border-color: rgba(138, 128, 112, 0.15);
+}
+
+.card:hover {
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.metric-card {
+    border-top: 2px solid transparent;
+    transition: border-color 0.2s;
+}
+
+.metric-card:hover {
+    border-top-color: var(--accent);
+}
+
+.agent-card.active {
+    border-left: 3px solid var(--accent);
+}
+
+.agent-card:hover {
+    border-color: var(--accent);
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: #0a0a0a;
+    font-weight: 600;
+}
+
+.btn-primary:hover {
+    background: var(--accent-hover);
+}
+
+.tab.active {
+    background: var(--accent);
+    color: #0a0a0a;
+    font-weight: 600;
+}
+
+.status-healthy, .status-running, .status-active {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--accent);
+}
+
+.spinner {
+    border-top-color: var(--accent);
+}
+
+.balance-card.primary {
+    background: linear-gradient(135deg, #064e3b 0%, #0a0a0a 100%);
+    border-color: var(--accent);
+}
+
+.kanban-column[data-status="todo"] {
+    border-top-color: var(--secondary);
+}
+
+.kanban-column[data-status="done"] {
+    border-top-color: var(--accent);
+}
+
+.log-message {
+    color: var(--text-primary);
+}
+
+.log-agent {
+    color: var(--secondary);
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-muted);
+}
+
+.version.up-to-date {
+    color: var(--accent);
+}
+
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(138, 128, 112, 0.3);
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(138, 128, 112, 0.5);
+}
+
+a {
+    color: var(--accent);
+}
+a:hover {
+    color: var(--accent-hover);
+}
+
+.progress-fill {
+    background: var(--accent);
+}
+
+.status-dot {
+    background: var(--accent);
+}
+
+.search-result.active, .search-result:hover {
+    border-color: var(--accent);
+}
+
+.result-score {
+    color: var(--accent);
+    background: var(--accent-muted);
+}
+
+.match-line {
+    color: var(--accent);
+}
+
+.tree-file.active {
+    background: var(--accent-muted);
+    color: var(--accent);
+}
+
+.settings-nav-item.active {
+    background: var(--accent-muted);
+    color: var(--accent);
+}
+
+.builder-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+.toggle-switch input:checked + .slider {
+    background: var(--accent);
+}
+
+.fab {
+    background: var(--accent);
+}
+.fab:hover {
+    background: var(--accent-hover);
+}

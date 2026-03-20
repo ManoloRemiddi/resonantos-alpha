@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+
+{% block title %}TODO - ResonantOS Dashboard{% endblock %}
+{% block page_title %}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg> TODO{% endblock %}
+
+{% block content %}
+<style>
+    .todo-toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+    .todo-toolbar .search-input { flex: 1; min-width: 200px; padding: 8px 14px; background: var(--card-bg, #1a1a2e); border: 1px solid var(--border, #2a2a4a); border-radius: 8px; color: var(--text-primary, #e0e0e0); font-size: 14px; }
+    .todo-toolbar select { padding: 8px 12px; background: var(--card-bg, #1a1a2e); border: 1px solid var(--border, #2a2a4a); border-radius: 8px; color: var(--text-primary, #e0e0e0); font-size: 13px; }
+    .todo-toolbar .btn-add { padding: 8px 16px; background: #6c5ce7; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; }
+    .todo-toolbar .btn-add:hover { background: #5a4bd1; }
+
+    .todo-stats { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+    .todo-stat { padding: 12px 20px; background: var(--card-bg, #1a1a2e); border: 1px solid var(--border, #2a2a4a); border-radius: 10px; text-align: center; cursor: pointer; transition: all 0.2s; min-width: 80px; }
+    .todo-stat:hover { border-color: #6c5ce7; }
+    .todo-stat.active { border-color: #6c5ce7; background: rgba(108,92,231,0.1); }
+    .todo-stat-value { font-size: 24px; font-weight: 700; color: var(--text-primary, #e0e0e0); }
+    .todo-stat-label { font-size: 11px; color: var(--text-secondary, #888); text-transform: uppercase; margin-top: 2px; }
+
+    .todo-list { display: flex; flex-direction: column; gap: 6px; }
+    .todo-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--card-bg, #1a1a2e); border: 1px solid var(--border, #2a2a4a); border-radius: 10px; border-left: 4px solid var(--item-color, #ffffff); transition: all 0.2s; }
+    .todo-item:hover { border-color: #3a3a5a; }
+    .todo-item.done { opacity: 0.5; }
+    .todo-item.done .todo-title { text-decoration: line-through; }
+
+    .todo-check { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border, #2a2a4a); cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .todo-check:hover { border-color: #6c5ce7; }
+    .todo-check.checked { background: #00b894; border-color: #00b894; }
+    .todo-check.checked::after { content: '✓'; color: #fff; font-size: 12px; }
+
+    .todo-content { flex: 1; min-width: 0; }
+    .todo-title { font-size: 14px; font-weight: 500; color: var(--text-primary, #e0e0e0); }
+    .todo-meta { display: flex; gap: 8px; align-items: center; margin-top: 4px; flex-wrap: wrap; }
+    .todo-tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+    .todo-project-tag { color: #fff; }
+    .todo-priority { font-size: 11px; padding: 2px 8px; border-radius: 4px; }
+    .todo-deadline { font-size: 11px; color: var(--text-secondary, #888); }
+    .todo-deadline.overdue { color: #e74c3c; font-weight: 600; }
+    .todo-actions { display: flex; gap: 6px; }
+    .todo-actions button { background: none; border: none; color: var(--text-secondary, #888); cursor: pointer; padding: 4px; font-size: 14px; }
+    .todo-actions button:hover { color: var(--text-primary, #e0e0e0); }
+
+    .priority-critical { background: rgba(231,76,60,0.2); color: #e74c3c; }
+    .priority-high { background: rgba(225,112,85,0.2); color: #e17055; }
+    .priority-medium { background: rgba(253,203,110,0.2); color: #fdcb6e; }
+    .priority-low { background: rgba(99,110,114,0.2); color: #b2bec3; }
+
+    .status-badge { font-size: 11px; padding: 2px 8px; border-radius: 4px; }
+    .status-blocked { background: rgba(231,76,60,0.2); color: #e74c3c; }
+    .status-in_progress { background: rgba(108,92,231,0.2); color: #6c5ce7; }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--text-secondary, #888); }
+    .empty-state h3 { margin-bottom: 8px; color: var(--text-primary, #e0e0e0); }
+
+    /* Modal */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
+    .modal-overlay.active { display: flex; }
+    .modal { background: var(--card-bg, #1a1a2e); border: 1px solid var(--border, #2a2a4a); border-radius: 14px; padding: 24px; width: 90%; max-width: 460px; }
+    .modal h3 { margin: 0 0 16px; color: var(--text-primary, #e0e0e0); }
+    .modal label { display: block; font-size: 12px; color: var(--text-secondary, #888); margin-bottom: 4px; margin-top: 12px; }
+    .modal input, .modal select, .modal textarea { width: 100%; padding: 8px 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border, #2a2a4a); border-radius: 8px; color: var(--text-primary, #e0e0e0); font-size: 14px; box-sizing: border-box; }
+    .modal textarea { resize: vertical; min-height: 60px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+    .modal-actions button { padding: 8px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; }
+    .btn-save { background: #6c5ce7; color: #fff; }
+    .btn-cancel { background: rgba(255,255,255,0.1); color: var(--text-secondary, #888); }
+    .btn-delete { background: rgba(231,76,60,0.2); color: #e74c3c; }
+</style>
+
+<div class="todo-stats" id="todoStats"></div>
+
+<div class="todo-toolbar">
+    <input type="text" class="search-input" id="searchInput" placeholder="Search tasks..." oninput="renderList()">
+    <select id="filterStatus" onchange="renderList()">
+        <option value="">All Status</option>
+        <option value="todo">To Do</option>
+        <option value="in_progress">In Progress</option>
+        <option value="blocked">Blocked</option>
+        <option value="done">Done</option>
+    </select>
+    <select id="filterPriority" onchange="renderList()">
+        <option value="">All Priorities</option>
+        <option value="critical">Critical</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+    </select>
+    <select id="filterProject" onchange="renderList()">
+        <option value="">All Sources</option>
+    </select>
+    <button class="btn-add" onclick="showAddModal()">+ New TODO</button>
+</div>
+
+<div class="todo-list" id="todoList"></div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="todoModal">
+    <div class="modal">
+        <h3 id="modalTitle">New TODO</h3>
+        <input type="hidden" id="mId">
+        <input type="hidden" id="mSource">
+        <input type="hidden" id="mProjectId">
+        <label>Title</label>
+        <input type="text" id="mTitle">
+        <label>Description</label>
+        <textarea id="mDesc"></textarea>
+        <label>Priority</label>
+        <select id="mPriority">
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium" selected>Medium</option>
+            <option value="low">Low</option>
+        </select>
+        <label>Deadline</label>
+        <input type="date" id="mDeadline">
+        <div class="modal-actions">
+            <button class="btn-delete" id="btnDelete" style="display:none" onclick="deleteTodo()">Delete</button>
+            <div style="flex:1"></div>
+            <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+            <button class="btn-save" onclick="saveTodo()">Save</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let allItems = [];
+
+async function loadTodos() {
+    try {
+        const r = await fetch('/api/todo');
+        const data = await r.json();
+        allItems = data.items || [];
+        populateProjectFilter();
+        renderStats();
+        renderList();
+    } catch(e) {
+        document.getElementById('todoList').innerHTML = '<div class="empty-state"><h3>Error loading tasks</h3><p>'+esc(e.message)+'</p></div>';
+    }
+}
+
+function populateProjectFilter() {
+    const sel = document.getElementById('filterProject');
+    const projects = new Map();
+    allItems.forEach(i => {
+        if (i.projectId && !projects.has(i.projectId))
+            projects.set(i.projectId, (i.projectIcon||'')+ ' ' + (i.projectName||i.projectId));
+    });
+    // Keep first option
+    sel.innerHTML = '<option value="">All Sources</option><option value="__standalone">No Project</option>';
+    projects.forEach((name, id) => {
+        sel.innerHTML += `<option value="${esc(id)}">${esc(name.trim())}</option>`;
+    });
+}
+
+function renderStats() {
+    const total = allItems.length;
+    const todo = allItems.filter(i => i.status === 'todo').length;
+    const prog = allItems.filter(i => i.status === 'in_progress').length;
+    const blocked = allItems.filter(i => i.status === 'blocked').length;
+    const done = allItems.filter(i => i.status === 'done').length;
+
+    document.getElementById('todoStats').innerHTML = `
+        <div class="todo-stat" onclick="setStatusFilter('')"><div class="todo-stat-value">${total}</div><div class="todo-stat-label">Total</div></div>
+        <div class="todo-stat" onclick="setStatusFilter('todo')"><div class="todo-stat-value">${todo}</div><div class="todo-stat-label">To Do</div></div>
+        <div class="todo-stat" onclick="setStatusFilter('in_progress')"><div class="todo-stat-value">${prog}</div><div class="todo-stat-label">In Progress</div></div>
+        <div class="todo-stat" onclick="setStatusFilter('blocked')"><div class="todo-stat-value" style="color:#e74c3c">${blocked}</div><div class="todo-stat-label">Blocked</div></div>
+        <div class="todo-stat" onclick="setStatusFilter('done')"><div class="todo-stat-value" style="color:#00b894">${done}</div><div class="todo-stat-label">Done</div></div>
+    `;
+}
+
+function setStatusFilter(s) {
+    document.getElementById('filterStatus').value = s;
+    renderList();
+}
+
+function renderList() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const fStatus = document.getElementById('filterStatus').value;
+    const fPriority = document.getElementById('filterPriority').value;
+    const fProject = document.getElementById('filterProject').value;
+
+    let items = allItems.filter(i => {
+        if (fStatus && i.status !== fStatus) return false;
+        if (fPriority && i.priority !== fPriority) return false;
+        if (fProject === '__standalone' && i.projectId) return false;
+        if (fProject && fProject !== '__standalone' && i.projectId !== fProject) return false;
+        if (search) {
+            const hay = ((i.title||'')+(i.description||'')+(i.projectName||'')).toLowerCase();
+            if (!hay.includes(search)) return false;
+        }
+        return true;
+    });
+
+    const el = document.getElementById('todoList');
+    if (!items.length) {
+        el.innerHTML = '<div class="empty-state"><h3>No tasks found</h3><p>Adjust filters or add a new TODO</p></div>';
+        return;
+    }
+
+    el.innerHTML = items.map(i => {
+        const isDone = i.status === 'done';
+        const color = i.projectColor || '#ffffff';
+        const overdue = i.deadline && !isDone && new Date(i.deadline) < new Date() ? 'overdue' : '';
+        return `<div class="todo-item ${isDone?'done':''}" style="--item-color:${esc(color)}">
+            <div class="todo-check ${isDone?'checked':''}" onclick="toggleDone('${esc(i.id)}','${esc(i.source)}','${esc(i.projectId||'')}',${isDone})"></div>
+            <div class="todo-content">
+                <div class="todo-title">${esc(i.title)}</div>
+                <div class="todo-meta">
+                    ${i.projectName ? `<span class="todo-tag todo-project-tag" style="background:${esc(color)}">${esc((i.projectIcon||'')+' '+i.projectName)}</span>` : '<span class="todo-tag" style="background:rgba(255,255,255,0.1);color:#ccc">Standalone</span>'}
+                    <span class="todo-priority priority-${esc(i.priority||'medium')}">${esc(i.priority||'medium')}</span>
+                    ${i.status==='blocked'?'<span class="status-badge status-blocked">blocked</span>':''}
+                    ${i.status==='in_progress'?'<span class="status-badge status-in_progress">in progress</span>':''}
+                    ${i.deadline?`<span class="todo-deadline ${overdue}">${i.deadline}</span>`:''}
+                </div>
+            </div>
+            <div class="todo-actions">
+                <button onclick='editTodo(${JSON.stringify(i).replace(/'/g,"&#39;")})' title="Edit"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function toggleDone(id, source, projectId, currentlyDone) {
+    const newStatus = currentlyDone ? 'todo' : 'done';
+    if (source === 'standalone') {
+        await fetch(`/api/todo/standalone/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({status: newStatus})});
+    } else {
+        await fetch(`/api/projects/${projectId}/tasks/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({status: newStatus})});
+    }
+    loadTodos();
+}
+
+function showAddModal() {
+    document.getElementById('modalTitle').textContent = 'New TODO';
+    document.getElementById('mId').value = '';
+    document.getElementById('mSource').value = 'standalone';
+    document.getElementById('mProjectId').value = '';
+    document.getElementById('mTitle').value = '';
+    document.getElementById('mDesc').value = '';
+    document.getElementById('mPriority').value = 'medium';
+    document.getElementById('mDeadline').value = '';
+    document.getElementById('btnDelete').style.display = 'none';
+    document.getElementById('todoModal').classList.add('active');
+}
+
+function editTodo(item) {
+    document.getElementById('modalTitle').textContent = 'Edit TODO';
+    document.getElementById('mId').value = item.id;
+    document.getElementById('mSource').value = item.source;
+    document.getElementById('mProjectId').value = item.projectId || '';
+    document.getElementById('mTitle').value = item.title || '';
+    document.getElementById('mDesc').value = item.description || '';
+    document.getElementById('mPriority').value = item.priority || 'medium';
+    document.getElementById('mDeadline').value = item.deadline || '';
+    document.getElementById('btnDelete').style.display = item.source === 'standalone' ? 'block' : 'none';
+    document.getElementById('todoModal').classList.add('active');
+}
+
+function closeModal() { document.getElementById('todoModal').classList.remove('active'); }
+
+async function saveTodo() {
+    const id = document.getElementById('mId').value;
+    const source = document.getElementById('mSource').value;
+    const projectId = document.getElementById('mProjectId').value;
+    const payload = {
+        title: document.getElementById('mTitle').value,
+        description: document.getElementById('mDesc').value,
+        priority: document.getElementById('mPriority').value,
+        deadline: document.getElementById('mDeadline').value || null,
+    };
+    if (!payload.title) return alert('Title required');
+
+    if (id && source === 'standalone') {
+        await fetch(`/api/todo/standalone/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+    } else if (id && source === 'project') {
+        await fetch(`/api/projects/${projectId}/tasks/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+    } else {
+        await fetch('/api/todo/standalone', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+    }
+    closeModal();
+    loadTodos();
+}
+
+async function deleteTodo() {
+    if (!confirm('Delete this todo?')) return;
+    const id = document.getElementById('mId').value;
+    await fetch(`/api/todo/standalone/${id}`, {method:'DELETE'});
+    closeModal();
+    loadTodos();
+}
+
+document.getElementById('todoModal').addEventListener('click', function(e) { if(e.target===this) closeModal(); });
+
+function esc(s) { if(!s) return ''; const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+loadTodos();
+</script>
+{% endblock %}

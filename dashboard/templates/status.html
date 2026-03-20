@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+
+{% block title %}System Status - ResonantOS Dashboard{% endblock %}
+{% block page_title %}System Status{% endblock %}
+
+{% block content %}
+<div class="status-grid">
+    <!-- System Health Card -->
+    <div class="card status-card">
+        <div class="card-header">
+            <h2 class="card-title">System Health</h2>
+            <span class="status-badge status-healthy" id="systemHealth">Healthy</span>
+        </div>
+        <div class="card-content">
+            <div class="gauge-container">
+                <div class="gauge">
+                    <div class="gauge-label">CPU</div>
+                    <svg viewBox="0 0 100 100" class="gauge-svg">
+                        <circle cx="50" cy="50" r="45" class="gauge-bg"/>
+                        <circle cx="50" cy="50" r="45" class="gauge-fill" id="cpuGauge" style="--percent: 23"/>
+                    </svg>
+                    <div class="gauge-value" id="cpuGaugeValue">23%</div>
+                </div>
+                <div class="gauge">
+                    <div class="gauge-label">Memory</div>
+                    <svg viewBox="0 0 100 100" class="gauge-svg">
+                        <circle cx="50" cy="50" r="45" class="gauge-bg"/>
+                        <circle cx="50" cy="50" r="45" class="gauge-fill" id="memoryGauge" style="--percent: 41"/>
+                    </svg>
+                    <div class="gauge-value" id="memoryGaugeValue">41%</div>
+                </div>
+                <div class="gauge">
+                    <div class="gauge-label">Disk</div>
+                    <svg viewBox="0 0 100 100" class="gauge-svg">
+                        <circle cx="50" cy="50" r="45" class="gauge-bg"/>
+                        <circle cx="50" cy="50" r="45" class="gauge-fill warning" id="diskGauge" style="--percent: 68"/>
+                    </svg>
+                    <div class="gauge-value" id="diskGaugeValue">68%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Services Status -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Services</h2>
+        </div>
+        <div class="card-content">
+            <div class="services-list">
+                <div class="service-item">
+                    <span class="service-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+                    <div class="service-info">
+                        <span class="service-name">Gateway</span>
+                        <span class="service-detail">Clawdbot main gateway</span>
+                    </div>
+                    <span class="status-badge status-running" id="gatewayStatus">Running</span>
+                </div>
+                <div class="service-item">
+                    <span class="service-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
+                    <div class="service-info">
+                        <span class="service-name">WebSocket</span>
+                        <span class="service-detail">Real-time updates</span>
+                    </div>
+                    <span class="status-badge status-running">Connected</span>
+                </div>
+                <div class="service-item">
+                    <span class="service-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+                    <div class="service-info">
+                        <span class="service-name">Shield</span>
+                        <span class="service-detail">Security scanner</span>
+                    </div>
+                    <span class="status-badge status-running">Active</span>
+                </div>
+                <div class="service-item">
+                    <span class="service-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span>
+                    <div class="service-info">
+                        <span class="service-name">Dashboard</span>
+                        <span class="service-detail">This interface</span>
+                    </div>
+                    <span class="status-badge status-running">Serving</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Camouflage Status -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Camouflage</h2>
+            <span class="status-badge" id="camouflageOverall">Loading...</span>
+        </div>
+        <div class="card-content">
+            <div class="services-list" id="camouflageChecks">
+                <div class="service-item">
+                    <div class="service-info">
+                        <span class="service-name">Loading checks...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="info-grid" style="margin-top: 1rem;">
+                <div class="info-item">
+                    <span class="info-label">Active Hours</span>
+                    <span class="info-value" id="camouflageHours">--</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Last Check</span>
+                    <span class="info-value" id="camouflageLastCheck">--</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Resource Usage Charts -->
+<div class="card chart-card">
+    <div class="card-header">
+        <h2 class="card-title">Resource Usage (Last Hour)</h2>
+    </div>
+    <div class="card-content">
+        <canvas id="resourceChart" height="250"></canvas>
+    </div>
+</div>
+
+<!-- System Info -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">System Information</h2>
+    </div>
+    <div class="card-content">
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">ResonantOS Version</span>
+                <span class="info-value" id="resonantVersion">{{ resonantos_version }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Clawdbot Version</span>
+                <span class="info-value" id="clawdbotVersion">0.4.2</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Uptime</span>
+                <span class="info-value" id="systemUptime">5d 12h 34m</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Last Restart</span>
+                <span class="info-value" id="lastRestart">5 days ago</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Active Agents</span>
+                <span class="info-value" id="activeAgents">2 / 5</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Gateway Status</span>
+                <span class="info-value status-running" id="gwStatus">Running</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadStatusData();
+    loadCamouflageStatus();
+    initResourceChart();
+});
+
+async function loadStatusData() {
+    try {
+        const res = await fetch('/api/status');
+        const status = await res.json();
+        
+        // Update gauges
+        updateGauge('cpu', status.cpu);
+        updateGauge('memory', status.memory);
+        updateGauge('disk', status.disk);
+        
+        // Update info
+        document.getElementById('systemUptime').textContent = status.uptime;
+        document.getElementById('resonantVersion').textContent = status.resonantosVersion;
+        document.getElementById('clawdbotVersion').textContent = status.clawdbotVersion;
+        document.getElementById('activeAgents').textContent = 
+            `${status.agents.active} / ${status.agents.total}`;
+        
+    } catch (error) {
+        console.error('Error loading status:', error);
+    }
+}
+
+async function loadCamouflageStatus() {
+    try {
+        const res = await fetch('/api/camouflage/status');
+        const data = await res.json();
+        
+        // Update overall status badge
+        const overall = document.getElementById('camouflageOverall');
+        if (data.status === 'healthy') {
+            overall.textContent = `${data.score}/${data.total} Passing`;
+            overall.className = 'status-badge status-healthy';
+        } else if (data.status === 'warning') {
+            overall.textContent = `${data.score}/${data.total} Passing`;
+            overall.className = 'status-badge status-warning';
+        } else {
+            overall.textContent = data.status;
+            overall.className = 'status-badge status-error';
+        }
+        
+        // Build checks list
+        const checksContainer = document.getElementById('camouflageChecks');
+        if (data.checks) {
+            const checks = [
+                { key: 'services', name: 'Launchd Services', detail: c => `${c.running}/${c.total} running` },
+                { key: 'humanDelay', name: 'Human Delay', detail: c => `Mode: ${c.mode}` },
+                { key: 'activeHours', name: 'Active Hours', detail: c => `${c.start} - ${c.end}` },
+                { key: 'gitHooks', name: 'Git Hooks', detail: c => `${c.installed}/${c.total} installed` },
+                { key: 'publicFootprint', name: 'Public Footprint', detail: c => c.dangerousFiles === 0 ? 'Clean' : `${c.dangerousFiles} issues` },
+                { key: 'networkMonitor', name: 'Network Monitor', detail: c => c.status ? 'Active' : 'Inactive' }
+            ];
+            
+            checksContainer.innerHTML = checks.map(check => {
+                const c = data.checks[check.key];
+                const statusClass = c.status ? 'status-running' : 'status-error';
+                const statusText = c.status ? '✓' : '✗';
+                return `
+                    <div class="service-item">
+                        <div class="service-info">
+                            <span class="service-name">${check.name}</span>
+                            <span class="service-detail">${check.detail(c)}</span>
+                        </div>
+                        <span class="status-badge ${statusClass}">${statusText}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Update active hours display
+        if (data.checks?.activeHours) {
+            document.getElementById('camouflageHours').textContent = 
+                `${data.checks.activeHours.start} - ${data.checks.activeHours.end}`;
+        }
+        
+        // Update last check time
+        if (data.timestamp) {
+            const checkTime = new Date(data.timestamp);
+            document.getElementById('camouflageLastCheck').textContent = checkTime.toLocaleTimeString();
+        }
+        
+    } catch (error) {
+        console.error('Error loading camouflage status:', error);
+        document.getElementById('camouflageOverall').textContent = 'Error';
+        document.getElementById('camouflageOverall').className = 'status-badge status-error';
+    }
+}
+
+function updateGauge(name, percent) {
+    const gauge = document.getElementById(name + 'Gauge');
+    const value = document.getElementById(name + 'GaugeValue');
+    
+    gauge.style.setProperty('--percent', percent);
+    value.textContent = percent + '%';
+    
+    // Color based on threshold
+    gauge.classList.remove('warning', 'danger');
+    if (percent > 80) {
+        gauge.classList.add('danger');
+    } else if (percent > 60) {
+        gauge.classList.add('warning');
+    }
+}
+
+function initResourceChart() {
+    const ctx = document.getElementById('resourceChart').getContext('2d');
+    
+    const labels = [];
+    const cpuData = [];
+    const memoryData = [];
+    
+    for (let i = 60; i >= 0; i--) {
+        labels.push(i === 0 ? 'Now' : `-${i}m`);
+        cpuData.push(Math.floor(Math.random() * 30) + 15);
+        memoryData.push(Math.floor(Math.random() * 15) + 35);
+    }
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'CPU',
+                    data: cpuData,
+                    borderColor: '#4ade80',
+                    backgroundColor: 'rgba(74, 222, 128, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: 'Memory',
+                    data: memoryData,
+                    borderColor: '#60a5fa',
+                    backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: { color: '#9ca3af' }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                    ticks: { color: '#9ca3af', callback: v => v + '%' }
+                },
+                x: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#9ca3af', maxTicksLimit: 12 }
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

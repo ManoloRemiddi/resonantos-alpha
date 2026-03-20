@@ -1,0 +1,808 @@
+{% extends "base.html" %}
+
+{% block title %}Skills - ResonantOS Dashboard{% endblock %}
+{% block page_title %}Skills{% endblock %}
+
+{% block content %}
+<!-- Page Intro -->
+<div class="page-intro">
+    <h2>Skills</h2>
+    <p>Skills are specialized capabilities you can add to your AI agents. Each skill teaches your agent how to perform specific tasks — from researching topics and writing content, to managing files and interacting with external services. Install skills to expand what your agents can do, or create custom skills tailored to your workflow.</p>
+</div>
+
+<!-- Community Skills Banner -->
+<div class="community-skills-banner">
+    <div class="banner-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+        </svg>
+    </div>
+    <div class="banner-content">
+        <p class="banner-text">
+            <strong>Built-in Skills</strong> — The skills below are included and tested with ResonantOS. 
+            Looking for more? The community creates and shares open source skills you can add.
+        </p>
+        <div class="banner-links">
+            <a href="https://github.com/clawdbot/clawdbot" target="_blank" rel="noopener" class="banner-btn primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                </svg>
+                Browse Community Skills
+            </a>
+            <a href="https://clawdhub.com" target="_blank" rel="noopener" class="banner-btn secondary">
+                🌐 ClawdHub Marketplace
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Skills Filter Bar -->
+<div class="skills-filter-bar">
+    <!-- Status/Cost Filters -->
+    <div class="filter-group filter-pills">
+        <button class="filter-pill active" data-filter="status" data-value="all" onclick="setStatusFilter('all')">ALL</button>
+        <button class="filter-pill" data-filter="status" data-value="free" onclick="setStatusFilter('free')">Free</button>
+        <button class="filter-pill" data-filter="status" data-value="premium" onclick="setStatusFilter('premium')">Premium</button>
+        <button class="filter-pill" data-filter="status" data-value="coming-soon" onclick="setStatusFilter('coming-soon')">Coming Soon</button>
+    </div>
+    
+    <!-- Category Tags -->
+    <div class="filter-group category-tags">
+        <button class="category-tag" data-category="essential" onclick="toggleCategory('essential')">Essential</button>
+        <button class="category-tag" data-category="arena" onclick="toggleCategory('arena')">Arena</button>
+        <button class="category-tag" data-category="productivity" onclick="toggleCategory('productivity')">Productivity</button>
+        <button class="category-tag" data-category="security" onclick="toggleCategory('security')">Security</button>
+        <button class="category-tag" data-category="creative" onclick="toggleCategory('creative')">Creative</button>
+        <button class="category-tag" data-category="integrations" onclick="toggleCategory('integrations')">Integrations</button>
+    </div>
+    
+    <!-- Sort Dropdown -->
+    <div class="filter-group sort-group">
+        <select id="sortSelect" onchange="sortSkills(this.value)">
+            <option value="top-rated">Top Rated</option>
+            <option value="newest">Newest</option>
+            <option value="most-used">Most Used</option>
+        </select>
+    </div>
+</div>
+
+<!-- Skills Grid -->
+<div class="skills-grid" id="skillsGrid">
+    <div class="loading-state">
+        <div class="spinner"></div>
+        <span>Loading skills...</span>
+    </div>
+</div>
+
+<!-- Skill Detail Modal -->
+<div class="modal" id="skillModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title" id="modalSkillName">Skill Details</h2>
+            <button class="modal-close" onclick="closeSkillModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="skill-detail-content">
+                <div class="skill-detail-header">
+                    <span class="skill-detail-icon" id="modalSkillIcon">🧩</span>
+                    <div class="skill-detail-info">
+                        <h3 id="modalSkillTitle">Skill Name</h3>
+                        <div class="skill-detail-rating" id="modalSkillRating">
+                            <!-- Rating stars populated by JS -->
+                        </div>
+                    </div>
+                    <div class="skill-detail-toggle">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="modalSkillToggle" onchange="toggleSkillFromModal()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="skill-detail-categories" id="modalSkillCategories">
+                    <!-- Categories populated by JS -->
+                </div>
+                
+                <div class="skill-detail-description" id="modalSkillDescription">
+                    <!-- Full description populated by JS -->
+                </div>
+                
+                <div class="skill-detail-actions">
+                    <button class="btn-secondary" disabled title="Coming Soon">
+                        ⭐ Rate This Skill (Coming Soon)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Community Skills Banner */
+.community-skills-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, rgba(96, 165, 250, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
+    border: 1px solid rgba(96, 165, 250, 0.2);
+    border-radius: var(--radius-lg);
+    margin-bottom: 24px;
+}
+
+.banner-icon {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius);
+    color: var(--text-secondary);
+}
+
+.banner-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.banner-text {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
+.banner-text strong {
+    color: var(--text-primary);
+}
+
+.banner-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.banner-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: var(--radius);
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.banner-btn.primary {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+.banner-btn.primary:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.banner-btn.secondary {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+}
+
+.banner-btn.secondary:hover {
+    color: var(--accent);
+}
+
+@media (max-width: 768px) {
+    .community-skills-banner {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .banner-icon {
+        align-self: flex-start;
+    }
+    
+    .banner-links {
+        flex-direction: column;
+    }
+    
+    .banner-btn {
+        justify-content: center;
+    }
+}
+
+/* Skills Filter Bar */
+.skills-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 16px 20px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 24px;
+    align-items: center;
+}
+
+.filter-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.filter-pills {
+    flex-wrap: wrap;
+}
+
+.filter-pill {
+    padding: 8px 16px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.filter-pill:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.filter-pill.active {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+}
+
+.category-tags {
+    flex-wrap: wrap;
+    border-left: 1px solid var(--border);
+    padding-left: 16px;
+}
+
+.category-tag {
+    padding: 6px 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.category-tag:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.category-tag.active {
+    background: var(--accent-muted);
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.sort-group {
+    margin-left: auto;
+}
+
+.sort-group select {
+    padding: 8px 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+/* Skills Grid */
+.skills-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+/* Skill Card */
+.skill-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+}
+
+.skill-card:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow);
+}
+
+.skill-card.coming-soon {
+    opacity: 0.7;
+}
+
+.skill-card.coming-soon .skill-card-header {
+    filter: grayscale(0.5);
+}
+
+.skill-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.skill-icon {
+    font-size: 36px;
+    flex-shrink: 0;
+}
+
+.skill-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.skill-name {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.skill-badge {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.skill-badge.free {
+    background: rgba(74, 222, 128, 0.2);
+    color: var(--success);
+}
+
+.skill-badge.premium {
+    background: rgba(251, 191, 36, 0.2);
+    color: var(--warning);
+}
+
+.skill-badge.coming-soon {
+    background: rgba(96, 165, 250, 0.2);
+    color: var(--info);
+}
+
+.skill-toggle {
+    flex-shrink: 0;
+}
+
+.skill-description {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    line-height: 1.5;
+    flex: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.skill-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+
+.skill-rating {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.skill-stars {
+    color: var(--warning);
+}
+
+.skill-votes {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.btn-read-more {
+    padding: 6px 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-read-more:hover {
+    background: var(--bg-hover);
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* Skill Detail Modal */
+.skill-detail-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.skill-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.skill-detail-icon {
+    font-size: 48px;
+}
+
+.skill-detail-info {
+    flex: 1;
+}
+
+.skill-detail-info h3 {
+    font-size: 20px;
+    margin-bottom: 8px;
+}
+
+.skill-detail-rating {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+}
+
+.skill-detail-rating .skill-stars {
+    color: var(--warning);
+    font-size: 16px;
+}
+
+.skill-detail-toggle {
+    flex-shrink: 0;
+}
+
+.skill-detail-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.skill-detail-categories .category-tag {
+    cursor: default;
+}
+
+.skill-detail-description {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    padding: 16px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius);
+}
+
+.skill-detail-actions {
+    display: flex;
+    gap: 12px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.skill-detail-actions button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Empty State */
+.empty-state {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    color: var(--text-muted);
+}
+
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .skills-filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .category-tags {
+        border-left: none;
+        padding-left: 0;
+        border-top: 1px solid var(--border);
+        padding-top: 16px;
+    }
+    
+    .sort-group {
+        margin-left: 0;
+    }
+    
+    .skills-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// State
+let allSkills = [];
+let filteredSkills = [];
+let enabledSkills = JSON.parse(localStorage.getItem('enabledSkills') || '{}');
+let currentStatusFilter = 'all';
+let selectedCategories = new Set();
+let currentSort = 'top-rated';
+let currentSkillId = null;
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    loadSkills();
+});
+
+// Load skills from API or mock data
+async function loadSkills() {
+    try {
+        const res = await fetch('/api/skills');
+        const data = await res.json();
+        allSkills = data.skills || [];
+        applyFilters();
+    } catch (error) {
+        console.error('Error loading skills:', error);
+        document.getElementById('skillsGrid').innerHTML = `
+            <div class="error-state">
+                <span>❌ Failed to load skills: ${error.message}</span>
+            </div>
+        `;
+    }
+}
+
+// Status filter
+function setStatusFilter(status) {
+    currentStatusFilter = status;
+    
+    // Update UI
+    document.querySelectorAll('.filter-pill[data-filter="status"]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.value === status);
+    });
+    
+    applyFilters();
+}
+
+// Category toggle
+function toggleCategory(category) {
+    const btn = document.querySelector(`.category-tag[data-category="${category}"]`);
+    
+    if (selectedCategories.has(category)) {
+        selectedCategories.delete(category);
+        btn.classList.remove('active');
+    } else {
+        selectedCategories.add(category);
+        btn.classList.add('active');
+    }
+    
+    applyFilters();
+}
+
+// Sort
+function sortSkills(sortBy) {
+    currentSort = sortBy;
+    applyFilters();
+}
+
+// Apply all filters and sort
+function applyFilters() {
+    filteredSkills = allSkills.filter(skill => {
+        // Status filter
+        if (currentStatusFilter !== 'all') {
+            if (currentStatusFilter === 'free' && skill.cost !== 'free') return false;
+            if (currentStatusFilter === 'premium' && skill.cost !== 'premium') return false;
+            if (currentStatusFilter === 'coming-soon' && skill.status !== 'coming-soon') return false;
+        }
+        
+        // Category filter (if any selected, skill must match at least one)
+        if (selectedCategories.size > 0) {
+            const skillCategories = skill.categories || [];
+            const hasMatchingCategory = skillCategories.some(cat => selectedCategories.has(cat));
+            if (!hasMatchingCategory) return false;
+        }
+        
+        return true;
+    });
+    
+    // Sort
+    filteredSkills.sort((a, b) => {
+        switch (currentSort) {
+            case 'top-rated':
+                return (b.rating || 0) - (a.rating || 0);
+            case 'newest':
+                return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+            case 'most-used':
+                return (b.uses || 0) - (a.uses || 0);
+            default:
+                return 0;
+        }
+    });
+    
+    renderSkills();
+}
+
+// Render skills grid
+function renderSkills() {
+    const grid = document.getElementById('skillsGrid');
+    
+    if (!filteredSkills || filteredSkills.length === 0) {
+        grid.innerHTML = `
+            <div class="empty-state">
+                <span class="empty-icon">🧩</span>
+                <p>No skills match your filters</p>
+            </div>
+        `;
+        return;
+    }
+    
+    grid.innerHTML = filteredSkills.map(skill => {
+        const isEnabled = enabledSkills[skill.id] || false;
+        const isComingSoon = skill.status === 'coming-soon';
+        const stars = renderStars(skill.rating || 0);
+        
+        let badgeClass = 'free';
+        let badgeText = 'Free';
+        if (skill.cost === 'premium') {
+            badgeClass = 'premium';
+            badgeText = 'Premium';
+        }
+        if (isComingSoon) {
+            badgeClass = 'coming-soon';
+            badgeText = 'Coming Soon';
+        }
+        
+        return `
+            <div class="skill-card ${isComingSoon ? 'coming-soon' : ''}" data-skill-id="${skill.id}">
+                <div class="skill-card-header">
+                    <span class="skill-icon">${skill.icon || '🧩'}</span>
+                    <div class="skill-info">
+                        <div class="skill-name">
+                            ${skill.name}
+                            <span class="skill-badge ${badgeClass}">${badgeText}</span>
+                        </div>
+                    </div>
+                    <div class="skill-toggle">
+                        <label class="toggle-switch">
+                            <input type="checkbox" 
+                                ${isEnabled ? 'checked' : ''} 
+                                ${isComingSoon ? 'disabled' : ''}
+                                onchange="toggleSkill('${skill.id}', this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <p class="skill-description">${skill.shortDescription || skill.description || 'No description available'}</p>
+                <div class="skill-footer">
+                    <div class="skill-rating">
+                        <span class="skill-stars">${stars}</span>
+                        <span class="skill-votes">(${skill.votes || 0})</span>
+                    </div>
+                    <button class="btn-read-more" onclick="openSkillDetail('${skill.id}')">Read More</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Render star rating
+function renderStars(rating) {
+    const fullStars = Math.floor(rating);
+    const hasHalf = rating % 1 >= 0.5;
+    const emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
+    
+    return '★'.repeat(fullStars) + (hasHalf ? '½' : '') + '☆'.repeat(emptyStars);
+}
+
+// Toggle skill enabled/disabled
+function toggleSkill(skillId, enabled) {
+    enabledSkills[skillId] = enabled;
+    localStorage.setItem('enabledSkills', JSON.stringify(enabledSkills));
+    
+    // If modal is open for this skill, update toggle there too
+    if (currentSkillId === skillId) {
+        document.getElementById('modalSkillToggle').checked = enabled;
+    }
+}
+
+// Toggle from modal
+function toggleSkillFromModal() {
+    if (!currentSkillId) return;
+    const enabled = document.getElementById('modalSkillToggle').checked;
+    toggleSkill(currentSkillId, enabled);
+    renderSkills(); // Re-render to update card toggle
+}
+
+// Open skill detail modal
+function openSkillDetail(skillId) {
+    const skill = allSkills.find(s => s.id === skillId);
+    if (!skill) return;
+    
+    currentSkillId = skillId;
+    
+    // Populate modal
+    document.getElementById('modalSkillName').textContent = skill.name;
+    document.getElementById('modalSkillIcon').textContent = skill.icon || '🧩';
+    document.getElementById('modalSkillTitle').textContent = skill.name;
+    document.getElementById('modalSkillDescription').textContent = skill.description || skill.shortDescription || 'No description available';
+    document.getElementById('modalSkillToggle').checked = enabledSkills[skillId] || false;
+    document.getElementById('modalSkillToggle').disabled = skill.status === 'coming-soon';
+    
+    // Rating
+    const ratingHtml = `
+        <span class="skill-stars">${renderStars(skill.rating || 0)}</span>
+        <span>${(skill.rating || 0).toFixed(1)} (${skill.votes || 0} votes)</span>
+    `;
+    document.getElementById('modalSkillRating').innerHTML = ratingHtml;
+    
+    // Categories
+    const categoriesHtml = (skill.categories || []).map(cat => 
+        `<span class="category-tag">${cat.charAt(0).toUpperCase() + cat.slice(1)}</span>`
+    ).join('');
+    document.getElementById('modalSkillCategories').innerHTML = categoriesHtml;
+    
+    // Show modal
+    document.getElementById('skillModal').classList.add('active');
+}
+
+// Close modal
+function closeSkillModal() {
+    document.getElementById('skillModal').classList.remove('active');
+    currentSkillId = null;
+}
+
+// Close modal on outside click
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('skillModal');
+    if (e.target === modal) {
+        closeSkillModal();
+    }
+});
+
+// Close modal on Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeSkillModal();
+    }
+});
+</script>
+{% endblock %}

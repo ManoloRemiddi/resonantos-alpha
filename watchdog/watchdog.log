@@ -1,0 +1,185 @@
+[2026-03-08 13:25:57] ==================================================
+[2026-03-08 13:25:57] Watchdog service started
+[2026-03-08 13:25:57] ==================================================
+[2026-03-08 13:25:57] Service gateway is UP
+[2026-03-08 13:25:57] Service dashboard is UP
+[2026-03-08 13:25:57] Service shield-gate is DOWN
+[2026-03-08 13:25:57] Attempting to restart shield-gate (attempt 1/3)
+[2026-03-08 13:26:02] Service shield-gate still not responding after restart attempt 1
+[2026-03-08 13:26:04] Attempting to restart shield-gate (attempt 2/3)
+[2026-03-08 13:26:10] Service shield-gate still not responding after restart attempt 2
+[2026-03-08 13:26:12] Attempting to restart shield-gate (attempt 3/3)
+[2026-03-08 13:26:17] Service shield-gate still not responding after restart attempt 3
+[2026-03-08 13:26:19] FAILED to restart shield-gate after 3 attempts
+[2026-03-08 13:27:13] ==================================================
+[2026-03-08 13:27:13] Watchdog service started
+[2026-03-08 13:27:13] ==================================================
+[2026-03-08 13:27:13] Service gateway is UP
+[2026-03-08 13:27:13] Service dashboard is UP
+[2026-03-08 13:29:13] Service gateway is UP
+[2026-03-08 13:29:13] Service dashboard is UP
+[2026-03-08 13:31:13] Service gateway is UP
+[2026-03-08 13:31:13] Service dashboard is UP
+[2026-03-08 13:32:29] ==================================================
+[2026-03-08 13:32:29] Watchdog service started
+[2026-03-08 13:32:29] ==================================================
+[2026-03-08 13:32:29] Service gateway is UP
+[2026-03-08 13:32:29] Service dashboard is UP
+[2026-03-08 13:32:29] Service logician is UP
+[2026-03-08 13:32:29] Service shield is UP
+[2026-03-08 13:33:13] Service gateway is UP
+[2026-03-08 13:33:13] Service dashboard is UP
+[2026-03-08 13:33:23] ==================================================
+[2026-03-08 13:33:23] Watchdog service started
+[2026-03-08 13:33:23] ==================================================
+[2026-03-08 13:33:23] Service gateway is UP
+[2026-03-08 13:33:23] Service dashboard is UP
+[2026-03-08 13:33:23] Service logician is UP
+[2026-03-08 13:33:23] Service shield is UP
+[2026-03-08 13:35:14] Service gateway is UP
+[2026-03-08 13:35:14] Service dashboard is DOWN
+[2026-03-08 13:35:14] Attempting to restart dashboard (attempt 1/3)
+[2026-03-08 13:35:19] Service dashboard still not responding after restart attempt 1
+[2026-03-08 13:35:21] Attempting to restart dashboard (attempt 2/3)
+[2026-03-08 13:35:23] Service gateway is UP
+[2026-03-08 13:35:23] Service dashboard is DOWN
+[2026-03-08 13:35:23] Attempting to restart dashboard (attempt 1/3)
+[2026-03-08 13:35:26] Successfully restarted dashboard
+[2026-03-08 13:35:28] Successfully restarted dashboard
+[2026-03-08 13:35:29] Service logician is UP
+[2026-03-08 13:35:29] Service shield is UP
+[2026-03-08 13:37:27] Service gateway is UP
+[2026-03-08 13:37:27] Service dashboard is UP
+[2026-03-08 13:37:29] Service gateway is UP
+[2026-03-08 13:37:29] Service dashboard is UP
+[2026-03-08 13:37:29] Service logician is UP
+[2026-03-08 13:37:29] Service shield is UP
+[2026-03-08 13:39:27] Service gateway is UP
+[2026-03-08 13:39:27] Service dashboard is UP
+[2026-03-08 13:39:29] Service gateway is UP
+[2026-03-08 13:39:29] Service dashboard is UP
+[2026-03-08 13:39:29] Service logician is UP
+[2026-03-08 13:39:29] Service shield is UP
+[2026-03-08 13:41:27] Service gateway is UP
+[2026-03-08 13:41:27] Service dashboard is UP
+[2026-03-08 13:41:29] Service gateway is UP
+[2026-03-08 13:41:29] Service dashboard is UP
+[2026-03-08 13:41:29] Service logician is UP
+[2026-03-08 13:41:29] Service shield is DOWN
+[2026-03-08 13:41:29] Service shield cannot be auto-restarted (runs inside gateway)
+[2026-03-08 13:43:27] Service gateway is UP
+[2026-03-08 13:43:27] Service dashboard is UP
+[2026-03-08 13:43:29] Service gateway is UP
+[2026-03-08 13:43:29] Service dashboard is UP
+[2026-03-08 13:43:29] Service logician is UP
+[2026-03-08 13:43:29] Service shield is UP
+[2026-03-08 13:45:27] Service gateway is UP
+[2026-03-08 13:45:28] Service dashboard is UP
+[2026-03-08 13:45:29] Service gateway is UP
+[2026-03-08 13:45:29] Service dashboard is UP
+[2026-03-08 13:45:29] Service logician is UP
+[2026-03-08 13:45:29] Service shield is UP
+[2026-03-08 13:47:28] Service gateway is UP
+[2026-03-08 13:47:28] Service dashboard is UP
+[2026-03-08 13:47:29] Service gateway is UP
+[2026-03-08 13:47:29] Service dashboard is UP
+[2026-03-08 13:47:29] Service logician is UP
+[2026-03-08 13:47:29] Service shield is UP
+[2026-03-08 13:49:28] Service gateway is UP
+[2026-03-08 13:49:28] Service dashboard is UP
+[2026-03-08 13:49:29] Service gateway is UP
+[2026-03-08 13:49:29] Service dashboard is UP
+[2026-03-08 13:49:29] Service logician is UP
+[2026-03-08 13:49:29] Service shield is DOWN
+[2026-03-08 13:49:29] Service shield cannot be auto-restarted (runs inside gateway)
+[2026-03-08 13:51:28] Service gateway is UP
+[2026-03-08 13:51:28] Service dashboard is UP
+[2026-03-08 13:51:30] Service gateway is UP
+[2026-03-08 13:51:30] Service dashboard is UP
+[2026-03-08 13:51:30] Service logician is UP
+[2026-03-08 13:51:30] Service shield is DOWN
+[2026-03-08 13:51:30] Service shield cannot be auto-restarted (runs inside gateway)
+[2026-03-08 13:53:28] Service gateway is UP
+[2026-03-08 13:53:28] Service dashboard is UP
+[2026-03-08 13:53:30] Service gateway is UP
+[2026-03-08 13:53:30] Service dashboard is UP
+[2026-03-08 13:53:30] Service logician is UP
+[2026-03-08 13:53:30] Service shield is DOWN
+[2026-03-08 13:53:30] Service shield cannot be auto-restarted (runs inside gateway)
+[2026-03-08 13:55:29] Service gateway is UP
+[2026-03-08 13:55:29] Service dashboard is UP
+[2026-03-08 13:55:30] Service gateway is UP
+[2026-03-08 13:55:30] Service dashboard is UP
+[2026-03-08 13:55:30] Service logician is UP
+[2026-03-08 13:55:30] Service shield is UP
+[2026-03-08 13:57:29] Service gateway is UP
+[2026-03-08 13:57:29] Service dashboard is UP
+[2026-03-08 13:57:30] Service gateway is UP
+[2026-03-08 13:57:30] Service dashboard is UP
+[2026-03-08 13:57:30] Service logician is UP
+[2026-03-08 13:57:30] Service shield is UP
+[2026-03-08 13:59:29] Service gateway is UP
+[2026-03-08 13:59:29] Service dashboard is UP
+[2026-03-08 13:59:30] Service gateway is UP
+[2026-03-08 13:59:30] Service dashboard is UP
+[2026-03-08 13:59:30] Service logician is UP
+[2026-03-08 13:59:30] Service shield is UP
+[2026-03-08 14:01:29] Service gateway is UP
+[2026-03-08 14:01:29] Service dashboard is UP
+[2026-03-08 14:01:30] Service gateway is UP
+[2026-03-08 14:01:30] Service dashboard is UP
+[2026-03-08 14:01:30] Service logician is UP
+[2026-03-08 14:01:30] Service shield is UP
+[2026-03-08 14:03:30] Service gateway is UP
+[2026-03-08 14:03:30] Service dashboard is DOWN
+[2026-03-08 14:03:30] Attempting to restart dashboard (attempt 1/3)
+[2026-03-08 14:03:35] Service dashboard still not responding after restart attempt 1
+[2026-03-08 14:03:37] Attempting to restart dashboard (attempt 2/3)
+[2026-03-08 14:03:42] Service dashboard still not responding after restart attempt 2
+[2026-03-08 14:03:44] Attempting to restart dashboard (attempt 3/3)
+[2026-03-08 14:03:49] Service dashboard still not responding after restart attempt 3
+[2026-03-08 14:03:52] FAILED to restart dashboard after 3 attempts
+[2026-03-08 14:05:52] Service gateway is UP
+[2026-03-08 14:05:52] Service dashboard is UP
+[2026-03-08 14:07:52] Service gateway is UP
+[2026-03-08 14:07:52] Service dashboard is UP
+[2026-03-08 14:09:52] Service gateway is UP
+[2026-03-08 14:09:52] Service dashboard is UP
+[2026-03-08 14:11:52] Service gateway is UP
+[2026-03-08 14:11:52] Service dashboard is UP
+[2026-03-08 14:13:52] Service gateway is UP
+[2026-03-08 14:13:52] Service dashboard is UP
+[2026-03-08 14:15:52] Service gateway is UP
+[2026-03-08 14:15:52] Service dashboard is UP
+[2026-03-08 14:17:53] Service gateway is UP
+[2026-03-08 14:17:53] Service dashboard is UP
+[2026-03-08 14:19:53] Service gateway is UP
+[2026-03-08 14:19:53] Service dashboard is UP
+[2026-03-08 14:21:53] Service gateway is UP
+[2026-03-08 14:21:53] Service dashboard is UP
+[2026-03-08 14:23:53] Service gateway is UP
+[2026-03-08 14:23:53] Service dashboard is UP
+[2026-03-08 14:25:53] Service gateway is UP
+[2026-03-08 14:25:53] Service dashboard is UP
+[2026-03-08 14:27:53] Service gateway is UP
+[2026-03-08 14:27:53] Service dashboard is UP
+[2026-03-08 14:29:54] Service gateway is UP
+[2026-03-08 14:29:54] Service dashboard is UP
+[2026-03-08 14:31:54] Service gateway is UP
+[2026-03-08 14:31:54] Service dashboard is UP
+[2026-03-08 14:33:54] Service gateway is UP
+[2026-03-08 14:33:54] Service dashboard is UP
+[2026-03-08 14:35:54] Service gateway is UP
+[2026-03-08 14:35:54] Service dashboard is UP
+[2026-03-08 14:37:54] Service gateway is UP
+[2026-03-08 14:37:54] Service dashboard is UP
+[2026-03-08 14:39:54] Service gateway is UP
+[2026-03-08 14:39:54] Service dashboard is UP
+[2026-03-08 14:41:54] Service gateway is UP
+[2026-03-08 14:41:55] Service dashboard is UP
+[2026-03-08 14:43:55] Service gateway is UP
+[2026-03-08 14:43:55] Service dashboard is UP
+[2026-03-08 14:45:55] Service gateway is UP
+[2026-03-08 14:45:55] Service dashboard is UP
+[2026-03-08 14:47:55] Service gateway is UP
+[2026-03-08 14:47:55] Service dashboard is UP

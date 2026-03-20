@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.resonantos.watchdog-health</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>$RESONANTOS_HOME/watchdog/watchdog-health.sh</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>$RESONANTOS_HOME/watchdog/watchdog-health.log</string>
+    <key>StandardErrorPath</key>
+    <string>$RESONANTOS_HOME/watchdog/watchdog-health.log</string>
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

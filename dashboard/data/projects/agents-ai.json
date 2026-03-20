@@ -1,0 +1,108 @@
+{
+  "id": "agents-ai",
+  "name": "Agents & AI Architecture",
+  "description": "**What:** Daily memory files, MEMORY.md (long-term), R-Memory compression, SSoT document hierarchy. **Working Name:** The Resonant Voice (Content & Community Agent) **Role:** Produces public-facing website copy, landing pages, documentation, and UI text for ResonantOS web properties.",
+  "status": "planning",
+  "priority": "medium",
+  "icon": "\ud83e\udd16",
+  "color": "#0984e3",
+  "createdAt": "2026-02-23T10:13:16Z",
+  "updatedAt": "2026-02-25T20:18:49Z",
+  "deadline": null,
+  "tags": [
+    "agents",
+    "orchestration",
+    "codex",
+    "swarm"
+  ],
+  "tasks": [
+    {
+      "id": "deep-philosophical-reasoning---core-strength--gemini-1-5-p",
+      "title": "| Deep philosophical reasoning | Core strength (Gemini 1.5 Pro context) \u2014 Preserved in SOUL.md + R-Awareness SSoT injection",
+      "description": "Source: agents/SSOT-L2-CAPABILITIES-AUDIT.md",
+      "status": "done",
+      "priority": "medium",
+      "assignee": null,
+      "deadline": null,
+      "blockedBy": null,
+      "createdAt": "2026-02-23T10:13:16Z",
+      "updatedAt": "2026-02-23T10:13:16Z",
+      "completedAt": "2026-02-23T10:13:16Z"
+    },
+    {
+      "id": "calibrated-voice-for-user-s-content---trained-over-months",
+      "title": "Calibrated voice for user's content | Trained over months of feedback \u2014 Needs rebuilding \u2014 new model, new calibration loop",
+      "description": "Source: agents/SSOT-L2-CAPABILITIES-AUDIT.md",
+      "status": "todo",
+      "priority": "medium",
+      "assignee": null,
+      "deadline": null,
+      "blockedBy": null,
+      "createdAt": "2026-02-23T10:13:16Z",
+      "updatedAt": "2026-02-23T10:13:16Z",
+      "completedAt": null
+    },
+    {
+      "id": "full-playbook-execution---37-plays-internalized",
+      "title": "Full playbook execution | 37 plays internalized \u2014 Documented in Content Agent config, not yet active",
+      "description": "Source: agents/SSOT-L2-CAPABILITIES-AUDIT.md",
+      "status": "done",
+      "priority": "medium",
+      "assignee": null,
+      "deadline": null,
+      "blockedBy": null,
+      "createdAt": "2026-02-23T10:13:16Z",
+      "updatedAt": "2026-02-23T10:13:16Z",
+      "completedAt": "2026-02-23T10:13:16Z"
+    },
+    {
+      "id": "comment-response-calibration---signal-verification-v5-0",
+      "title": "Comment response calibration | Signal Verification v5.0 \u2014 Documented, needs live testing",
+      "description": "Source: agents/SSOT-L2-CAPABILITIES-AUDIT.md",
+      "status": "done",
+      "priority": "medium",
+      "assignee": null,
+      "deadline": null,
+      "blockedBy": null,
+      "createdAt": "2026-02-23T10:13:16Z",
+      "updatedAt": "2026-02-23T10:13:16Z",
+      "completedAt": "2026-02-23T10:13:16Z"
+    },
+    {
+      "id": "brand-consistency---lexicon---naming-discipline",
+      "title": "Brand consistency | Lexicon + naming discipline \u2014 Preserved in L2 brand docs",
+      "description": "Source: agents/SSOT-L2-CAPABILITIES-AUDIT.md",
+      "status": "done",
+      "priority": "medium",
+      "assignee": null,
+      "deadline": null,
+      "blockedBy": null,
+      "createdAt": "2026-02-23T10:13:16Z",
+      "updatedAt": "2026-02-23T10:13:16Z",
+      "completedAt": "2026-02-23T10:13:16Z"
+    },
+    {
+      "id": "35---open-blueprint-play",
+      "title": "| 35 | Open Blueprint Play \u2014 framing for in-progress work",
+      "description": "Source: agents/SSOT-L2-AGENT-CONTENT-VOICE.md",
+      "status": "in_progress",
+      "priority": "medium",
+      "assignee": null,
+      "deadline": null,
+      "blockedBy": null,
+      "createdAt": "2026-02-23T10:13:16Z",
+      "updatedAt": "2026-02-25T20:18:49Z",
+      "completedAt": null
+    }
+  ],
+  "_generated": true,
+  "_generatedAt": "2026-02-23T10:13:16Z",
+  "_sources": [
+    "agents/SSOT-L2-CAPABILITIES-AUDIT.md",
+    "agents/SSOT-L2-AGENT-CONTENT-VOICE.md",
+    "agents/SSOT-L2-AGENT-WEBSITE.md",
+    "agents/SSOT-L2-AGENT-DAO.md",
+    "agents/SSOT-L2-SKILL-CANDIDATES.md",
+    "agi-strategy/SSOT-L2-AGI-STRATEGY.md"
+  ]
+}
