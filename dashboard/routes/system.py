@@ -355,4 +355,98 @@ def register_system_routes(app):
         default_model = cfg.get("agents", "defaults", "model", "primary", default="anthropic/claude-haiku-4-5")
         return jsonify({"model": default_model})
 
+    @app.route("/api/gateway/token")
+    def api_gateway_token():
+        """Get gateway auth token from openclaw.json."""
+        openclaw_cfg = Path.home() / ".openclaw" / "openclaw.json"
+        if openclaw_cfg.exists():
+            try:
+                cfg = json.loads(openclaw_cfg.read_text())
+                token = cfg.get("gateway", {}).get("token") or cfg.get("token")
+                if token:
+                    return jsonify({"token": token})
+            except Exception:
+                pass
+        return jsonify({"token": ""}), 200
+
+    @app.route("/api/agents")
+    def api_agents():
+        """List all agents with agentId and mainModel fields (setup page format)."""
+        agents = []
+        openclaw_cfg = Path.home() / ".openclaw" / "openclaw.json"
+        if openclaw_cfg.exists():
+            try:
+                cfg = json.loads(openclaw_cfg.read_text())
+                agents_list = cfg.get("agents", {}).get("list", [])
+                for entry in agents_list:
+                    agents.append({
+                        "agentId": entry.get("id", ""),
+                        "mainModel": entry.get("model", ""),
+                    })
+            except Exception:
+                pass
+        return jsonify(agents)
+
+    @app.route("/api/agents/<agent_id>/model", methods=["GET", "PUT"])
+    def api_agent_model(agent_id):
+        """Get or set the model for a specific agent."""
+        openclaw_cfg = Path.home() / ".openclaw" / "openclaw.json"
+        if not openclaw_cfg.exists():
+            return jsonify({"error": "openclaw.json not found"}), 404
+        try:
+            cfg = json.loads(openclaw_cfg.read_text())
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+        if request.method == "GET":
+            agents_list = cfg.get("agents", {}).get("list", [])
+            for entry in agents_list:
+                if entry.get("id") == agent_id:
+                    return jsonify({"model": entry.get("model", "")})
+            return jsonify({"model": ""})
+
+        data = request.get_json() or {}
+        model = data.get("model", "")
+        agents_list = cfg.get("agents", {}).get("list", [])
+        found = False
+        for entry in agents_list:
+            if entry.get("id") == agent_id:
+                entry["model"] = model
+                found = True
+                break
+        if not found:
+            agents_list.append({"id": agent_id, "model": model})
+        cfg.setdefault("agents", {})["list"] = agents_list
+        openclaw_cfg.write_text(json.dumps(cfg, indent=2))
+        return jsonify({"success": True, "model": model})
+
+    @app.route("/api/settings/update-config", methods=["GET", "PUT"])
+    def api_settings_update_config():
+        """Read or write the updates section of dashboard config.json."""
+        dashboard_dir = Path(__file__).resolve().parent
+        config_file = dashboard_dir / "config.json"
+
+        if request.method == "GET":
+            if config_file.exists():
+                try:
+                    cfg = json.loads(config_file.read_text())
+                    return jsonify(cfg.get("updates", {}))
+                except Exception:
+                    pass
+            return jsonify({})
+
+        data = request.get_json() or {}
+        cfg = {}
+        if config_file.exists():
+            try:
+                cfg = json.loads(config_file.read_text())
+            except Exception:
+                pass
+        cfg.setdefault("updates", {}).update(data)
+        try:
+            config_file.write_text(json.dumps(cfg, indent=2))
+            return jsonify(cfg["updates"])
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
     return app
