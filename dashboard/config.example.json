@@ -32,5 +32,13 @@
     "daoDetails": "ssot/L2/DAO_DETAILS.json",
     "rctCapsFile": "data/rct_caps.json",
     "onboardingFile": "data/onboarding.json"
+  },
+  "features": {
+    "wallet": false,
+    "tribes": false,
+    "bounties": false,
+    "protocol_store": false,
+    "logician": false,
+    "mcp": false
   }
 }

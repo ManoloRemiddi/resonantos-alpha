@@ -29,6 +29,7 @@ from shared import (
     WORKSPACE, OPENCLAW_HOME, OPENCLAW_CONFIG,
     RMEMORY_DIR, RMEMORY_CONFIG,
 )
+from features import init_features, is_enabled, get_context
 
 # Import route modules
 from routes import (
@@ -48,6 +49,8 @@ from routes import (
 app = Flask(__name__, template_folder="templates", static_folder="static")
 app.config["JSON_SORT_KEYS"] = False
 CORS(app)
+init_features()
+app.context_processor(get_context)
 
 # ============================================================================
 # Page Routes
@@ -83,18 +86,26 @@ def page_chatbots():
 
 @app.route("/wallet")
 def page_wallet():
+    if not is_enabled("wallet"):
+        return "Wallet feature is disabled", 404
     return render_template("pages/wallet.html")
 
 @app.route("/tribes")
 def page_tribes():
+    if not is_enabled("tribes"):
+        return "Tribes feature is disabled", 404
     return render_template("pages/tribes.html")
 
 @app.route("/bounties")
 def page_bounties():
+    if not is_enabled("bounties"):
+        return "Bounties feature is disabled", 404
     return render_template("pages/bounties.html")
 
 @app.route("/protocol-store")
 def page_protocol_store():
+    if not is_enabled("protocol_store"):
+        return "Protocol Store is disabled", 404
     return render_template("pages/protocol-store.html")
 
 @app.route("/docs")
@@ -116,11 +127,11 @@ def serve_static(filename):
 register_docs_routes(app)
 register_memory_routes(app)
 register_projects_routes(app)
-register_wallet_routes(app)
+if is_enabled("wallet"):
+    register_wallet_routes(app)
 register_system_routes(app)
 
-# Register full implementations if available
-if register_bounty_routes:
+if register_bounty_routes and is_enabled("bounties"):
     register_bounty_routes(app)
 
 if register_profile_routes:
