@@ -1,0 +1,19 @@
+{
+  "wallets_yearly": {
+    "FfxagDH34L7Sgvga4LBxkhegMkMKtYt8S9A6cFdnambn": {
+      "2026": 2
+    }
+  },
+  "daily": [
+    {
+      "ts": "2026-03-20T04:57:26.190766+00:00",
+      "recipient": "FfxagDH34L7Sgvga4LBxkhegMkMKtYt8S9A6cFdnambn",
+      "amount": 1
+    },
+    {
+      "ts": "2026-03-20T04:57:44.992096+00:00",
+      "recipient": "FfxagDH34L7Sgvga4LBxkhegMkMKtYt8S9A6cFdnambn",
+      "amount": 1
+    }
+  ]
+}
