@@ -362,7 +362,7 @@ def register_system_routes(app):
         if openclaw_cfg.exists():
             try:
                 cfg = json.loads(openclaw_cfg.read_text())
-                token = cfg.get("gateway", {}).get("token") or cfg.get("token")
+                token = cfg.get("gateway", {}).get("auth", {}).get("token")
                 if token:
                     return jsonify({"token": token})
             except Exception:
