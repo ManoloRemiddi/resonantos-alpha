@@ -5,10 +5,9 @@ shopt -s nullglob
 
 HEADER_DIR="${HOME}/.openclaw/workspace/memory/headers"
 RECENT_FILE="${HOME}/.openclaw/workspace/memory/RECENT-HEADERS.md"
-SSOT_FILE="${HOME}/resonantos-augmentor/ssot/L1/RECENT-HEADERS.md"
 KEEP_COUNT=20
 
-mkdir -p "${HEADER_DIR}" "$(dirname "${RECENT_FILE}")" "$(dirname "${SSOT_FILE}")"
+mkdir -p "${HEADER_DIR}" "$(dirname "${RECENT_FILE}")"
 
 headers=( "${HEADER_DIR}"/*.header.md )
 total_headers=${#headers[@]}
@@ -36,8 +35,5 @@ fi
     done < "${file}"
   done
 } > "${RECENT_FILE}"
-
-recent_content="$(<"${RECENT_FILE}")"
-printf '%s\n' "${recent_content}" > "${SSOT_FILE}"
 
 printf 'Kept %d headers, deleted %d, rebuilt RECENT-HEADERS.md\n' "${#headers[@]}" "${deleted_headers}"

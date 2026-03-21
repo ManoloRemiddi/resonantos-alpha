@@ -62,7 +62,7 @@ cat > "$BUILD_DIR/dashboard.spec" << 'SPEC'
 block_cipher = None
 
 a = Analysis(
-    ['server.py'],
+    ['server_v2.py'],
     pathex=[],
     binaries=[],
     datas=[],
@@ -121,7 +121,7 @@ SPEC
     --specpath "$BUILD_DIR" \
     --clean \
     --noconfirm \
-    server.py 2>&1 | grep -E "(Building|Appending|Completed|Error)" || true
+    server_v2.py 2>&1 | grep -E "(Building|Appending|Completed|Error)" || true
 
 if [ ! -f "$DIST_DIR/$PACKAGE_NAME/dashboard" ]; then
     echo "❌ PyInstaller build failed"

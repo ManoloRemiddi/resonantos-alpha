@@ -301,7 +301,6 @@ class NFTMinter:
             base.parent / "data" / "nft_registry.json",
             base.parent.parent / "dashboard-audit" / "data" / "nft_registry.json",
             Path.cwd() / "data" / "nft_registry.json",
-            Path.home() / "resonantos-augmentor" / "data" / "nft_registry.json",
         ]
 
     def _load_nft_registry(self) -> Dict[str, str]:

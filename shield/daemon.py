@@ -25,10 +25,11 @@ from watchdog.events import FileSystemEventHandler
 # Configuration
 HEALTH_PORT = 9999
 HEALTH_HOST = "127.0.0.1"
-ALERTS_DIR = Path.home() / "clawd" / "security" / "alerts"
-LOGS_DIR = Path.home() / "clawd" / "security" / "logs"
+OPENCLAW_DIR = Path.home() / ".openclaw"
+ALERTS_DIR = OPENCLAW_DIR / "shield" / "security" / "alerts"
+LOGS_DIR = OPENCLAW_DIR / "shield" / "security" / "logs"
 LOG_FILE = LOGS_DIR / "shield_daemon.log"
-PID_FILE = Path.home() / "clawd" / "security" / "shield" / "shield.pid"
+PID_FILE = OPENCLAW_DIR / "shield" / "shield.pid"
 
 # Ensure directories exist
 ALERTS_DIR.mkdir(parents=True, exist_ok=True)

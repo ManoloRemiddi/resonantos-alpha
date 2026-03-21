@@ -1,6 +1,6 @@
 #!/bin/bash
 # Dashboard watchdog — restarts server_v2.py if it's not responding
-DASHBOARD_DIR="/Users/augmentor/resonantos-augmentor/dashboard"
+DASHBOARD_DIR="${RESONANTOS_REPO_DIR:-${HOME}/resonantos-alpha}/dashboard"
 LOG="/tmp/dashboard.log"
 PIDFILE="/tmp/dashboard.pid"
 

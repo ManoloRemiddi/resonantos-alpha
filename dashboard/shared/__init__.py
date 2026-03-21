@@ -73,7 +73,6 @@ def get_openclaw_skills_dir():
 def resolve_data_file(path_from_cfg: str, default_rel: str, dashboard_dir: Path) -> Path:
     """Resolve a data file path, checking multiple candidates."""
     candidates = [
-        Path.home() / "resonantos-augmentor" / path_from_cfg,
         dashboard_dir / default_rel,
     ]
     for candidate in candidates:

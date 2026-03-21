@@ -3,7 +3,7 @@
 set -uo pipefail
 
 SCRIPT_NAME="$(basename "$0")"
-REPO_DIR="$HOME/resonantos-augmentor"
+REPO_DIR="${RESONANTOS_REPO_DIR:-${HOME}/resonantos-alpha}"
 SSOT_DIR="$REPO_DIR/ssot"
 MODEL="minimax/MiniMax-M2.5"
 
