@@ -1,0 +1,50 @@
+        <section class="settings-section" id="memorylogsSection">
+            <div class="settings-card">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Memory Logs</h3>
+                        <p>Configure automated memory log generation. DNA Sequencing requires a reasoning-capable model (Opus/Gemini Pro).</p>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Daily Log <span id="mlDailyBadge" style="font-size:0.75rem;padding:2px 8px;border-radius:6px;margin-left:8px;background:rgba(255,255,255,0.06);color:var(--text-secondary)">idle</span></h3>
+                        <p>Full session summary at 04:30 Rome time</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="mlDailyEnabled" onchange="saveMemoryLogs()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Intraday Log <span id="mlIntradayBadge" style="font-size:0.75rem;padding:2px 8px;border-radius:6px;margin-left:8px;background:rgba(255,255,255,0.06);color:var(--text-secondary)">idle</span></h3>
+                        <p>Incremental log every 3 hours (skips quiet windows)</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="mlIntradayEnabled" onchange="saveMemoryLogs()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Model</h3>
+                        <p>Model used for DNA Sequencing in memory logs</p>
+                    </div>
+                    <div class="setting-control">
+                        <select id="mlModel" onchange="saveMemoryLogs()" style="background:var(--card-bg);color:var(--text-primary);border:1px solid var(--border-color);border-radius:8px;padding:6px 10px;font-size:0.85rem;">
+                            <option value="">Same as orchestrator</option>
+                            <option value="anthropic/claude-opus-4-6">anthropic/claude-opus-4-6</option>
+                            <option value="google/gemini-2.5-pro">google/gemini-2.5-pro</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </section>

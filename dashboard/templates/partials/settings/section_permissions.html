@@ -1,0 +1,71 @@
+        <section class="settings-section" id="permissionsSection">
+            <h2 class="section-title">AI Permissions</h2>
+            <p class="section-description">Control what capabilities the AI has access to. Changes require confirmation.</p>
+            
+            <div class="settings-card permissions-card">
+                <div class="setting-item permission">
+                    <div class="setting-info">
+                        <h3>Browser Access</h3>
+                        <p>Allow AI to control web browser for research and automation</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="permBrowser" checked onchange="confirmPermission(this, 'browserAccess')">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="setting-item permission">
+                    <div class="setting-info">
+                        <h3>Shell Commands</h3>
+                        <p>Allow AI to execute shell commands on your system</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="permShell" checked onchange="confirmPermission(this, 'shellCommands')">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="setting-item permission">
+                    <div class="setting-info">
+                        <h3>File Write Access</h3>
+                        <p>Allow AI to create and modify files</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="permFileWrite" checked onchange="confirmPermission(this, 'fileWrite')">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="setting-item permission sensitive">
+                    <div class="setting-info">
+                        <h3>External Messaging</h3>
+                        <p class="warning"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Allow AI to send emails, tweets, and other external messages</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="permMessaging" onchange="confirmPermission(this, 'externalMessaging')">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="setting-item permission">
+                    <div class="setting-info">
+                        <h3>Tool Installation</h3>
+                        <p>Allow AI to install new tools and packages</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="permToolInstall" checked onchange="confirmPermission(this, 'toolInstallation')">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </section>

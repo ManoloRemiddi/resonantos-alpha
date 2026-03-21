@@ -1,0 +1,102 @@
+        <section class="settings-section" id="memory-bridgeSection">
+            <h2 style="font-size:1.25rem;font-weight:600;color:var(--text-primary);margin-bottom:16px;">Memory Bridge</h2>
+            <p style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:20px;line-height:1.5;">
+                Share your agent's knowledge with external AI systems via the <strong>Model Context Protocol (MCP)</strong>.
+                Any MCP-compatible AI client (Claude Desktop, ChatGPT, Cursor, Windsurf, and others) can search your SSoT,
+                memory logs, and RAG knowledge bases — without copying data out of your machine.
+            </p>
+
+            <!-- MCP Server Status -->
+            <div style="padding:16px 20px;background:var(--card-bg,#1a1a2e);border-radius:12px;border:1px solid var(--border-color,#2a2a4a);margin-bottom:20px;display:flex;align-items:center;gap:12px;">
+                <div id="mcpStatusDot" style="width:12px;height:12px;border-radius:50%;background:#4ade80;box-shadow:0 0 8px rgba(74,222,128,0.4);"></div>
+                <span style="font-size:1rem;color:var(--text-primary);" id="mcpStatusText">MCP Server Enabled</span>
+            </div>
+
+            <!-- Knowledge Sources -->
+            <h3 style="font-size:1rem;font-weight:600;color:var(--text-primary);margin-bottom:12px;">Knowledge Sources</h3>
+            <div style="background:var(--card-bg,#1a1a2e);border-radius:12px;border:1px solid var(--border-color,#2a2a4a);margin-bottom:20px;" id="bridgeSourcesCard">
+                <div id="bridgeSourcesToggles" style="padding:4px 0;">Loading...</div>
+            </div>
+
+            <!-- RAG Agent Selection -->
+            <h3 style="font-size:1rem;font-weight:600;color:var(--text-primary);margin-bottom:8px;">RAG Knowledge Bases</h3>
+            <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:12px;">
+                Select which agent knowledge bases are searchable via MCP. Each agent maintains its own indexed content.
+            </p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-bottom:20px;" id="bridgeAgentGrid">Loading...</div>
+
+            <!-- Connection Info -->
+            <h3 style="font-size:1rem;font-weight:600;color:var(--text-primary);margin-bottom:8px;">Connection Info</h3>
+            <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:12px;line-height:1.5;">
+                To connect an external AI, add this MCP server to your client's configuration.
+                The exact location depends on your client — check its documentation for where to add MCP servers.
+            </p>
+            <div style="background:#0d0d1a;border:1px solid var(--border-color,#2a2a4a);border-radius:8px;padding:16px;font-family:monospace;font-size:0.85rem;color:#4ade80;white-space:pre;overflow-x:auto;position:relative;" id="bridgeConfigSnippet"><button onclick="navigator.clipboard.writeText(document.getElementById('bridgeConfigSnippet').textContent.replace('Copy','').trim()).then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',2000)})" style="position:absolute;top:8px;right:8px;background:rgba(74,222,128,0.2);border:1px solid rgba(74,222,128,0.3);color:#4ade80;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:0.8rem;">Copy</button>{
+  "mcpServers": {
+    "resonantos": {
+      "command": "node",
+      "args": ["/Users/augmentor/resonantos-augmentor/mcp-server/src/index.js"]
+    }
+  }
+}</div>
+
+            <!-- Save Bar -->
+            <div id="bridgeSaveBar" style="display:none;align-items:center;justify-content:flex-end;gap:12px;margin-top:16px;padding:12px 0;">
+                <span id="bridgeSaveStatus" style="font-size:0.85rem;color:var(--text-secondary);"></span>
+                <button onclick="saveBridgeConfig()" style="background:#4ade80;color:#000;border:none;padding:8px 24px;border-radius:8px;font-weight:600;cursor:pointer;" id="bridgeSaveBtn">Save Changes</button>
+            </div>
+
+            <script>
+            (function(){
+                var SOURCES = [
+                    {key:'ssot_l0',name:'SSoT L0 — Foundation',desc:'Philosophy, mission, creative DNA'},
+                    {key:'ssot_l1',name:'SSoT L1 — Architecture',desc:'System specs, component docs'},
+                    {key:'ssot_l2',name:'SSoT L2 — Projects',desc:'Active project documentation'},
+                    {key:'ssot_l3',name:'SSoT L3 — Drafts',desc:'Work in progress'},
+                    {key:'ssot_l4',name:'SSoT L4 — Notes',desc:'Session notes, research'},
+                    {key:'research',name:'Research',desc:'Competitive analysis, market data'},
+                    {key:'memory_logs',name:'Memory Logs',desc:'Collaboration history'}
+                ];
+                var AGENTS=['main','deputy','voice','dao','website','setup','acupuncturist','blindspot','researcher','creative'];
+                var cfg=null, dirty=false;
+
+                fetch('/api/memory-bridge/config').then(function(r){return r.json()}).then(function(d){
+                    cfg=d; renderSrc(); renderAg(); updateSt();
+                }).catch(function(){document.getElementById('bridgeSourcesToggles').textContent='Error loading config'});
+
+                function renderSrc(){
+                    var el=document.getElementById('bridgeSourcesToggles');
+                    el.innerHTML=SOURCES.map(function(s){
+                        var c=cfg.sources[s.key]?'checked':'';
+                        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border-color,#2a2a4a)">'+
+                            '<div><div style="font-size:0.95rem;color:var(--text-primary);font-weight:500">'+s.name+'</div><div style="font-size:0.8rem;color:var(--text-secondary)">'+s.desc+'</div></div>'+
+                            '<label style="position:relative;width:44px;height:24px;flex-shrink:0"><input type="checkbox" data-src="'+s.key+'" '+c+' onchange="window._bridgeToggleSrc(this)" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#333;border-radius:24px;transition:0.3s" class="bslider"></span></label></div>';
+                    }).join('');
+                    el.querySelectorAll('input:checked').forEach(function(i){i.nextElementSibling.style.background='#4ade80'});
+                }
+                function renderAg(){
+                    var el=document.getElementById('bridgeAgentGrid');
+                    el.innerHTML=AGENTS.map(function(a){
+                        var c=(cfg.rag_agents||[]).indexOf(a)>=0?'checked':'';
+                        return '<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;cursor:pointer"><input type="checkbox" data-agent="'+a+'" '+c+' onchange="window._bridgeToggleAg(this)" style="accent-color:#4ade80;width:16px;height:16px"><span style="font-size:0.9rem;color:var(--text-primary)">'+a+'</span></label>';
+                    }).join('');
+                }
+                function updateSt(){
+                    var dot=document.getElementById('mcpStatusDot'),txt=document.getElementById('mcpStatusText');
+                    if(cfg&&cfg.server&&cfg.server.enabled){dot.style.background='#4ade80';dot.style.boxShadow='0 0 8px rgba(74,222,128,0.4)';txt.textContent='MCP Server Enabled'}
+                    else{dot.style.background='#ef4444';dot.style.boxShadow='none';txt.textContent='MCP Server Disabled'}
+                }
+                function markDirty(){dirty=true;var b=document.getElementById('bridgeSaveBar');b.style.display='flex';document.getElementById('bridgeSaveStatus').textContent='Unsaved changes'}
+
+                window._bridgeToggleSrc=function(el){cfg.sources[el.dataset.src]=el.checked;el.nextElementSibling.style.background=el.checked?'#4ade80':'#333';markDirty()};
+                window._bridgeToggleAg=function(el){var a=el.dataset.agent;if(el.checked){if(cfg.rag_agents.indexOf(a)<0)cfg.rag_agents.push(a)}else{cfg.rag_agents=cfg.rag_agents.filter(function(x){return x!==a})}markDirty()};
+                window.saveBridgeConfig=function(){
+                    var btn=document.getElementById('bridgeSaveBtn');btn.textContent='Saving...';
+                    fetch('/api/memory-bridge/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)}).then(function(r){
+                        if(r.ok){dirty=false;document.getElementById('bridgeSaveBar').style.display='none';btn.textContent='Save Changes'}
+                        else{document.getElementById('bridgeSaveStatus').textContent='Save failed';btn.textContent='Save Changes'}
+                    }).catch(function(e){document.getElementById('bridgeSaveStatus').textContent='Error';btn.textContent='Save Changes'});
+                };
+            })();
+            </script>
+        </section>

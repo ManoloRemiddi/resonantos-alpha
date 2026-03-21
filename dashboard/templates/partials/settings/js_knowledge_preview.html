@@ -1,0 +1,527 @@
+    document.querySelectorAll('.knowledge-ssot-toggle').forEach(toggle => {
+        toggle.addEventListener('change', async function() {
+            const agentId = this.dataset.agentId;
+            const level = this.dataset.level;
+            const enabled = this.checked;
+            try {
+                const resp = await fetch('/api/knowledge/ssot-access', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({agentId, level, enabled})
+                });
+                if (!resp.ok) throw new Error('Failed');
+            } catch(e) {
+                this.checked = !enabled; // revert
+                alert('Failed to save: ' + e.message);
+            }
+        });
+    });
+}
+
+function initUnifiedToggles(container) {
+    if (!container) return;
+    const getScope = function(element) {
+        return element ? element.closest('.ku-row, .ku-common-card') : null;
+    };
+
+    const setDeleteButtonVisibility = function(scope, expanded) {
+        if (!scope) return;
+        const deleteBtn = scope.querySelector('.ku-delete-btn');
+        if (!deleteBtn) return;
+        deleteBtn.classList.toggle('visible', !!expanded);
+    };
+
+    const getSelectedFilePaths = function(scope) {
+        if (!scope) return [];
+        return Array.from(scope.querySelectorAll('.ku-file-checkbox:checked'))
+            .map(function(input) { return input.getAttribute('data-file-path') || ''; })
+            .filter(function(pathValue) { return !!pathValue; });
+    };
+
+    const refreshDeleteButtonState = function(scope) {
+        if (!scope) return;
+        const deleteBtn = scope.querySelector('.ku-delete-btn');
+        if (!deleteBtn) return;
+        const selectedCount = getSelectedFilePaths(scope).length;
+        deleteBtn.disabled = selectedCount === 0;
+    };
+
+    container.querySelectorAll('.ku-ssot-toggle').forEach(function(toggle) {
+        toggle.addEventListener('change', async function() {
+            const agentId = toggle.dataset.agentId || '';
+            const level = toggle.dataset.level || '';
+            const enabled = toggle.checked;
+            toggle.disabled = true;
+            try {
+                const response = await fetch('/api/knowledge/ssot-access', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agentId: agentId, level: level, enabled: enabled })
+                });
+                const data = await response.json();
+                if (!response.ok || data.error) throw new Error(data.error || 'Failed to update access');
+            } catch (error) {
+                toggle.checked = !enabled;
+                showToast('Failed to update SSoT access: ' + error.message, 'error');
+            } finally {
+                toggle.disabled = false;
+            }
+        });
+    });
+
+    container.querySelectorAll('.ku-common-toggle').forEach(function(toggle) {
+        toggle.addEventListener('change', async function() {
+            const agentId = toggle.dataset.agentId || '';
+            const enabled = toggle.checked;
+            toggle.disabled = true;
+            try {
+                const response = await fetch('/api/knowledge/common-access', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agentId: agentId, enabled: enabled })
+                });
+                const data = await response.json();
+                if (!response.ok || data.error) throw new Error(data.error || 'Failed to update access');
+                showToast('Common KB ' + (enabled ? 'enabled' : 'disabled') + ' for ' + formatAgentName(agentId));
+            } catch (error) {
+                toggle.checked = !enabled;
+                showToast('Failed to update common access: ' + error.message, 'error');
+            } finally {
+                toggle.disabled = false;
+            }
+        });
+    });
+
+    container.querySelectorAll('.ku-memory-toggle').forEach(function(toggle) {
+        toggle.addEventListener('change', async function() {
+            const agentId = toggle.dataset.agentId || '';
+            const enabled = toggle.checked;
+            toggle.disabled = true;
+            try {
+                const response = await fetch('/api/knowledge/common-access', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agentId: agentId, enabled: enabled })
+                });
+                const data = await response.json();
+                if (!response.ok || data.error) throw new Error(data.error || 'Failed to update access');
+                showToast('Memory access ' + (enabled ? 'enabled' : 'disabled') + ' for ' + formatAgentName(agentId));
+            } catch (error) {
+                toggle.checked = !enabled;
+                showToast('Failed to update memory access: ' + error.message, 'error');
+            } finally {
+                toggle.disabled = false;
+            }
+        });
+    });
+
+    container.querySelectorAll('.ku-show-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const targetId = button.getAttribute('data-files-target');
+            const filesEl = targetId ? document.getElementById(targetId) : null;
+            if (!filesEl) return;
+            const expanded = filesEl.classList.toggle('expanded');
+            button.textContent = expanded ? 'Hide files' : 'Show files';
+            const scope = getScope(button);
+            setDeleteButtonVisibility(scope, expanded);
+            refreshDeleteButtonState(scope);
+        });
+    });
+
+    container.querySelectorAll('.ku-file-checkbox').forEach(function(input) {
+        input.addEventListener('change', function() {
+            refreshDeleteButtonState(getScope(input));
+        });
+    });
+
+    container.querySelectorAll('.ku-delete-btn').forEach(function(button) {
+        button.addEventListener('click', async function() {
+            const scope = getScope(button);
+            const selectedPaths = getSelectedFilePaths(scope);
+            if (selectedPaths.length === 0) {
+                showToast('Select at least one file to delete', 'error');
+                return;
+            }
+
+            const confirmed = window.confirm('Delete ' + selectedPaths.length + ' selected file' + (selectedPaths.length === 1 ? '' : 's') + '?');
+            if (!confirmed) return;
+
+            const originalLabel = button.textContent;
+            button.disabled = true;
+            button.textContent = '...';
+            try {
+                for (const filePath of selectedPaths) {
+                    const response = await fetch('/api/knowledge/file', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ path: filePath })
+                    });
+                    const data = await response.json();
+                    if (!response.ok || data.error) throw new Error(data.error || ('Failed to delete ' + filePath));
+                }
+                showToast('Deleted ' + selectedPaths.length + ' file' + (selectedPaths.length === 1 ? '' : 's'));
+                await loadKnowledgeBase();
+            } catch (error) {
+                showToast('Delete failed: ' + error.message, 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = originalLabel;
+            }
+        });
+    });
+
+    container.querySelectorAll('.ku-file-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const filePath = button.getAttribute('data-file-path');
+            if (!filePath) return;
+            previewKnowledgeFile(filePath);
+        });
+    });
+
+    container.querySelectorAll('.ku-upload-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const scope = button.closest('.ku-row, .ku-common-card');
+            const input = scope ? scope.querySelector('.ku-upload-input') : null;
+            if (input) input.click();
+        });
+    });
+
+    container.querySelectorAll('.ku-upload-input').forEach(function(input) {
+        input.addEventListener('change', async function() {
+            const file = input.files && input.files[0];
+            if (!file) return;
+            const folder = input.getAttribute('data-folder') || '';
+            const scope = input.closest('.ku-row, .ku-common-card');
+            const uploadBtn = scope ? scope.querySelector('.ku-upload-btn') : null;
+            const originalText = uploadBtn ? uploadBtn.textContent : '';
+
+            if (uploadBtn) {
+                uploadBtn.disabled = true;
+                uploadBtn.textContent = 'Uploading...';
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('folder', folder);
+                formData.append('file', file);
+
+                const response = await fetch('/api/knowledge/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (!response.ok || data.error) throw new Error(data.error || 'Upload failed');
+                showToast('Uploaded ' + file.name + ' to ' + folder);
+                await loadKnowledgeBase();
+            } catch (error) {
+                showToast('Upload failed: ' + error.message, 'error');
+            } finally {
+                input.value = '';
+                if (uploadBtn) {
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = originalText;
+                }
+            }
+        });
+    });
+
+    container.querySelectorAll('.ku-row, .ku-common-card').forEach(function(scope) {
+        const filesPanel = scope.querySelector('.ku-files-list');
+        setDeleteButtonVisibility(scope, !!(filesPanel && filesPanel.classList.contains('expanded')));
+        refreshDeleteButtonState(scope);
+    });
+}
+
+function initKnowledgePreview() {
+    const overlay = document.getElementById('knowledgePreviewOverlay');
+    if (!overlay || overlay.dataset.initialized === '1') return;
+    const closeBtn = document.getElementById('knowledgePreviewClose');
+
+    const close = function() {
+        overlay.classList.remove('active');
+    };
+
+    if (closeBtn) closeBtn.addEventListener('click', close);
+    overlay.addEventListener('click', function(event) {
+        if (event.target === overlay) close();
+    });
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape' && overlay.classList.contains('active')) close();
+    });
+
+    overlay.dataset.initialized = '1';
+}
+
+function openKnowledgePreview(title, content) {
+    initKnowledgePreview();
+    const overlay = document.getElementById('knowledgePreviewOverlay');
+    const titleEl = document.getElementById('knowledgePreviewTitle');
+    const contentEl = document.getElementById('knowledgePreviewContent');
+    if (!overlay || !titleEl || !contentEl) return;
+    titleEl.textContent = title || 'File preview';
+    contentEl.textContent = content || '';
+    overlay.classList.add('active');
+}
+
+async function previewKnowledgeFile(filePath) {
+    try {
+        const response = await fetch('/api/knowledge/file?path=' + encodeURIComponent(filePath));
+        const data = await response.json();
+        if (!response.ok || data.error) throw new Error(data.error || 'Failed to load file');
+        openKnowledgePreview(data.path || data.name || filePath, data.content || '');
+    } catch (error) {
+        showToast('Failed to preview file: ' + error.message, 'error');
+    }
+}
+
+function bindKnowledgeBaseEvents(container) {
+    container.querySelectorAll('.knowledge-expand-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const targetId = button.getAttribute('data-files-target');
+            const filesEl = targetId ? document.getElementById(targetId) : null;
+            if (!filesEl) return;
+            const expanded = filesEl.classList.toggle('expanded');
+            button.classList.toggle('expanded', expanded);
+            button.textContent = expanded ? 'Hide files' : 'Show files';
+        });
+    });
+
+    container.querySelectorAll('.knowledge-file-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const filePath = button.getAttribute('data-file-path');
+            if (!filePath) return;
+            previewKnowledgeFile(filePath);
+        });
+    });
+
+    container.querySelectorAll('.knowledge-upload-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const input = button.parentElement ? button.parentElement.querySelector('.knowledge-upload-input') : null;
+            if (input) input.click();
+        });
+    });
+
+    container.querySelectorAll('.knowledge-upload-input').forEach(function(input) {
+        input.addEventListener('change', async function() {
+            const file = input.files && input.files[0];
+            if (!file) return;
+            const folder = input.getAttribute('data-folder') || '';
+            const uploadBtn = input.parentElement ? input.parentElement.querySelector('.knowledge-upload-btn') : null;
+            const originalText = uploadBtn ? uploadBtn.textContent : '';
+
+            if (uploadBtn) {
+                uploadBtn.disabled = true;
+                uploadBtn.textContent = 'Uploading...';
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('folder', folder);
+                formData.append('file', file);
+
+                const response = await fetch('/api/knowledge/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (!response.ok || data.error) throw new Error(data.error || 'Upload failed');
+                showToast('Uploaded ' + file.name + ' to ' + folder);
+                await loadKnowledgeBase();
+            } catch (error) {
+                showToast('Upload failed: ' + error.message, 'error');
+            } finally {
+                input.value = '';
+                if (uploadBtn) {
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = originalText;
+                }
+            }
+        });
+    });
+
+    container.querySelectorAll('.knowledge-common-toggle').forEach(function(input) {
+        input.addEventListener('change', async function() {
+            const agentId = input.getAttribute('data-agent-id') || '';
+            const enabled = input.checked;
+            input.disabled = true;
+            try {
+                const response = await fetch('/api/knowledge/common-access', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agentId: agentId, enabled: enabled })
+                });
+                const data = await response.json();
+                if (!response.ok || data.error) throw new Error(data.error || 'Failed to update access');
+                showToast('Common KB ' + (enabled ? 'enabled' : 'disabled') + ' for ' + formatAgentName(agentId));
+            } catch (error) {
+                input.checked = !enabled;
+                showToast('Failed to update common access: ' + error.message, 'error');
+            } finally {
+                input.disabled = false;
+            }
+        });
+    });
+}
+
+async function loadKnowledgeBase() {
+    const container = document.getElementById('knowledgeFolders');
+    if (!container) return;
+    initKnowledgePreview();
+    container.innerHTML = '<div class="muted">Loading knowledge base...</div>';
+
+    try {
+        const responses = await Promise.all([
+            fetch('/api/knowledge/base'),
+            fetch('/api/knowledge/ssot')
+        ]);
+        const baseResponse = responses[0];
+        const ssotResponse = responses[1];
+        const baseData = await baseResponse.json();
+        const ssotData = await ssotResponse.json();
+
+        if (!baseResponse.ok || baseData.error) throw new Error(baseData.error || 'Failed to load base knowledge');
+        if (!ssotResponse.ok || ssotData.error) throw new Error(ssotData.error || 'Failed to load SSoT access');
+
+        container.innerHTML = renderUnifiedKnowledgeGrid(baseData, ssotData);
+        initUnifiedToggles(container);
+    } catch (error) {
+        container.innerHTML = '<div class="error-state">Failed to load knowledge base: ' + error.message + '</div>';
+    }
+}
+
+async function loadSkills() {
+    const container = document.getElementById('skillsMatrixContainer');
+    if (!container) return;
+
+    closeSkillPopover();
+    container.innerHTML = '<p>Loading skills...</p>';
+
+    try {
+        const response = await fetch('/api/settings/skills');
+        const data = await response.json();
+        if (!response.ok || data.error) {
+            throw new Error(data.error || 'Failed to load skills');
+        }
+
+        const skills = Array.isArray(data.skills) ? data.skills : [];
+        const agents = sortSkillAgents(Array.isArray(data.agents) ? data.agents : []);
+        const assignments = data.assignments && typeof data.assignments === 'object' ? data.assignments : {};
+
+        let html = `
+            <div class="skills-summary">
+            <div class="skills-filter-bar">
+                <button type="button" class="skills-filter-btn skills-filter-reset" onclick="resetSkillFilters()">Reset</button>
+                <button type="button" class="skills-filter-btn" data-filter-type="category" data-category="all" onclick="setSkillCategory('all')">All</button>
+                <button type="button" class="skills-filter-btn" data-filter-type="category" data-category="System & DevOps" onclick="setSkillCategory('System & DevOps')"><span class="filter-dot" style="background:#60a5fa"></span>System & DevOps</button>
+                <button type="button" class="skills-filter-btn" data-filter-type="category" data-category="Coding" onclick="setSkillCategory('Coding')"><span class="filter-dot" style="background:#818cf8"></span>Coding</button>
+                <button type="button" class="skills-filter-btn" data-filter-type="category" data-category="Communication" onclick="setSkillCategory('Communication')"><span class="filter-dot" style="background:#34d399"></span>Communication</button>
+                <button type="button" class="skills-filter-btn" data-filter-type="category" data-category="Productivity" onclick="setSkillCategory('Productivity')"><span class="filter-dot" style="background:#a78bfa"></span>Productivity</button>
+                <button type="button" class="skills-filter-btn" data-filter-type="category" data-category="Media & Creative" onclick="setSkillCategory('Media & Creative')"><span class="filter-dot" style="background:#f472b6"></span>Media & Creative</button>
+                <button type="button" class="skills-filter-btn" data-filter-type="category" data-category="Audio & Voice" onclick="setSkillCategory('Audio & Voice')"><span class="filter-dot" style="background:#fbbf24"></span>Audio & Voice</button>
+                <button type="button" class="skills-filter-btn" data-filter-type="category" data-category="Smart Home" onclick="setSkillCategory('Smart Home')"><span class="filter-dot" style="background:#fb923c"></span>Smart Home</button>
+                <button type="button" class="skills-filter-btn" data-filter-type="category" data-category="Research & Utility" onclick="setSkillCategory('Research & Utility')"><span class="filter-dot" style="background:#94a3b8"></span>Research & Utility</button>
+                <span class="skills-filter-divider" aria-hidden="true"></span>
+                <button type="button" class="skills-filter-btn" data-filter-type="status" data-status="ready" onclick="toggleSkillStatusFilter('ready')"><span class="skill-status-dot skill-status-ready" aria-hidden="true"></span>Ready</button>
+                <button type="button" class="skills-filter-btn" data-filter-type="status" data-status="needs_setup" onclick="toggleSkillStatusFilter('needs_setup')"><span class="skill-status-dot skill-status-needs-setup" aria-hidden="true"></span>Needs Setup</button>
+                <button type="button" class="skills-filter-btn" data-filter-type="status" data-status="unknown" onclick="toggleSkillStatusFilter('unknown')"><span class="skill-status-dot skill-status-unknown" aria-hidden="true"></span>Unknown</button>
+            </div>
+</div><div class="skills-summary">
+                ${skills.length} skills · ${agents.length} agents
+            </div>
+            <div class="skills-matrix">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="skill-col-header">Skill</th><th class="category-col-header">Category</th>
+                            ${agents.map(function(agent, agentIndex) {
+                                const count = Array.isArray(assignments[agent.name]) ? assignments[agent.name].length : 0;
+                                return `<th class="agent-col-header" data-agent-index="${agentIndex}" title="${escapeAttr(agent.model || '')}"><span class="agent-header-label">${escapeHtml(agent.name || '')}<span class="agent-count">(${count}/55)</span></span></th>`;
+                            }).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        skills.forEach(function(skill) {
+            const cat = getSkillCategory(skill.name || '');
+            const catColor = CATEGORY_COLORS[cat] || '#666';
+            const status = skill.status || 'unknown';
+            const statusDot = status === 'ready'
+                ? '<span class="skill-status-dot skill-status-ready" aria-hidden="true"></span>'
+                : (status === 'needs_setup'
+                    ? '<span class="skill-status-dot skill-status-needs-setup" aria-hidden="true"></span>'
+                    : '<span class="skill-status-dot skill-status-unknown" aria-hidden="true"></span>');
+            const setupButton = status === 'needs_setup'
+                ? `<button
+                        type="button"
+                        class="skill-setup-btn"
+                        data-skill-name="${escapeAttr(skill.name || '')}"
+                        data-missing-bins="${escapeAttr(JSON.stringify(Array.isArray(skill.missingBins) ? skill.missingBins : []))}"
+                        data-install-options="${escapeAttr(JSON.stringify(Array.isArray(skill.installOptions) ? skill.installOptions : []))}"
+                        title="Setup"
+                        aria-label="Show setup requirements for ${escapeAttr(skill.name || 'skill')}"
+                        aria-expanded="false">&#9881;</button>`
+                : '';
+            html += `<tr data-skill-name="${escapeAttr(skill.name || '')}" data-skill-category="${escapeAttr(cat)}" data-skill-status="${escapeAttr(status)}">
+                <td>
+                    <div class="skill-name-cell">
+                        ${statusDot}
+                        <span class="skill-name">${escapeHtml(skill.name || '')}</span>
+                        <button
+                            type="button"
+                            class="skill-info-btn"
+                            data-desc="${escapeAttr(skill.description || 'No description available')}"
+                            title="Info"
+                            aria-label="Show description for ${escapeAttr(skill.name || 'skill')}"
+                            aria-expanded="false">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        </button>
+                        ${setupButton}
+                        <span class="skill-type-badge skill-type-${escapeAttr(skill.type || 'builtin')}">${escapeHtml(skill.type || 'builtin')}</span>
+                    </div>
+                </td>
+                <td><span class="skill-category-badge" style="background:${catColor}20;color:${catColor}">${cat}</span></td>`;
+
+            agents.forEach(function(agent, agentIndex) {
+                const assignedSkills = Array.isArray(assignments[agent.name]) ? assignments[agent.name] : [];
+                const isActive = assignedSkills.includes(skill.name);
+                const agentName = agent.name || '';
+                const skillName = skill.name || '';
+                html += `<td class="agent-skill-cell">
+                    <button
+                        type="button"
+                        class="skill-toggle ${isActive ? 'active' : ''}"
+                        data-agent-index="${agentIndex}"
+                        data-agent-name="${escapeAttr(agentName)}"
+                        data-skill-name="${escapeAttr(skillName)}"
+                        title="${escapeAttr((isActive ? 'Disable ' : 'Enable ') + skillName + ' for ' + agentName)}"
+                        aria-label="${escapeAttr((isActive ? 'Disable ' : 'Enable ') + skillName + ' for ' + agentName)}">
+                    </button>
+                </td>`;
+            });
+
+            html += '</tr>';
+        });
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        container.innerHTML = html;
+        bindSkillPopover();
+        container.querySelectorAll('.skill-toggle').forEach(function(toggle) {
+            toggle.addEventListener('click', function() {
+                toggleSkill(toggle.getAttribute('data-agent-name') || '', toggle.getAttribute('data-skill-name') || '');
+            });
+        });
+        filterSkills();
+    } catch (error) {
+        container.innerHTML = '<p style="color: var(--error);">Failed to load skills: ' + escapeHtml(error.message) + '</p>';
+    }
+}
+
+let activeSkillPopover = null;
+let activeSkillPopoverButton = null;
+let skillPopoverBound = false;

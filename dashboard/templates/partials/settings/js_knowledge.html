@@ -1,0 +1,332 @@
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 2000);
+}
+
+// ============================================
+// Rules Management - Category awareness UI
+// ============================================
+
+async function loadRules() {
+    const container = document.getElementById('rulesCategories');
+    if (!container) return;
+    container.innerHTML = '<div class="rules-loading"><div class="spinner"></div><span>Loading rules...</span></div>';
+    try {
+        const response = await fetch('/api/logician/rules');
+        const data = await response.json();
+        if (data.error) { container.innerHTML = '<div class="error-state">' + data.error + '</div>'; return; }
+        renderCategories(data.categories);
+        updateOverviewStats(data.totals);
+    } catch (error) {
+        container.innerHTML = '<div class="error-state">Failed to load rules: ' + error.message + '</div>';
+    }
+}
+
+function updateOverviewStats(totals) {
+    var el = function(id) { return document.getElementById(id); };
+    if (el('totalRules')) el('totalRules').textContent = totals.rules;
+    if (el('totalFacts')) el('totalFacts').textContent = totals.facts;
+    if (el('totalCategories')) el('totalCategories').textContent = totals.categories;
+    if (el('totalFiles')) el('totalFiles').textContent = totals.sections || totals.files || 0;
+}
+
+function renderCategories(categories) {
+    const container = document.getElementById('rulesCategories');
+    if (!categories || categories.length === 0) {
+        container.innerHTML = '<div class="empty-state"><p>No rule categories found</p></div>';
+        return;
+    }
+    container.innerHTML = categories.map(function(cat) {
+        var dn = cat.name.replace(/^\S+\s/, '');
+        return '<div class="category-card' + (cat.locked ? ' locked' : '') + '">' +
+            '<div class="category-icon">' + cat.icon + '</div>' +
+            '<div class="category-info"><div class="category-name">' + dn + '</div><div class="category-description">' + cat.description + '</div></div>' +
+            '<div class="category-stats">' +
+                '<div class="cat-stat"><span class="cat-count">' + cat.ruleCount + '</span><span class="cat-label">rules</span></div>' +
+                '<div class="cat-stat"><span class="cat-count">' + cat.factCount + '</span><span class="cat-label">facts</span></div>' +
+                '<div class="cat-stat"><span class="cat-count">' + (cat.sectionCount || cat.fileCount || 0) + '</span><span class="cat-label">' + ((cat.sectionCount || cat.fileCount || 0) === 1 ? 'section' : 'sections') + '</span></div>' +
+            '</div>' +
+            (cat.locked ? '<div class="category-locked-badge">&#x1F512;</div>' : '') +
+        '</div>';
+    }).join('');
+}
+
+function getKnowledgeFolderEntry(folders, folderId) {
+    if (!folders || typeof folders !== 'object') return { name: folderId, info: null };
+    const lookup = String(folderId || '').toLowerCase();
+    for (const [name, info] of Object.entries(folders)) {
+        if (String(name).toLowerCase() === lookup) return { name, info: info || null };
+    }
+    return { name: folderId, info: null };
+}
+
+function formatAgentName(agentId) {
+    const value = String(agentId || '').trim();
+    if (!value) return 'Agent';
+    return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function renderKnowledgeFolderBlock(folderId, title, folderEntry, options) {
+    const opts = options || {};
+    const info = folderEntry && folderEntry.info ? folderEntry.info : null;
+    const folderName = (folderEntry && folderEntry.name) ? folderEntry.name : folderId;
+    const files = info && Array.isArray(info.files) ? info.files : [];
+    const totalFiles = info && typeof info.totalFiles === 'number' ? info.totalFiles : files.length;
+    const fileCountLabel = totalFiles + ' file' + (totalFiles === 1 ? '' : 's');
+    const folderSlug = String(folderId || folderName || 'folder').replace(/[^a-zA-Z0-9_-]+/g, '_');
+    const filesId = 'knowledge_files_' + folderSlug;
+
+    // Only render Common KB section if common folder exists and has files
+    let html = '';
+    html += '<div class="knowledge-folder' + (opts.isCommon ? ' common' : '') + '">';
+    html += '<div class="knowledge-folder-header">';
+    html += '<div class="knowledge-folder-header-left">';
+    html += '<div class="knowledge-folder-name">' + escapeHtml(title) + '</div>';
+    html += '<div class="knowledge-folder-meta">' + escapeHtml(fileCountLabel) + '</div>';
+    html += '</div>';
+    html += '<div class="knowledge-folder-header-right">';
+    html += '<input type="file" class="knowledge-upload-input" data-folder="' + escapeAttr(folderName) + '">';
+    html += '<button type="button" class="btn-secondary knowledge-upload-btn" data-folder="' + escapeAttr(folderName) + '">Upload file</button>';
+    html += '<button type="button" class="knowledge-expand-btn" data-files-target="' + escapeAttr(filesId) + '">Show files</button>';
+    html += '</div>';
+    html += '</div>';
+
+    if (opts.isCommon) {
+        const agentOrder = Array.isArray(opts.agentOrder) ? opts.agentOrder : [];
+        const commonAccess = (opts.commonAccess && typeof opts.commonAccess === 'object') ? opts.commonAccess : {};
+        if (agentOrder.length > 0) {
+            html += '<div class="knowledge-common-toggles">';
+            for (const agentId of agentOrder) {
+                const enabled = !!commonAccess[agentId];
+                html += '<div class="knowledge-toggle-item">';
+                html += '<span class="knowledge-toggle-item-label">' + escapeHtml(formatAgentName(agentId)) + '</span>';
+                html += '<label class="toggle-switch">';
+                html += '<input type="checkbox" class="knowledge-common-toggle" data-agent-id="' + escapeAttr(agentId) + '"' + (enabled ? ' checked' : '') + '>';
+                html += '<span class="slider"></span>';
+                html += '</label>';
+                html += '</div>';
+            }
+            html += '</div>';
+        }
+    }
+
+    html += '<div id="' + escapeAttr(filesId) + '" class="knowledge-folder-files">';
+    if (files.length > 0) {
+        for (const file of files) {
+            const filePath = file.path || (folderName + '/' + (file.name || ''));
+            html += '<button type="button" class="knowledge-file-btn" data-file-path="' + escapeAttr(filePath) + '">';
+            html += '<span>' + escapeHtml(file.name || filePath) + '</span>';
+            html += '<span class="knowledge-file-size">' + formatBytes(file.size || 0) + '</span>';
+            html += '</button>';
+        }
+    } else {
+        html += '<div class="knowledge-empty">No files in this folder</div>';
+    }
+    html += '</div>';
+    html += '</div>';
+    return html;
+}
+
+function renderKnowledgeSsotAccess(data) {
+    const levelOrder = ['L0', 'L1', 'L2'];
+    const levels = (data && data.levels && typeof data.levels === 'object') ? data.levels : {};
+    const ssotAccess = (data && data.ssotAccess && typeof data.ssotAccess === 'object') ? data.ssotAccess : {};
+    const rootPath = (data && data.ssotRoot) ? String(data.ssotRoot) : '';
+    const agentOrder = (data && Array.isArray(data.agentOrder) && data.agentOrder.length > 0)
+        ? data.agentOrder
+        : ['main', 'voice', 'coder'];
+
+    if (agentOrder.length === 0) {
+        return '<div class="knowledge-empty">No agents found in openclaw.json</div>';
+    }
+
+    // Only render Common KB section if common folder exists and has files
+    let html = '';
+    if (rootPath) {
+        html += '<div class="knowledge-ssot-meta">Root: ' + escapeHtml(rootPath) + '</div>';
+    }
+
+    html += '<div class="knowledge-ssot-grid">';
+    html += '<div class="knowledge-ssot-row header">';
+    html += '<div class="knowledge-ssot-agent">Agent</div>';
+    for (const level of levelOrder) {
+        const info = levels[level] || {};
+        const exists = !!info.exists;
+        const label = exists ? level : (level + ' (missing)');
+        const cls = exists ? 'knowledge-ssot-level-heading' : 'knowledge-ssot-level-heading missing';
+        html += '<div class="' + cls + '" title="' + escapeAttr(info.path || '') + '">' + escapeHtml(label) + '</div>';
+    }
+    html += '</div>';
+
+    for (const agentId of agentOrder) {
+        const access = (ssotAccess[agentId] && typeof ssotAccess[agentId] === 'object') ? ssotAccess[agentId] : {};
+        html += '<div class="knowledge-ssot-row">';
+        html += '<div class="knowledge-ssot-agent">' + escapeHtml(formatAgentName(agentId)) + '</div>';
+        for (const level of levelOrder) {
+            const info = levels[level] || {};
+            const exists = !!info.exists;
+            const enabled = !!access[level];
+            html += '<div class="knowledge-ssot-cell">';
+            html += '<label class="toggle-switch">';
+            html += '<input type="checkbox" class="knowledge-ssot-toggle" data-agent-id="' + escapeAttr(agentId) + '" data-level="' + escapeAttr(level) + '"' + (enabled ? ' checked' : '') + (exists ? '' : ' disabled') + '>';
+            html += '<span class="slider"></span>';
+            html += '</label>';
+            html += '</div>';
+        }
+        html += '</div>';
+    }
+
+    html += '</div>';
+    return html;
+}
+
+// Unified knowledge grid: one row per agent with all controls
+function renderUnifiedKnowledgeGrid(baseData, ssotData) {
+    const levelOrder = ['L0', 'L1', 'L2'];
+    const agentOrder = (baseData && Array.isArray(baseData.agentOrder) && baseData.agentOrder.length > 0)
+        ? baseData.agentOrder
+        : ['main', 'voice', 'coder'];
+    const ssotAccess = (ssotData && ssotData.ssotAccess && typeof ssotData.ssotAccess === 'object')
+        ? ssotData.ssotAccess
+        : {};
+    const commonAccess = (baseData && baseData.commonAccess && typeof baseData.commonAccess === 'object')
+        ? baseData.commonAccess
+        : {};
+    const folders = (baseData && baseData.folders && typeof baseData.folders === 'object')
+        ? baseData.folders
+        : {};
+    const commonFolderId = (baseData && typeof baseData.commonFolder === 'string' && baseData.commonFolder.trim())
+        ? baseData.commonFolder.trim()
+        : 'common';
+    const commonFolderEntry = getKnowledgeFolderEntry(folders, commonFolderId);
+    const commonFolderName = commonFolderEntry && commonFolderEntry.name ? commonFolderEntry.name : commonFolderId;
+    const commonInfo = commonFolderEntry && commonFolderEntry.info ? commonFolderEntry.info : {};
+    const commonFiles = Array.isArray(commonInfo.files) ? commonInfo.files : [];
+    const commonFileCount = (typeof commonInfo.totalFiles === 'number') ? commonInfo.totalFiles : commonFiles.length;
+    const commonFilesPanelId = 'ku_files_' + String(commonFolderId).replace(/[^a-zA-Z0-9_-]/g, '_');
+
+    // Only render Common KB section if common folder exists and has files
+    let html = '';
+    // Only render Common KB if it has files
+    if (commonFolderEntry && commonFileCount > 0) {
+    html += '<div class="ku-common-card">';
+    html += '<div class="knowledge-folder-name">Common KB</div>';
+    html += '<div class="knowledge-folder-meta">Shared folder access for each agent</div>';
+    if (agentOrder.length > 0) {
+        html += '<div class="ku-common-grid">';
+        for (const agentId of agentOrder) {
+            const ca = !!commonAccess[agentId];
+            html += '<div class="ku-common-item">';
+            html += '<span class="knowledge-toggle-item-label">' + escapeHtml(formatAgentName(agentId)) + '</span>';
+            html += '<label class="toggle-switch">';
+            html += '<input type="checkbox" class="ku-common-toggle" data-agent-id="' + escapeAttr(agentId) + '"' + (ca ? ' checked' : '') + '>';
+            html += '<span class="slider"></span>';
+            html += '</label>';
+            html += '</div>';
+        }
+        html += '</div>';
+    } else {
+        html += '<div class="knowledge-empty">No agents found in openclaw.json</div>';
+    }
+    html += '<div class="ku-actions ku-common-actions">';
+    html += '<span class="ku-files-count">' + commonFileCount + ' file' + (commonFileCount !== 1 ? 's' : '') + '</span>';
+    html += '<button type="button" class="btn-secondary ku-show-btn" data-files-target="' + escapeAttr(commonFilesPanelId) + '">Show files</button>';
+    html += '<button type="button" class="btn-danger ku-delete-btn" data-folder="' + escapeAttr(commonFolderName) + '" aria-label="Delete selected files" title="Delete selected files">🗑️</button>';
+    html += '<input type="file" class="ku-upload-input" data-folder="' + escapeAttr(commonFolderName) + '">';
+    html += '<button type="button" class="btn-secondary ku-upload-btn" data-folder="' + escapeAttr(commonFolderName) + '">Upload</button>';
+    html += '</div>';
+    html += '<div id="' + escapeAttr(commonFilesPanelId) + '" class="ku-files-list">';
+    if (commonFiles.length > 0) {
+        for (const file of commonFiles) {
+            const filePath = file.path || (commonFolderName + '/' + (file.name || ''));
+            const fileLabel = file.name || file.path || 'Unnamed file';
+            html += '<div class="ku-file-row">';
+            html += '<input type="checkbox" class="ku-file-checkbox" data-file-path="' + escapeAttr(filePath) + '" data-folder="' + escapeAttr(commonFolderName) + '">';
+            html += '<button type="button" class="ku-file-btn" data-file-path="' + escapeAttr(filePath) + '">';
+            html += '<span class="ku-file-name">' + escapeHtml(fileLabel) + '</span>';
+            html += '<span class="ku-file-size">' + formatBytes(file.size || 0) + '</span>';
+            html += '</button>';
+            html += '</div>';
+        }
+    } else {
+        html += '<div class="knowledge-empty">No files in this folder</div>';
+    }
+    html += '</div>';
+    html += '</div>';
+    }
+
+    html += '<div class="knowledge-unified-grid">';
+    html += '<div class="ku-header">';
+    html += '<div class="ku-agent">Agent</div>';
+    html += '<div class="ku-toggle">L0</div>';
+    html += '<div class="ku-toggle">L1</div>';
+    html += '<div class="ku-toggle">L2</div>';
+    html += '<div class="ku-toggle">Memory Log</div>';
+    html += '<div class="ku-actions">Files</div>';
+    html += '</div>';
+
+    for (const agentId of agentOrder) {
+        const sa = (ssotAccess[agentId] && typeof ssotAccess[agentId] === 'object') ? ssotAccess[agentId] : {};
+        const ca = !!commonAccess[agentId];
+        const folderEntry = getKnowledgeFolderEntry(folders, agentId);
+        const folderName = folderEntry && folderEntry.name ? folderEntry.name : agentId;
+        const info = folderEntry && folderEntry.info ? folderEntry.info : {};
+        const files = Array.isArray(info.files) ? info.files : [];
+        const fileCount = (typeof info.totalFiles === 'number') ? info.totalFiles : files.length;
+        const filesPanelId = 'ku_files_' + String(agentId).replace(/[^a-zA-Z0-9_-]/g, '_');
+
+        html += '<div class="ku-row">';
+        html += '<div class="ku-agent">' + escapeHtml(formatAgentName(agentId)) + '</div>';
+        for (const level of levelOrder) {
+            html += '<div class="ku-toggle">';
+            html += '<label class="toggle-switch">';
+            html += '<input type="checkbox" class="ku-ssot-toggle" data-agent-id="' + escapeAttr(agentId) + '" data-level="' + escapeAttr(level) + '"' + (sa[level] ? ' checked' : '') + '>';
+            html += '<span class="slider"></span>';
+            html += '</label>';
+            html += '</div>';
+        }
+        html += '<div class="ku-toggle">';
+        html += '<label class="toggle-switch">';
+        html += '<input type="checkbox" class="ku-memory-toggle" data-agent-id="' + escapeAttr(agentId) + '"' + (ca ? ' checked' : '') + '>';
+        html += '<span class="slider"></span>';
+        html += '</label>';
+        html += '</div>';
+        html += '<div class="ku-actions">';
+        html += '<span class="ku-files-count">' + fileCount + ' file' + (fileCount !== 1 ? 's' : '') + '</span>';
+        html += '<button type="button" class="btn-secondary ku-show-btn" data-files-target="' + escapeAttr(filesPanelId) + '">Show files</button>';
+        html += '<button type="button" class="btn-danger ku-delete-btn" data-folder="' + escapeAttr(folderName) + '" aria-label="Delete selected files" title="Delete selected files">🗑️</button>';
+        html += '<input type="file" class="ku-upload-input" data-folder="' + escapeAttr(folderName) + '">';
+        html += '<button type="button" class="btn-secondary ku-upload-btn" data-folder="' + escapeAttr(folderName) + '">Upload</button>';
+        html += '</div>';
+        html += '<div id="' + escapeAttr(filesPanelId) + '" class="ku-files-list">';
+        if (files.length > 0) {
+            for (const file of files) {
+                const filePath = file.path || (folderName + '/' + (file.name || ''));
+                const fileLabel = file.name || file.path || 'Unnamed file';
+                html += '<div class="ku-file-row">';
+                html += '<input type="checkbox" class="ku-file-checkbox" data-file-path="' + escapeAttr(filePath) + '" data-folder="' + escapeAttr(folderName) + '">';
+                html += '<button type="button" class="ku-file-btn" data-file-path="' + escapeAttr(filePath) + '">';
+                html += '<span class="ku-file-name">' + escapeHtml(fileLabel) + '</span>';
+                html += '<span class="ku-file-size">' + formatBytes(file.size || 0) + '</span>';
+                html += '</button>';
+                html += '</div>';
+            }
+        } else {
+            html += '<div class="knowledge-empty">No files in this folder</div>';
+        }
+        html += '</div>';
+        html += '</div>';
+    }
+
+    html += '</div>';
+    return html;
+}
+
+
+function initSsotToggles() {

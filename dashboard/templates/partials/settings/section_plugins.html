@@ -1,0 +1,41 @@
+        <section class="settings-section" id="pluginsSection">
+            <h2 class="section-title">Plugins</h2>
+            <p class="section-description">Extensions loaded by the OpenClaw gateway</p>
+
+            <div style="display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap;">
+                <div class="settings-card" style="flex:1;min-width:140px;padding:16px;text-align:center;">
+                    <div style="font-size:1.5rem;font-weight:700;color:var(--accent,#4ade80);" id="pluginCustomCount">-</div>
+                    <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;">Custom Plugins</div>
+                </div>
+                <div class="settings-card" style="flex:1;min-width:140px;padding:16px;text-align:center;">
+                    <div style="font-size:1.5rem;font-weight:700;color:var(--text-primary,#fff);" id="pluginStockCount">-</div>
+                    <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;">Stock Plugins</div>
+                </div>
+                <div class="settings-card" style="flex:1;min-width:140px;padding:16px;text-align:center;">
+                    <div style="font-size:1rem;font-weight:600;color:#a78bfa;" id="pluginContextEngine">-</div>
+                    <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:uppercase;">Context Engine</div>
+                </div>
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <span style="font-size:0.78rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;">Trusted (plugins.allow):</span>
+                <span id="pluginAllowChips" style="margin-left:8px;"></span>
+            </div>
+
+            <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;">
+                <button class="skills-filter-btn active" data-plugin-filter="all" onclick="filterPlugins('all',this)">All</button>
+                <button class="skills-filter-btn" data-plugin-filter="custom" onclick="filterPlugins('custom',this)">Custom</button>
+                <button class="skills-filter-btn" data-plugin-filter="stock" onclick="filterPlugins('stock',this)">Stock</button>
+                <button class="skills-filter-btn" data-plugin-filter="enabled" onclick="filterPlugins('enabled',this)">Enabled</button>
+            </div>
+
+            <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:16px;font-size:0.8rem;color:var(--text-secondary);">
+                <span><span style="color:#34d399;">■</span> Active &mdash; always loaded</span>
+                <span><span style="color:#60a5fa;">⟳</span> On-demand &mdash; loaded when needed</span>
+                <span><span style="color:#ef4444;">✕</span> Retired</span>
+            </div>
+
+            <div class="settings-card" style="padding:0;overflow-x:auto;">
+                <div id="pluginsTableContainer"><p style="padding:20px;">Loading plugins...</p></div>
+            </div>
+        </section>

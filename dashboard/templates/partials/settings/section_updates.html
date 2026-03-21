@@ -1,0 +1,112 @@
+        <section class="settings-section" id="updatesSection">
+            <h2 class="section-title">Software Updates</h2>
+            <p class="section-description">Check for and apply updates to the ResonantOS Dashboard from the remote repository.</p>
+
+            <div class="settings-card">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Current Version</h3>
+                        <p>Branch: <code id="updateBranch">—</code> · Commit: <code id="updateLocalCommit">—</code></p>
+                    </div>
+                    <div class="setting-control">
+                        <button class="btn-secondary" id="checkUpdateBtn" onclick="checkForUpdates()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                            Check for Updates
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-card">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Automatic Updates</h3>
+                        <p>Configure background checks and optional auto-apply behavior.</p>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Check for updates automatically</h3>
+                        <p>Run update checks in the background.</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="updateAutoCheck" onchange="handleAutoCheckToggle()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Check every</h3>
+                        <p>Background check interval.</p>
+                    </div>
+                    <div class="setting-control">
+                        <select id="updateIntervalHours" onchange="saveUpdateConfig()">
+                            <option value="1">1 hour</option>
+                            <option value="2">2 hours</option>
+                            <option value="4">4 hours</option>
+                            <option value="6">6 hours</option>
+                            <option value="12">12 hours</option>
+                            <option value="24">24 hours</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Apply updates automatically</h3>
+                        <p>Run <code>git pull --ff-only</code> when updates are found.</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="updateAutoApply" onchange="saveUpdateConfig()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Show notification when update available</h3>
+                        <p>Show a sidebar badge when the last check finds updates.</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="updateNotifyOnUpdate" onchange="saveUpdateConfig()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="setting-item update-last-meta">
+                    <div class="setting-info">
+                        <h3>Background Check Status</h3>
+                        <p id="updateLastChecked">Last checked: Never</p>
+                        <p id="updateLastResult">Result: No checks yet</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-card">
+                <div id="updateStatus" style="display:none;">
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <h3 id="updateStatusTitle">Checking...</h3>
+                            <p id="updateStatusDetail"></p>
+                        </div>
+                        <div class="setting-control">
+                            <button class="btn-primary" id="applyUpdateBtn" onclick="applyUpdate()" style="display:none;">
+                                Apply Update
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="updateResult" style="display:none;">
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <h3 id="updateResultTitle"></h3>
+                            <pre id="updateResultOutput" style="margin-top:8px; padding:10px; background:rgba(0,0,0,0.2); border-radius:6px; font-size:12px; overflow-x:auto; white-space:pre-wrap; max-height:200px; overflow-y:auto;"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>

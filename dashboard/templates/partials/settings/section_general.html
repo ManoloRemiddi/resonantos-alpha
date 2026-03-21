@@ -1,0 +1,46 @@
+        <section class="settings-section active" id="generalSection">
+            <h2 class="section-title">General Settings</h2>
+            
+            <div class="settings-card">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Theme</h3>
+                        <p>Choose your preferred color scheme</p>
+                    </div>
+                    <div class="setting-control">
+                        <select id="themeSelect" onchange="changeTheme(this.value)">
+                            <option value="dark"> Dark</option>
+                            <option value="light"> Light</option>
+                            <option value="auto"> System</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Auto Refresh</h3>
+                        <p>Automatically refresh dashboard data</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="autoRefresh" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Refresh Interval</h3>
+                        <p>How often to refresh data</p>
+                    </div>
+                    <div class="setting-control">
+                        <select id="refreshInterval">
+                            <option value="5">5 seconds</option>
+                            <option value="10">10 seconds</option>
+                            <option value="30" selected>30 seconds</option>
+                            <option value="60">1 minute</option>
+                        </select>
+                    </div>
+                </div>
+            </div>

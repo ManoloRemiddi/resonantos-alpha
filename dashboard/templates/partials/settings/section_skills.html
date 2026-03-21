@@ -1,0 +1,31 @@
+        <section class="settings-section" id="skillsSection">
+            <h2 class="section-title">Skills</h2>
+            <p class="section-description">Manage which skills each agent can use</p>
+
+            <div class="settings-card skills-panel">
+                <div class="skills-help" id="skillsHelp">
+                    <button
+                        type="button"
+                        class="skills-help-toggle"
+                        aria-expanded="false"
+                        aria-controls="skillsHelpPanel"
+                        onclick="toggleSkillsHelp()">
+                        <span class="skills-help-toggle-text">
+                            <span class="skills-help-icon">?</span>
+                            <span>Help</span>
+                        </span>
+                        <span class="skills-help-chevron">&#9656;</span>
+                    </button>
+                    <div class="skills-help-body" id="skillsHelpPanel">
+                        <p><strong>What are skills?</strong> Skills are capability modules that give agents specific abilities, like GitHub operations, weather lookup, or video editing. Each skill has a `SKILL.md` instruction file.</p>
+                        <p><strong>How it works</strong> When a skill is enabled for an agent, OpenClaw includes that skill's description in the agent's prompt. The agent can then follow the skill's instructions when the task matches. When disabled, the agent doesn't know the skill exists.</p>
+                        <p><strong>How to use</strong> Click a toggle dot to enable or disable a skill for an agent. Purple dot means enabled, an empty circle means disabled. Changes save to `openclaw.json` immediately.</p>
+                        <p><strong>Default behavior</strong> If no skills are explicitly configured for an agent, it has access to all skills. Once you toggle any skill, that agent switches to an explicit allowlist with only the enabled skills.</p>
+                    </div>
+                </div>
+
+                <div id="skillsMatrixContainer">
+                    <p>Loading skills...</p>
+                </div>
+            </div>
+        </section>

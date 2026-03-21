@@ -1,0 +1,52 @@
+
+
+	    </div>
+	</div>
+
+<div id="knowledgePreviewOverlay" class="knowledge-preview-overlay">
+    <div class="knowledge-preview-modal">
+        <div class="knowledge-preview-header">
+            <div id="knowledgePreviewTitle" class="knowledge-preview-title">File preview</div>
+            <button type="button" id="knowledgePreviewClose" class="knowledge-preview-close" aria-label="Close preview">&times;</button>
+        </div>
+        <div id="knowledgePreviewContent" class="knowledge-preview-content"></div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal" id="confirmModal">
+    <div class="modal-content small">
+        <div class="modal-header">
+            <h2>Confirm Permission Change</h2>
+        </div>
+        <div class="modal-body">
+            <p id="confirmMessage">Are you sure you want to change this permission?</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="cancelPermission()">Cancel</button>
+            <button class="btn-primary" onclick="applyPermission()">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<!-- Reset Settings Confirmation Modal -->
+<div class="modal" id="resetConfirmModal">
+    <div class="modal-content small">
+        <div class="modal-header">
+            <h2><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Reset All Settings</h2>
+        </div>
+        <div class="modal-body">
+            <p class="warning-text">This action will reset all settings to their default values. This cannot be undone.</p>
+            <p>To confirm, type <strong>RESET</strong> below:</p>
+            <input type="text" id="resetConfirmInput" class="confirm-input" 
+                   placeholder="Type RESET to confirm" 
+                   onkeyup="checkResetConfirmation()" 
+                   autocomplete="off">
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="cancelResetSettings()">Cancel</button>
+            <button class="btn-danger" id="confirmResetBtn" onclick="confirmResetSettings()" disabled>Reset All Settings</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

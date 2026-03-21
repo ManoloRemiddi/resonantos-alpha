@@ -1,0 +1,29 @@
+        <section class="settings-section" id="rulesSection">
+            <h2 class="section-title">Logician Rules</h2>
+            <p class="section-description">The Logician enforces deterministic rules that govern AI behavior, security, and operations. Rules are evaluated in milliseconds &mdash; no AI reasoning required.</p>
+            <div class="rules-overview">
+                <div class="rules-overview-stats">
+                    <div class="overview-stat"><span class="stat-value" id="totalRules">-</span><span class="stat-label">Total Rules</span></div>
+                    <div class="overview-stat"><span class="stat-value" id="totalFacts">-</span><span class="stat-label">Facts</span></div>
+                    <div class="overview-stat"><span class="stat-value" id="totalCategories">-</span><span class="stat-label">Categories</span></div>
+                    <div class="overview-stat"><span class="stat-value" id="totalFiles">-</span><span class="stat-label">Files</span></div>
+                </div>
+            </div>
+            <div class="rules-categories" id="rulesCategories">
+                <div class="rules-loading"><div class="spinner"></div><span>Loading rules...</span></div>
+            </div>
+            <div class="rules-help">
+                <div class="rules-help-icon">&#x1F4A1;</div>
+                <div class="rules-help-content">
+                    <h3>Working with Rules</h3>
+                    <p>The Logician can contain hundreds or thousands of rules across many domains. Rather than browsing them manually, <strong>ask your AI agent</strong> to help you:</p>
+                    <ul>
+                        <li><strong>View rules:</strong> &ldquo;Show me all rules about agent spawning&rdquo;</li>
+                        <li><strong>Add rules:</strong> &ldquo;Create a rule that blocks expensive models on heartbeat tasks&rdquo;</li>
+                        <li><strong>Modify rules:</strong> &ldquo;Disable the rule that requires TASK.md for small fixes&rdquo;</li>
+                        <li><strong>Understand rules:</strong> &ldquo;Explain what the security rules protect against&rdquo;</li>
+                    </ul>
+                    <p class="rules-help-note">Rules use <a href="https://github.com/google/mangle" target="_blank" rel="noopener">Google Mangle</a> (Datalog) syntax. Your AI translates between human intent and machine-readable policy.</p>
+                </div>
+            </div>
+        </section>

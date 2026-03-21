@@ -1,0 +1,273 @@
+<script>
+let pendingPermission = null;
+let _pluginsData = null;
+let _pluginFilter = 'all';
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadSettings();
+    loadRules();
+    loadMemoryLogs();
+    loadUpdateConfig();
+    loadCronCalendar();
+    loadKnowledgeBase();
+    syncSectionWithHash();
+    window.addEventListener('hashchange', syncSectionWithHash);
+});
+
+function showSection(section) {
+    var sec = document.getElementById(section + 'Section');
+    if (!sec) return;
+
+    document.querySelectorAll('.settings-nav-item').forEach(function(i) { i.classList.remove('active'); });
+    document.querySelectorAll('.settings-section').forEach(function(s) { s.classList.remove('active'); });
+    
+    var navLink = document.querySelector('a[href="#' + section + '"]');
+    if (navLink) navLink.classList.add('active');
+    sec.classList.add('active');
+
+    if (section === 'skills') {
+        loadSkills();
+    }
+    if (section === 'plugins') {
+        loadPlugins();
+    }
+}
+
+function syncSectionWithHash() {
+    var section = window.location.hash.replace('#', '').trim();
+    if (section && document.getElementById(section + 'Section')) {
+        showSection(section);
+    }
+}
+
+async function loadPlugins() {
+    const container = document.getElementById('pluginsTableContainer');
+    if (!container) return;
+    container.innerHTML = '<p style="padding:20px;">Loading plugins...</p>';
+    try {
+        const resp = await fetch('/api/settings/plugins');
+        _pluginsData = await resp.json();
+
+        document.getElementById('pluginCustomCount').textContent = _pluginsData.totalCustom;
+        document.getElementById('pluginStockCount').textContent = _pluginsData.totalStock;
+        document.getElementById('pluginContextEngine').textContent = _pluginsData.contextEngineSlot || 'none';
+
+        const chipsEl = document.getElementById('pluginAllowChips');
+        chipsEl.innerHTML = _pluginsData.allow.map(id =>
+            '<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:0.75rem;background:rgba(74,222,128,0.12);color:#4ade80;border:1px solid rgba(74,222,128,0.3);margin:2px;">' + id + '</span>'
+        ).join('');
+
+        renderPluginsTable();
+    } catch (err) {
+        container.innerHTML = '<p style="padding:20px;color:#ef4444;">Failed to load plugins: ' + err.message + '</p>';
+    }
+}
+
+function filterPlugins(filter, btn) {
+    _pluginFilter = filter;
+    document.querySelectorAll('[data-plugin-filter]').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    renderPluginsTable();
+}
+
+function renderPluginsTable() {
+    if (!_pluginsData) return;
+    const container = document.getElementById('pluginsTableContainer');
+    let plugins = _pluginsData.plugins.slice();
+
+    if (_pluginFilter === 'custom') plugins = plugins.filter(p => p.source === 'custom');
+    else if (_pluginFilter === 'stock') plugins = plugins.filter(p => p.source === 'stock');
+    else if (_pluginFilter === 'enabled') plugins = plugins.filter(p => p.enabled === true);
+
+    plugins.sort((a, b) => {
+        const srcOrder = { custom: 0, stock: 1 };
+        const enabledOrder = (v) => v === true ? 0 : v === null ? 1 : 2;
+        const srcDiff = (srcOrder[a.source] || 1) - (srcOrder[b.source] || 1);
+        if (srcDiff !== 0) return srcDiff;
+        const enDiff = enabledOrder(a.enabled) - enabledOrder(b.enabled);
+        if (enDiff !== 0) return enDiff;
+        return a.id.localeCompare(b.id);
+    });
+
+    if (plugins.length === 0) {
+        container.innerHTML = '<p style="padding:20px;color:var(--text-secondary);">No plugins match the current filter.</p>';
+        return;
+    }
+
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">';
+    html += '<thead><tr style="border-bottom:1px solid var(--border-color,#2a2a4a);text-align:left;">';
+    html += '<th style="padding:12px 16px;color:var(--text-secondary);font-weight:500;font-size:0.75rem;text-transform:uppercase;">Status</th>';
+    html += '<th style="padding:12px 16px;color:var(--text-secondary);font-weight:500;font-size:0.75rem;text-transform:uppercase;">Name</th>';
+    html += '<th style="padding:12px 16px;color:var(--text-secondary);font-weight:500;font-size:0.75rem;text-transform:uppercase;">ID</th>';
+    html += '<th style="padding:12px 16px;color:var(--text-secondary);font-weight:500;font-size:0.75rem;text-transform:uppercase;">Source</th>';
+    html += '<th style="padding:12px 16px;color:var(--text-secondary);font-weight:500;font-size:0.75rem;text-transform:uppercase;">Version</th>';
+    html += '<th style="padding:12px 16px;color:var(--text-secondary);font-weight:500;font-size:0.75rem;text-transform:uppercase;">Description</th>';
+    html += '<th style="padding:12px 16px;color:var(--text-secondary);font-weight:500;font-size:0.75rem;text-transform:uppercase;">Config</th>';
+    html += '</tr></thead><tbody>';
+
+    plugins.forEach(p => {
+        let statusIcon, statusColor, statusLabel;
+        if (p.retired === true) { statusIcon = '✕'; statusColor = '#ef4444'; statusLabel = 'Retired'; }
+        else if (p.enabled === true) { statusIcon = '■'; statusColor = '#34d399'; statusLabel = 'Active'; }
+        else if (p.enabled === false) { statusIcon = '■'; statusColor = '#ef4444'; statusLabel = 'Disabled'; }
+        else { statusIcon = '⟳'; statusColor = '#60a5fa'; statusLabel = 'On-demand'; }
+        const retiredNote = p.retired === true && p.note
+            ? '<span style="color:#888;font-style:italic;font-size:0.85em;margin-left:8px;">' + p.note + '</span>'
+            : '';
+
+        const srcBadge = p.source === 'custom'
+            ? '<span style="padding:2px 8px;border-radius:6px;font-size:0.7rem;background:rgba(45,212,191,0.12);color:#2dd4bf;border:1px solid rgba(45,212,191,0.3);">custom</span>'
+            : '<span style="padding:2px 8px;border-radius:6px;font-size:0.7rem;background:rgba(107,114,128,0.12);color:#9ca3af;border:1px solid rgba(107,114,128,0.3);">stock</span>';
+
+        let configBadges = '';
+        if (p.configuredInEntries) configBadges += '<span style="padding:1px 6px;border-radius:4px;font-size:0.65rem;background:rgba(167,139,250,0.12);color:#a78bfa;border:1px solid rgba(167,139,250,0.3);margin-right:4px;">entries</span>';
+        if (p.inAllowList) configBadges += '<span style="padding:1px 6px;border-radius:4px;font-size:0.65rem;background:rgba(74,222,128,0.12);color:#4ade80;border:1px solid rgba(74,222,128,0.3);">allowed</span>';
+
+        html += '<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">';
+        html += '<td style="padding:10px 16px;white-space:nowrap;"><span style="color:' + statusColor + ';font-size:0.9rem;">' + statusIcon + '</span><span style="margin-left:8px;color:' + statusColor + ';">' + statusLabel + '</span></td>';
+        html += '<td style="padding:10px 16px;font-weight:600;color:var(--text-primary);">' + (p.name || p.id) + retiredNote + '</td>';
+        html += '<td style="padding:10px 16px;font-family:monospace;font-size:0.78rem;color:var(--text-secondary);">' + p.id + '</td>';
+        html += '<td style="padding:10px 16px;">' + srcBadge + '</td>';
+        html += '<td style="padding:10px 16px;color:var(--text-secondary);font-size:0.78rem;">' + (p.version || '-') + '</td>';
+        html += '<td style="padding:10px 16px;color:var(--text-secondary);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (p.description || '-') + '</td>';
+        html += '<td style="padding:10px 16px;">' + (configBadges || '<span style="color:#555;">-</span>') + '</td>';
+        html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+async function loadSettings() {
+    try {
+        const res = await fetch('/api/settings');
+        const settings = await res.json();
+        
+        document.getElementById('themeSelect').value = settings.theme;
+        document.getElementById('autoRefresh').checked = settings.autoRefresh;
+        document.getElementById('refreshInterval').value = settings.refreshInterval;
+        
+        // Load permissions
+        document.getElementById('permBrowser').checked = settings.permissions.browserAccess;
+        document.getElementById('permShell').checked = settings.permissions.shellCommands;
+        document.getElementById('permFileWrite').checked = settings.permissions.fileWrite;
+        document.getElementById('permMessaging').checked = settings.permissions.externalMessaging;
+        document.getElementById('permToolInstall').checked = settings.permissions.toolInstallation;
+        
+    } catch (error) {
+        console.error('Error loading settings:', error);
+    }
+}
+
+function changeTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    saveSettings();
+}
+
+function confirmPermission(checkbox, permName) {
+    const action = checkbox.checked ? 'enable' : 'disable';
+    const messages = {
+        browserAccess: `${action} browser access for the AI?`,
+        shellCommands: `${action} shell command execution? This allows the AI to run commands on your system.`,
+        fileWrite: `${action} file write access?`,
+        externalMessaging: `${action} external messaging? This allows the AI to send emails and messages.`,
+        toolInstallation: `${action} tool installation?`
+    };
+    
+    pendingPermission = {
+        checkbox: checkbox,
+        permName: permName,
+        value: checkbox.checked
+    };
+    
+    // Revert the checkbox until confirmed
+    checkbox.checked = !checkbox.checked;
+    
+    document.getElementById('confirmMessage').textContent = messages[permName];
+    document.getElementById('confirmModal').classList.add('active');
+}
+
+function cancelPermission() {
+    document.getElementById('confirmModal').classList.remove('active');
+    pendingPermission = null;
+}
+
+async function applyPermission() {
+    if (!pendingPermission) return;
+    
+    const { checkbox, permName, value } = pendingPermission;
+    checkbox.checked = value;
+    
+    document.getElementById('confirmModal').classList.remove('active');
+    
+    await saveSettings();
+    showToast(`Permission ${value ? 'enabled' : 'disabled'}`);
+    
+    pendingPermission = null;
+}
+
+async function saveSettings() {
+    const settings = {
+        theme: document.getElementById('themeSelect').value,
+        autoRefresh: document.getElementById('autoRefresh').checked,
+        refreshInterval: parseInt(document.getElementById('refreshInterval').value),
+        notifications: document.getElementById('desktopNotif').checked,
+        permissions: {
+            browserAccess: document.getElementById('permBrowser').checked,
+            shellCommands: document.getElementById('permShell').checked,
+            fileWrite: document.getElementById('permFileWrite').checked,
+            externalMessaging: document.getElementById('permMessaging').checked,
+            toolInstallation: document.getElementById('permToolInstall').checked
+        }
+    };
+    
+    try {
+        await fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(settings)
+        });
+    } catch (error) {
+        console.error('Error saving settings:', error);
+    }
+}
+
+function clearCache() {
+    if (confirm('Are you sure you want to clear all cached data?')) {
+        showToast('Cache cleared');
+    }
+}
+
+function resetSettings() {
+    // Show the confirmation modal instead of simple confirm
+    document.getElementById('resetConfirmModal').classList.add('active');
+    document.getElementById('resetConfirmInput').value = '';
+    document.getElementById('confirmResetBtn').disabled = true;
+}
+
+function checkResetConfirmation() {
+    const input = document.getElementById('resetConfirmInput').value;
+    document.getElementById('confirmResetBtn').disabled = (input !== 'RESET');
+}
+
+function cancelResetSettings() {
+    document.getElementById('resetConfirmModal').classList.remove('active');
+}
+
+function confirmResetSettings() {
+    const input = document.getElementById('resetConfirmInput').value;
+    if (input !== 'RESET') {
+        showToast('Type RESET to confirm', 'error');
+        return;
+    }
+    
+    document.getElementById('resetConfirmModal').classList.remove('active');
+    
+    // Actually reset settings
+    localStorage.clear();
+    showToast('Settings reset to defaults');
+    loadSettings();
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');

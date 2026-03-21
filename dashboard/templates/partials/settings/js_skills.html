@@ -1,0 +1,318 @@
+function closeSkillPopover() {
+    if (activeSkillPopoverButton) {
+        activeSkillPopoverButton.setAttribute('aria-expanded', 'false');
+    }
+    if (activeSkillPopover) {
+        activeSkillPopover.remove();
+    }
+    activeSkillPopover = null;
+    activeSkillPopoverButton = null;
+}
+
+function positionSkillPopover(button, popover) {
+    const rect = button.getBoundingClientRect();
+    const margin = 10;
+    let left = rect.left;
+    let top = rect.bottom + 8;
+    const maxLeft = window.innerWidth - popover.offsetWidth - margin;
+
+    left = Math.max(margin, Math.min(left, maxLeft));
+    if (top + popover.offsetHeight > window.innerHeight - margin) {
+        top = Math.max(margin, rect.top - popover.offsetHeight - 8);
+    }
+
+    popover.style.left = left + 'px';
+    popover.style.top = top + 'px';
+}
+
+function parseSkillButtonJson(button, attributeName) {
+    try {
+        const rawValue = button.getAttribute(attributeName) || '[]';
+        const parsed = JSON.parse(rawValue);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+        return [];
+    }
+}
+
+function formatInstallOptionLabel(option) {
+    if (!option || typeof option !== 'object') return '';
+    if (typeof option.label === 'string' && option.label.trim()) return option.label.trim();
+    if (typeof option.formula === 'string' && option.formula.trim()) return option.formula.trim();
+    if (typeof option.package === 'string' && option.package.trim()) return option.package.trim();
+    if (typeof option.id === 'string' && option.id.trim()) return option.id.trim();
+    return '';
+}
+
+async function requestSkillSetup(skillName, actionButton) {
+    if (!skillName) return;
+    if (actionButton) {
+        actionButton.disabled = true;
+        actionButton.textContent = 'Queuing...';
+    }
+
+    try {
+        const response = await fetch('/api/skills/setup-request', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ skill: skillName })
+        });
+        const data = await response.json();
+        if (!response.ok || data.error) {
+            throw new Error(data.error || 'Failed to queue setup request');
+        }
+        closeSkillPopover();
+        showToast(data.message || 'Setup request queued', 'success');
+    } catch (error) {
+        if (actionButton) {
+            actionButton.disabled = false;
+            actionButton.textContent = 'Help me set up';
+        }
+        showToast('Failed to queue setup request: ' + error.message, 'error');
+    }
+}
+
+function buildSkillPopoverContent(button, popover) {
+    if (button.classList.contains('skill-info-btn')) {
+        popover.textContent = button.getAttribute('data-desc') || 'No description available';
+        return;
+    }
+
+    const skillName = button.getAttribute('data-skill-name') || 'skill';
+    const missingBins = parseSkillButtonJson(button, 'data-missing-bins');
+    const installOptions = parseSkillButtonJson(button, 'data-install-options')
+        .map(formatInstallOptionLabel)
+        .filter(Boolean);
+
+    popover.innerHTML = `
+        <div class="skill-popover-title">${escapeHtml(skillName)} setup</div>
+        <p class="skill-popover-row"><span class="skill-popover-label">Missing:</span> ${escapeHtml(missingBins.join(', ') || 'Unknown')}</p>
+    `;
+
+    if (installOptions.length) {
+        const installList = installOptions.map(function(option) {
+            return '<li>' + escapeHtml(option) + '</li>';
+        }).join('');
+        popover.innerHTML += `
+            <div class="skill-popover-row">
+                <span class="skill-popover-label">Install:</span>
+                <ul class="skill-popover-list">${installList}</ul>
+            </div>
+        `;
+    }
+
+    const actionButton = document.createElement('button');
+    actionButton.type = 'button';
+    actionButton.className = 'skill-setup-action';
+    actionButton.textContent = 'Help me set up';
+    actionButton.addEventListener('click', function(event) {
+        event.preventDefault();
+        requestSkillSetup(skillName, actionButton);
+    });
+    popover.appendChild(actionButton);
+}
+
+function showSkillPopover(button) {
+    const popover = document.createElement('div');
+    popover.className = 'skill-info-popover';
+    buildSkillPopoverContent(button, popover);
+
+    closeSkillPopover();
+
+    document.body.appendChild(popover);
+    positionSkillPopover(button, popover);
+
+    activeSkillPopover = popover;
+    activeSkillPopoverButton = button;
+    button.setAttribute('aria-expanded', 'true');
+}
+
+function bindSkillPopover() {
+    if (skillPopoverBound) return;
+    skillPopoverBound = true;
+
+    document.addEventListener('click', function(event) {
+        var button = event.target.closest('.skill-info-btn, .skill-setup-btn');
+        if (button) {
+            event.preventDefault();
+            if (button === activeSkillPopoverButton && activeSkillPopover) {
+                closeSkillPopover();
+            } else {
+                showSkillPopover(button);
+            }
+            return;
+        }
+        if (activeSkillPopover) {
+            if (activeSkillPopover.contains(event.target)) return;
+            closeSkillPopover();
+        }
+    });
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') closeSkillPopover();
+    });
+    window.addEventListener('resize', closeSkillPopover);
+}
+
+async function toggleSkill(agentName, skillName) {
+    try {
+        const currentResponse = await fetch('/api/settings/skills');
+        const currentData = await currentResponse.json();
+        if (!currentResponse.ok || currentData.error) {
+            throw new Error(currentData.error || 'Failed to load current skills');
+        }
+
+        const current = Array.isArray(currentData.assignments && currentData.assignments[agentName])
+            ? currentData.assignments[agentName]
+            : [];
+        const newSkills = current.includes(skillName)
+            ? current.filter(function(name) { return name !== skillName; })
+            : current.concat([skillName]);
+
+        const updateResponse = await fetch('/api/settings/skills', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ agent: agentName, skills: newSkills })
+        });
+        const updateData = await updateResponse.json();
+        if (!updateResponse.ok || updateData.error) {
+            throw new Error(updateData.error || 'Failed to update skills');
+        }
+
+        const mx = document.querySelector('.skills-matrix');
+        const sY = mx ? mx.scrollTop : 0;
+        await loadSkills();
+        const mx2 = document.querySelector('.skills-matrix');
+        if (mx2) mx2.scrollTop = sY;
+    } catch (error) {
+        console.error('Toggle failed:', error);
+        showToast('Failed to update skills: ' + error.message, 'error');
+    }
+}
+
+function sortSkillAgents(agents) {
+    const priority = { main: 0, deputy: 1 };
+    return agents.slice().sort(function(a, b) {
+        const aName = String((a && a.name) || '').trim();
+        const bName = String((b && b.name) || '').trim();
+        const aRank = Object.prototype.hasOwnProperty.call(priority, aName) ? priority[aName] : 2;
+        const bRank = Object.prototype.hasOwnProperty.call(priority, bName) ? priority[bName] : 2;
+
+        if (aRank !== bRank) return aRank - bRank;
+        return aName.localeCompare(bName);
+    });
+}
+
+function toggleSkillsHelp() {
+    const button = document.querySelector('.skills-help-toggle');
+    const panel = document.getElementById('skillsHelpPanel');
+    if (!button || !panel) return;
+
+    const isOpen = button.getAttribute('aria-expanded') === 'true';
+    button.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+    panel.classList.toggle('open', !isOpen);
+}
+
+function escapeHtml(text) {
+    return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function escapeAttr(text) {
+    return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+// Skills categories for filtering
+const SKILL_CATEGORIES = {
+    "System & DevOps": ["github","gh-issues","healthcheck","node-connect","mcporter","clawhub","skill-creator","tmux"],
+    "Coding": ["coding-agent","gemini"],
+    "Communication": ["discord","slack","himalaya","imsg","bluebubbles","wacli","xurl","voice-call"],
+    "Productivity": ["apple-notes","apple-reminders","bear-notes","things-mac","notion","obsidian","trello","gog"],
+    "Media & Creative": ["video-editor","video-frames","nano-banana-pro","openai-image-gen","gifgrep","songsee","camsnap","nano-pdf"],
+    "Audio & Voice": ["openai-whisper","openai-whisper-api","sherpa-onnx-tts","sag","summarize"],
+    "Smart Home": ["openhue","blucli","sonoscli","eightctl"],
+    "Research & Utility": ["weather","canvas","goplaces","oracle","session-logs","model-usage","blogwatcher","peekaboo","1password","ordercli","spotify-player","self-debate"]
+};
+
+const CATEGORY_COLORS = {
+    "System & DevOps": "#60a5fa", "Communication": "#34d399", "Media & Creative": "#f472b6",
+    "Audio & Voice": "#fbbf24", "Productivity": "#a78bfa", "Smart Home": "#fb923c", "Research & Utility": "#94a3b8", "Coding": "#818cf8"
+};
+
+let currentSkillCategoryFilter = 'all';
+const activeSkillStatusFilters = new Set();
+
+function getSkillCategory(skillName) {
+    for (const [cat, skills] of Object.entries(SKILL_CATEGORIES)) {
+        if (skills.includes(skillName)) return cat;
+    }
+    return 'Other';
+}
+
+function setSkillCategory(category) {
+    currentSkillCategoryFilter = category || 'all';
+    filterSkills();
+}
+
+function toggleSkillStatusFilter(status) {
+    if (!status) return;
+    if (activeSkillStatusFilters.has(status)) {
+        activeSkillStatusFilters.delete(status);
+    } else {
+        activeSkillStatusFilters.add(status);
+    }
+    filterSkills();
+}
+
+function resetSkillFilters() {
+    currentSkillCategoryFilter = 'all';
+    activeSkillStatusFilters.clear();
+    filterSkills();
+}
+
+function updateSkillHeaderCounts() {
+    const rows = Array.from(document.querySelectorAll('#skillsMatrixContainer tbody tr'));
+    const visibleRows = rows.filter(function(row) {
+        return row.style.display !== 'none';
+    });
+
+    document.querySelectorAll('#skillsMatrixContainer .agent-col-header').forEach(function(header) {
+        const agentIndex = header.getAttribute('data-agent-index') || '';
+        const countEl = header.querySelector('.agent-count');
+        if (!countEl) return;
+
+        let visibleCount = 0;
+        visibleRows.forEach(function(row) {
+            const toggle = row.querySelector('.skill-toggle[data-agent-index="' + agentIndex + '"]');
+            if (toggle && toggle.classList.contains('active')) {
+                visibleCount += 1;
+            }
+        });
+
+        countEl.textContent = '(' + visibleCount + '/55)';
+    });
+}
+
+function filterSkills() {
+    const category = currentSkillCategoryFilter || 'all';
+
+    document.querySelectorAll('.skills-filter-btn[data-filter-type="category"]').forEach(function(btn) {
+        btn.classList.toggle('active', btn.getAttribute('data-category') === category);
+    });
+    document.querySelectorAll('.skills-filter-btn[data-filter-type="status"]').forEach(function(btn) {
+        btn.classList.toggle('active', activeSkillStatusFilters.has(btn.getAttribute('data-status') || ''));
+    });
+
+    document.querySelectorAll('#skillsMatrixContainer tbody tr').forEach(function(row) {
+        const rowCategory = row.getAttribute('data-skill-category') || 'Other';
+        const rowStatus = row.getAttribute('data-skill-status') || 'unknown';
+        const matchesCategory = category === 'all' || rowCategory === category;
+        const matchesStatus = activeSkillStatusFilters.size === 0 || activeSkillStatusFilters.has(rowStatus);
+        row.style.display = (matchesCategory && matchesStatus) ? '' : 'none';
+    });
+
+    updateSkillHeaderCounts();
+}
+

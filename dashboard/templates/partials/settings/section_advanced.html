@@ -1,0 +1,57 @@
+        <section class="settings-section" id="advancedSection">
+            <h2 class="section-title">Advanced Settings</h2>
+            
+            <div class="settings-card">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Log Retention</h3>
+                        <p>How long to keep log files</p>
+                    </div>
+                    <div class="setting-control">
+                        <select id="logRetention">
+                            <option value="7">7 days</option>
+                            <option value="14">14 days</option>
+                            <option value="30" selected>30 days</option>
+                            <option value="90">90 days</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Debug Mode</h3>
+                        <p>Enable verbose logging for troubleshooting</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="debugMode">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="settings-card danger-zone">
+                <h3>Danger Zone</h3>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Clear Cache</h3>
+                        <p>Remove all cached data</p>
+                    </div>
+                    <div class="setting-control">
+                        <button class="btn-danger" onclick="clearCache()">Clear Cache</button>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Reset Settings</h3>
+                        <p>Restore all settings to default values</p>
+                    </div>
+                    <div class="setting-control">
+                        <button class="btn-danger" onclick="resetSettings()">Reset All</button>
+                    </div>
+                </div>
+            </div>
+        </section>
