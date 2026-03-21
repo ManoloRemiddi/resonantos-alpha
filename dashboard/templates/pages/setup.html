@@ -927,11 +927,18 @@ class SetupGatewayClient {
                 resolve();
             };
 
+            let connectRetryCount = 0;
+            const MAX_CONNECT_RETRIES = 5;
             const sendConnect = () => {
+                if (connectRetryCount >= MAX_CONNECT_RETRIES) {
+                    finalizeError(new Error(`Gateway did not respond after ${MAX_CONNECT_RETRIES} attempts`));
+                    return;
+                }
                 if (connectSent || ws.readyState !== WebSocket.OPEN) {
                     return;
                 }
                 connectSent = true;
+                connectRetryCount++;
                 try {
                     ws.send(JSON.stringify({
                         type: 'req',
@@ -952,12 +959,11 @@ class SetupGatewayClient {
                             }
                         }
                     }));
+                    window.setTimeout(sendConnect, 2000);
                 } catch (error) {
                     finalizeError(error instanceof Error ? error : new Error(String(error)));
                 }
             };
-
-            const fallbackTimer = window.setTimeout(sendConnect, 1000);
 
             ws.addEventListener('message', event => {
                 let msg;
@@ -973,7 +979,6 @@ class SetupGatewayClient {
                 }
 
                 if (msg.type === 'res' && msg.id === 'c0') {
-                    window.clearTimeout(fallbackTimer);
                     if (msg.ok) {
                         finalizeSuccess();
                     } else {
@@ -987,7 +992,6 @@ class SetupGatewayClient {
             });
 
             ws.addEventListener('close', () => {
-                window.clearTimeout(fallbackTimer);
                 const wasConnected = this.connected;
                 this._handleDisconnect(new Error('Gateway connection closed'));
                 if (!settled && !wasConnected) {
