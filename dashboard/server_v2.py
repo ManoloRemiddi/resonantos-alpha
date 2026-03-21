@@ -163,10 +163,16 @@ def api_memory_logs_settings_update():
 
 if __name__ == "__main__":
     import argparse
+    from startup_validation import run_startup_validation, print_validation_report
     parser = argparse.ArgumentParser(description="ResonantOS Dashboard")
     parser.add_argument("--port", type=int, default=19100, help="Port to run on")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
+    parser.add_argument("--skip-validation", action="store_true", help="Skip startup validation")
     args = parser.parse_args()
+
+    if not args.skip_validation:
+        results = run_startup_validation()
+        print_validation_report(results)
 
     print(f"Starting ResonantOS Dashboard on port {args.port}")
     app.run(host="0.0.0.0", port=args.port, debug=args.debug)
