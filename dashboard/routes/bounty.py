@@ -251,7 +251,7 @@ def register_bounty_routes(app, ctx=None):
 
     @app.route("/bounties")
     def bounties_page():
-        return render_template("bounties.html", active_page="bounties")
+        return render_template("pages/bounties.html", active_page="bounties")
 
     # tribes page route is in server_profile_routes.py
 

@@ -35,7 +35,7 @@ def register_profile_routes(app):
 
     @app.route("/tribes")
     def tribes_page():
-        return render_template("tribes.html", active_page="tribes")
+        return render_template("pages/tribes.html", active_page="tribes")
 
     @app.route("/api/profiles/<wallet>")
     def api_profile_get(wallet):

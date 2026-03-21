@@ -55,7 +55,7 @@ CORS(app)
 
 @app.route("/")
 def page_home():
-    return render_template("index.html")
+    return render_template("pages/index.html")
 
 @app.route("/chat-redirect")
 def chat_redirect():
@@ -63,47 +63,47 @@ def chat_redirect():
 
 @app.route("/agents")
 def page_agents():
-    return render_template("agents.html")
+    return render_template("pages/agents.html")
 
 @app.route("/r-memory")
 def page_r_memory():
-    return render_template("r-memory.html")
+    return render_template("pages/r-memory.html")
 
 @app.route("/projects")
 def page_projects():
-    return render_template("projects.html")
+    return render_template("pages/projects.html")
 
 @app.route("/setup")
 def page_setup():
-    return render_template("setup.html")
+    return render_template("pages/setup.html")
 
 @app.route("/chatbots")
 def page_chatbots():
-    return render_template("chatbots.html")
+    return render_template("pages/chatbots.html")
 
 @app.route("/wallet")
 def page_wallet():
-    return render_template("wallet.html")
+    return render_template("pages/wallet.html")
 
 @app.route("/tribes")
 def page_tribes():
-    return render_template("tribes.html")
+    return render_template("pages/tribes.html")
 
 @app.route("/bounties")
 def page_bounties():
-    return render_template("bounties.html")
+    return render_template("pages/bounties.html")
 
 @app.route("/protocol-store")
 def page_protocol_store():
-    return render_template("protocol-store.html")
+    return render_template("pages/protocol-store.html")
 
 @app.route("/docs")
 def page_docs():
-    return render_template("docs.html")
+    return render_template("pages/docs.html")
 
 @app.route("/license")
 def page_license():
-    return render_template("license.html")
+    return render_template("pages/license.html")
 
 @app.route("/<path:filename>")
 def serve_static(filename):
