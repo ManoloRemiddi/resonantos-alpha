@@ -33,14 +33,15 @@ The entire dashboard is obfuscated for IP protection:
 ```bash
 # Development mode
 cd dashboard
-./venv/bin/python server.py
+python server_v2.py
 
-# Production mode (obfuscated)
-./build.sh
-./venv/bin/python server.py --dist
+# Production mode
+python server_v2.py --port 19100
 ```
 
 Server runs at: http://localhost:19100
+
+> **Note:** `server.py` is **LEGACY/DEPRECATED**. Use `server_v2.py` for all new development.
 
 ## Build Commands
 
@@ -65,7 +66,8 @@ Install on Android device to access dashboard from mobile.
 
 ```
 dashboard/
-├── server.py           # Flask backend
+├── server_v2.py        # Flask backend (ACTIVE - OpenClaw native)
+├── server.py           # DEPRECATED - Legacy server (kept for reference)
 ├── templates/          # HTML templates
 ├── static/             # JS, CSS, assets
 ├── build.sh            # Production build script

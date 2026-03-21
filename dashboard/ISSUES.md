@@ -276,7 +276,7 @@ resonantos-dashboard-v1.0.0/
 - **CSS Minification:** 75KB → 51KB
 - **HTML Minification:** Whitespace/comments removed
 - **Inline Script Obfuscation:** Template JS also protected
-- **Production Mode:** `python server.py --dist` uses protected files
+- **Production Mode:** `python server_v2.py --port 19100` uses active server (**Note:** `server.py` is deprecated)
 - **Output:** `dist-dashboard/` folder ready for deployment
 
 #### Protection Level:

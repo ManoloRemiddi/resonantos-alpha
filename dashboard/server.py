@@ -1,9 +1,30 @@
 #!/usr/bin/env python3
 """
-ResonantOS Dashboard Server
+⚠️  DEPRECATED — This file is LEGACY and kept for migration reference only.
+
+Use server_v2.py instead — the official OpenClaw-native implementation.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ResonantOS Dashboard Server (Legacy v1)
 A modern, dark-mode dashboard for managing AI agents and services.
 
 UPGRADED: Now uses REAL data from Watchtower database and Clawdbot CLI.
+
+THIS VERSION (server.py):
+- 5,193 lines of legacy code
+- Uses deprecated Clawdbot/Watchtower dependencies
+- Conflicts with server_v2.py routes
+- Kept for reference during migration
+
+ACTIVE VERSION (server_v2.py):
+- Clean OpenClaw-native implementation
+- WebSocket integration with Gateway
+- No legacy dependencies
+- Official supported server
+
+For new development, use server_v2.py.
+This file will be removed in a future release.
 """
 
 import os

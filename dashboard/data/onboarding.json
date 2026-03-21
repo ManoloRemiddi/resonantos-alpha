@@ -1,0 +1,19 @@
+{
+  "FfxagDH34L7Sgvga4LBxkhegMkMKtYt8S9A6cFdnambn": {
+    "symbioticPairCreated": true,
+    "symbioticPda": "GE8McawrfPJKyZk1sVHHo4saTyTTt7gpKnvtFjo6mkhX",
+    "licenseSigned": true,
+    "manifestoSigned": true,
+    "identityNftMinted": true,
+    "alphaNftMinted": true,
+    "alphaAgreed": true,
+    "alphaAgreedAt": "2026-03-20T04:43:45.685513+00:00",
+    "alphaSignature": "2C80qgo9d6MD+3XX7LwHl0vVOiZ4A2TXz/NTjXrElrUw0LNlnw7fxgrCgW1HMsOUb8W0QfDiuIB7eqvj8nJjBg==",
+    "licenseSignedAt": "2026-03-20T04:44:13.076114+00:00",
+    "licenseHash": "16df4da9c067eba38e6bcc3b007cc1242a062df7cab5aafd183542c02a1528ce",
+    "licenseSignature": "XD7sbOqFDcQmMjrNi3bMmZqhwLRjGfrCXMMWwhuvatOauNhRRH3+zOF/Cbc2lSw3cuZB0+sIxjJPgEv1kfsoCw==",
+    "manifestoSignedAt": "2026-03-20T04:44:48.493244+00:00",
+    "manifestoHash": "6d8ebcd76d23aabdf8cbd212b730c3f8bfa19f4a8441712dab26aa88c1b2862a",
+    "manifestoSignature": "jSLJUocOzXAiQTSaTzpb8WsEtuawbvl+V5wTJb0ImYuThanAIZ5MTe3bbwkQUh3cvPRHoLQ25UM3nkSD9h4JBQ=="
+  }
+}
