@@ -1,0 +1,111 @@
+<div class="tab-panel" id="conversationsPanel">
+    <div class="conversations-container">
+        <!-- Header with filters -->
+        <div class="conversations-header">
+            <div class="conversations-header-left">
+                <h2>Conversations</h2>
+                <p class="conversations-subtitle">View all user discussions with your chatbots</p>
+            </div>
+        </div>
+        
+        <!-- Filters -->
+        <div class="conversations-filters">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>Chatbot</label>
+                    <select id="convChatbotFilter" onchange="loadConversations()">
+                        <option value="">All Chatbots</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Search Messages</label>
+                    <input type="text" id="convSearchFilter" placeholder="Search in messages..." onkeyup="debounceConvSearch()">
+                </div>
+                <div class="filter-group">
+                    <label>Date Range</label>
+                    <div class="date-range">
+                        <input type="date" id="convStartDate" onchange="loadConversations()">
+                        <span>to</span>
+                        <input type="date" id="convEndDate" onchange="loadConversations()">
+                    </div>
+                </div>
+                <button class="btn-secondary" onclick="clearConvFilters()">Clear Filters</button>
+            </div>
+        </div>
+        
+        <!-- Stats Summary -->
+        <div class="conv-stats-bar">
+            <div class="stat-item">
+                <span class="stat-value" id="totalConversations">-</span>
+                <span class="stat-label">Total Conversations</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value" id="todayConversations">-</span>
+                <span class="stat-label">Today</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value" id="totalMessages">-</span>
+                <span class="stat-label">Total Messages</span>
+            </div>
+        </div>
+        
+        <!-- Conversations List -->
+        <div class="conversations-list" id="conversationsList">
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <span>Loading conversations...</span>
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        <div class="conversations-pagination" id="convPagination">
+            <button class="btn-secondary" id="convPrevBtn" onclick="loadConversations(convCurrentOffset - convLimit)" disabled>← Previous</button>
+            <span id="convPageInfo">Page 1</span>
+            <button class="btn-secondary" id="convNextBtn" onclick="loadConversations(convCurrentOffset + convLimit)">Next →</button>
+        </div>
+    </div>
+</div>
+
+<!-- Conversation Detail Modal -->
+<div class="modal-overlay" id="convDetailModal" style="display: none;">
+    <div class="modal conv-detail-modal">
+        <div class="modal-header">
+            <h3 id="convDetailTitle">Conversation Details</h3>
+            <button class="modal-close" onclick="closeConvDetail()">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="conv-detail-info">
+                <div class="conv-info-row">
+                    <span class="conv-info-label">Chatbot:</span>
+                    <span class="conv-info-value" id="convDetailChatbot">-</span>
+                </div>
+                <div class="conv-info-row">
+                    <span class="conv-info-label">Session ID:</span>
+                    <span class="conv-info-value" id="convDetailSession">-</span>
+                </div>
+                <div class="conv-info-row">
+                    <span class="conv-info-label">Started:</span>
+                    <span class="conv-info-value" id="convDetailStarted">-</span>
+                </div>
+                <div class="conv-info-row">
+                    <span class="conv-info-label">Duration:</span>
+                    <span class="conv-info-value" id="convDetailDuration">-</span>
+                </div>
+                <div class="conv-info-row">
+                    <span class="conv-info-label">Messages:</span>
+                    <span class="conv-info-value" id="convDetailMsgCount">-</span>
+                </div>
+            </div>
+            <div class="conv-detail-transcript" id="convDetailTranscript">
+                <!-- Messages will be loaded here -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="exportConversation('csv')">📄 Export CSV</button>
+            <button class="btn-secondary" onclick="exportConversation('json')">📋 Export JSON</button>
+            <button class="btn-primary" onclick="closeConvDetail()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Addons Tab -->

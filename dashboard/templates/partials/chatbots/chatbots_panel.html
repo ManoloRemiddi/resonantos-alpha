@@ -1,0 +1,40 @@
+<div class="tab-panel active" id="chatbotsPanel">
+    <!-- Header -->
+    <div class="chatbots-header">
+        <div class="chatbots-header-left">
+            <h2>My Chatbots</h2>
+            <p class="chatbots-subtitle">Manage your AI chatbots</p>
+        </div>
+    </div>
+    
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+        <div class="stat-item">
+            <span class="stat-value" id="totalBots">-</span>
+            <span class="stat-label">Total Chatbots</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-value green" id="activeBots">-</span>
+            <span class="stat-label">Active</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-value blue" id="totalConvos">-</span>
+            <span class="stat-label">Conversations</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-value" id="avgSatisfaction">-</span>
+            <span class="stat-label">Satisfaction</span>
+        </div>
+    </div>
+    
+    <!-- Chatbots Grid -->
+    <div class="chatbots-grid" id="chatbotsGrid">
+        <!-- Populated by JS -->
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <span>Loading chatbots...</span>
+        </div>
+    </div>
+</div>
+
+<!-- Conversations Tab -->

@@ -1,0 +1,272 @@
+<script>
+let currentWidgetId = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadChatbots();
+    setupDragDrop();
+    
+    // Initialize the unified preview module
+    if (window.ChatbotPreview) {
+        ChatbotPreview.init();
+    }
+});
+
+function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    
+    const tabButton = document.querySelector(`.tab[data-tab="${tab}"]`);
+    if (tabButton) tabButton.classList.add('active');
+    const panel = document.getElementById(tab + 'Panel');
+    if (panel) panel.classList.add('active');
+    
+    // Load conversations when switching to that tab
+    if (tab === 'conversations') {
+        initConversationsTab();
+    }
+}
+
+// ============================================================================
+// Conversations Tab
+// ============================================================================
+
+let convCurrentOffset = 0;
+let convLimit = 20;
+let convTotal = 0;
+let convSearchTimeout = null;
+let currentConversationId = null;
+let convChatbotsLoaded = false;
+
+function initConversationsTab() {
+    if (!convChatbotsLoaded) {
+        loadChatbotsForFilter();
+        convChatbotsLoaded = true;
+    }
+    loadConversations();
+}
+
+async function loadChatbotsForFilter() {
+    try {
+        const res = await fetch('/api/chatbots');
+        const data = await res.json();
+        const select = document.getElementById('convChatbotFilter');
+        
+        data.chatbots.forEach(bot => {
+            const option = document.createElement('option');
+            option.value = bot.id;
+            option.textContent = bot.name;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading chatbots for filter:', error);
+    }
+}
+
+function debounceConvSearch() {
+    clearTimeout(convSearchTimeout);
+    convSearchTimeout = setTimeout(() => loadConversations(0), 300);
+}
+
+function clearConvFilters() {
+    document.getElementById('convChatbotFilter').value = '';
+    document.getElementById('convSearchFilter').value = '';
+    document.getElementById('convStartDate').value = '';
+    document.getElementById('convEndDate').value = '';
+    loadConversations(0);
+}
+
+async function loadConversations(offset = 0) {
+    convCurrentOffset = offset;
+    
+    const chatbotId = document.getElementById('convChatbotFilter').value;
+    const search = document.getElementById('convSearchFilter').value;
+    const startDate = document.getElementById('convStartDate').value;
+    const endDate = document.getElementById('convEndDate').value;
+    
+    let url = `/api/conversations?limit=${convLimit}&offset=${offset}`;
+    if (chatbotId) url += `&chatbot_id=${chatbotId}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (startDate) url += `&start_date=${new Date(startDate).getTime()}`;
+    if (endDate) url += `&end_date=${new Date(endDate).getTime() + 86400000}`;
+    
+    const list = document.getElementById('conversationsList');
+    list.innerHTML = '<div class="loading-state"><div class="spinner"></div><span>Loading conversations...</span></div>';
+    
+    try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const conversations = Array.isArray(data) ? data : (data.conversations || []);
+        convTotal = typeof data.total === 'number' ? data.total : conversations.length;
+        
+        // Update stats
+        document.getElementById('totalConversations').textContent = convTotal.toLocaleString();
+        
+        // Calculate total messages from conversations
+        let totalMsgs = 0;
+        conversations.forEach(c => totalMsgs += c.message_count || 0);
+        document.getElementById('totalMessages').textContent = totalMsgs.toLocaleString();
+        
+        // Count today's conversations
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayTs = today.getTime();
+        const todayCount = conversations.filter(c => c.started_at >= todayTs).length;
+        document.getElementById('todayConversations').textContent = todayCount;
+        
+        renderConversations(conversations);
+        updateConvPagination();
+        
+    } catch (error) {
+        console.error('Error loading conversations:', error);
+        list.innerHTML = '<div class="empty-state"><h3>Error loading conversations</h3><p>' + error.message + '</p></div>';
+    }
+}
+
+function renderConversations(conversations) {
+    const list = document.getElementById('conversationsList');
+    
+    if (!conversations || conversations.length === 0) {
+        list.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📜</div>
+                <h3>No conversations yet</h3>
+                <p>Conversations will appear here when users chat with your chatbots.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    list.innerHTML = `
+        <table class="conversations-table">
+            <thead>
+                <tr>
+                    <th>Chatbot</th>
+                    <th>User/Session</th>
+                    <th>First Message</th>
+                    <th>Messages</th>
+                    <th>Started</th>
+                    <th>Duration</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${conversations.map(conv => {
+                    const started = conv.started_at ? new Date(conv.started_at).toLocaleString() : '-';
+                    const duration = conv.duration_seconds 
+                        ? formatDuration(conv.duration_seconds) 
+                        : 'Active';
+                    const firstMsg = conv.first_message 
+                        ? (conv.first_message.length > 50 ? conv.first_message.substring(0, 50) + '...' : conv.first_message)
+                        : '-';
+                    const sessionShort = conv.session_id 
+                        ? (conv.session_id.length > 15 ? conv.session_id.substring(0, 15) + '...' : conv.session_id)
+                        : '-';
+                    
+                    return `
+                        <tr onclick="viewConversation(${conv.id})" class="conv-row">
+                            <td><span class="chatbot-badge">${escapeHtml(conv.chatbot_name || 'Unknown')}</span></td>
+                            <td title="${escapeHtml(conv.session_id)}">${escapeHtml(sessionShort)}</td>
+                            <td class="first-message">${escapeHtml(firstMsg)}</td>
+                            <td><span class="msg-count">${conv.message_count || 0}</span></td>
+                            <td class="timestamp">${started}</td>
+                            <td>${duration}</td>
+                            <td>
+                                <button class="btn-small" onclick="event.stopPropagation(); viewConversation(${conv.id})">View</button>
+                                <button class="btn-small" onclick="event.stopPropagation(); exportConversationDirect(${conv.id}, 'csv')">Export</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function formatDuration(seconds) {
+    if (seconds < 60) return seconds + 's';
+    if (seconds < 3600) return Math.floor(seconds / 60) + 'm';
+    return Math.floor(seconds / 3600) + 'h ' + Math.floor((seconds % 3600) / 60) + 'm';
+}
+
+function updateConvPagination() {
+    const prevBtn = document.getElementById('convPrevBtn');
+    const nextBtn = document.getElementById('convNextBtn');
+    const pageInfo = document.getElementById('convPageInfo');
+    
+    const currentPage = Math.floor(convCurrentOffset / convLimit) + 1;
+    const totalPages = Math.ceil(convTotal / convLimit);
+    
+    pageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
+    prevBtn.disabled = convCurrentOffset === 0;
+    nextBtn.disabled = convCurrentOffset + convLimit >= convTotal;
+}
+
+async function viewConversation(conversationId) {
+    currentConversationId = conversationId;
+    
+    try {
+        const res = await fetch(`/api/conversations/${conversationId}`);
+        const conv = await res.json();
+        
+        if (conv.error) {
+            showToast('Error: ' + conv.error, 'error');
+            return;
+        }
+        
+        // Populate modal
+        document.getElementById('convDetailTitle').textContent = 
+            `Conversation #${conv.id} - ${conv.chatbot_name || 'Unknown Chatbot'}`;
+        document.getElementById('convDetailChatbot').textContent = conv.chatbot_name || '-';
+        document.getElementById('convDetailSession').textContent = conv.session_id || '-';
+        document.getElementById('convDetailStarted').textContent = 
+            conv.started_at ? new Date(conv.started_at).toLocaleString() : '-';
+        document.getElementById('convDetailDuration').textContent = 
+            conv.duration_seconds ? formatDuration(conv.duration_seconds) : 'Active';
+        document.getElementById('convDetailMsgCount').textContent = conv.message_count || 0;
+        
+        // Render transcript
+        const transcript = document.getElementById('convDetailTranscript');
+        if (conv.messages && conv.messages.length > 0) {
+            transcript.innerHTML = conv.messages.map(msg => {
+                const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : '';
+                const roleClass = msg.role === 'user' ? 'user' : 'bot';
+                const roleLabel = msg.role === 'user' ? 'User' : 'Bot';
+                return `
+                    <div class="transcript-message ${roleClass}">
+                        <div class="transcript-meta">
+                            <span class="transcript-role">${roleLabel}</span>
+                            <span class="transcript-time">${time}</span>
+                        </div>
+                        <div class="transcript-content">${escapeHtml(msg.content)}</div>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            transcript.innerHTML = '<p class="no-messages">No messages in this conversation.</p>';
+        }
+        
+        // Show modal
+        document.getElementById('convDetailModal').style.display = 'flex';
+        
+    } catch (error) {
+        console.error('Error loading conversation:', error);
+        showToast('Error loading conversation', 'error');
+    }
+}
+
+function closeConvDetail() {
+    document.getElementById('convDetailModal').style.display = 'none';
+    currentConversationId = null;
+}
+
+function exportConversation(format) {
+    if (!currentConversationId) return;
+    exportConversationDirect(currentConversationId, format);
+}
+
+function exportConversationDirect(id, format) {
+    window.open(`/api/conversations/${id}/export?format=${format}`, '_blank');
+}
+
+function switchBuilderTab(tab) {

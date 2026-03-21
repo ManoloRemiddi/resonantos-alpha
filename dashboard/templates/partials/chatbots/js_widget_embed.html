@@ -1,0 +1,118 @@
+    return `<!-- ResonantOS Chat Widget -->
+<script>
+  (function() {
+    var widget = document.createElement('script');
+    widget.src = 'https://resonantos.com/widget.js';
+    widget.dataset.widgetId = '${widgetId}';
+    widget.dataset.position = '${config.position}';
+    widget.dataset.theme = '${config.theme}';
+    widget.dataset.primaryColor = '${config.primaryColor}';
+    widget.dataset.bgColor = '${config.bgColor}';
+    widget.dataset.textColor = '${config.textColor}';
+    document.body.appendChild(widget);
+  })();
+<\/script>`;
+}
+
+function resetWidgetForm() {
+    // Reset to create mode
+    currentWidgetId = null;
+    
+    // Reset form fields to defaults
+    document.getElementById('widgetName').value = 'ResonantOS Assistant';
+    document.getElementById('greeting').value = 'Hi! How can I help you today?';
+    document.getElementById('systemPrompt').value = `You are a helpful assistant for ResonantOS.
+
+Your role:
+- Answer questions about the platform
+- Be friendly and informative
+- Admit when you don't know something`;
+    document.getElementById('primaryColor').value = '#4ade80';
+    document.getElementById('bgColor').value = '#1a1a1a';
+    document.getElementById('textColor').value = '#e0e0e0';
+    document.getElementById('allowedDomains').value = '';
+    document.getElementById('ratePerMinute').value = 10;
+    document.getElementById('ratePerHour').value = 100;
+    document.getElementById('enableAnalytics').checked = true;
+    document.getElementById('showWatermark').checked = true;
+    
+    // Reset position and theme radios
+    document.querySelector('input[name="position"][value="bottom-right"]').checked = true;
+    document.querySelector('input[name="theme"][value="dark"]').checked = true;
+    
+    // Reset suggested prompts
+    const promptsContainer = document.getElementById('suggestedPrompts');
+    promptsContainer.innerHTML = `
+        <div class="prompt-input">
+            <input type="text" placeholder="What is ResonantOS?" value="What is ResonantOS?">
+            <button class="remove-btn" onclick="removePrompt(this)">×</button>
+        </div>
+        <div class="prompt-input">
+            <input type="text" placeholder="How do I get started?" value="How do I get started?">
+            <button class="remove-btn" onclick="removePrompt(this)">×</button>
+        </div>
+    `;
+    
+    // Update preview module
+    if (window.ChatbotPreview) {
+        ChatbotPreview.setCreateMode();
+        ChatbotPreview.updateAllPreviews();
+    }
+}
+
+function copyEmbedCode() {
+    const code = document.getElementById('embedCode').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+        showToast('Embed code copied!', 'success');
+    }).catch(() => {
+        // Fallback for older browsers
+        const textarea = document.createElement('textarea');
+        textarea.value = code;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showToast('Embed code copied!', 'success');
+    });
+}
+
+async function downloadPackage() {
+    if (!currentWidgetId) {
+        // Generate widget first
+        await generateWidget();
+    }
+    
+    if (!currentWidgetId) {
+        showToast('Please generate a widget first', 'error');
+        return;
+    }
+    
+    showToast('Preparing download...', 'info');
+    
+    try {
+        const response = await fetch(`/api/widget/download/${currentWidgetId}`);
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Download failed');
+        }
+        
+        // Get the blob and download
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `widget-${currentWidgetId}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        showToast('Widget package downloaded!', 'success');
+    } catch (error) {
+        console.error('Download error:', error);
+        showToast('Download failed: ' + error.message, 'error');
+    }
+}
+
+function editChatbot(id) {

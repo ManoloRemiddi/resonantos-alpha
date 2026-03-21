@@ -1,0 +1,364 @@
+    const list = document.getElementById('kbFilesList');
+    
+    if (!knowledgeFiles || knowledgeFiles.length === 0) {
+        list.innerHTML = '<p class="kb-no-files">No files uploaded yet. Upload documents below.</p>';
+        return;
+    }
+    
+    list.innerHTML = knowledgeFiles.map(file => `
+        <div class="kb-file-item" data-id="${file.id}">
+            <div class="kb-file-info">
+                <span class="kb-file-icon">${getFileIcon(file.filename)}</span>
+                <div class="kb-file-details">
+                    <span class="kb-file-name">${escapeHtml(file.filename)}</span>
+                    <span class="kb-file-meta">${formatFileSize(file.file_size)} • ${formatTimeAgo(file.uploaded_at)}</span>
+                </div>
+            </div>
+            <button class="kb-delete-btn" onclick="deleteKnowledgeFile(${file.id}, '${escapeHtml(file.filename)}')" title="Delete file">🗑️</button>
+        </div>
+    `).join('');
+}
+
+function getFileIcon(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    const icons = {
+        'pdf': '📕',
+        'txt': '📄',
+        'md': '📝',
+        'docx': '📘',
+        'doc': '📘'
+    };
+    return icons[ext] || '📄';
+}
+
+function formatFileSize(bytes) {
+    if (!bytes) return '0 B';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+async function handleKnowledgeUpload(files) {
+    if (!currentWidgetId) {
+        // For new chatbots, store files locally until saved
+        handleLocalFileUpload(files);
+        return;
+    }
+    
+    // Upload to server for existing chatbots
+    const progressDiv = document.getElementById('kbUploadProgress');
+    const progressFill = document.getElementById('kbProgressFill');
+    const statusText = document.getElementById('kbUploadStatus');
+    
+    progressDiv.style.display = 'block';
+    const totalFiles = files.length;
+    let uploadedCount = 0;
+    
+    for (const file of files) {
+        if (file.size > 10 * 1024 * 1024) {
+            showToast(`File too large: ${file.name} (max 10MB)`, 'error');
+            continue;
+        }
+        
+        statusText.textContent = `Uploading ${file.name}...`;
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+            const res = await fetch(`/api/chatbots/${currentWidgetId}/knowledge`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await res.json();
+            
+            if (data.success) {
+                uploadedCount++;
+                progressFill.style.width = `${(uploadedCount / totalFiles) * 100}%`;
+                showToast(`Uploaded: ${file.name}`, 'success');
+            } else {
+                showToast(`Failed to upload ${file.name}: ${data.error}`, 'error');
+            }
+        } catch (error) {
+            showToast(`Error uploading ${file.name}`, 'error');
+        }
+    }
+    
+    progressDiv.style.display = 'none';
+    progressFill.style.width = '0%';
+    
+    // Refresh file list
+    loadKnowledgeFiles();
+    
+    // Clear file input
+    document.getElementById('fileInput').value = '';
+}
+
+function handleLocalFileUpload(files) {
+    // For new chatbots - store in memory until chatbot is saved
+    const container = document.getElementById('uploadedFiles');
+    
+    Array.from(files).forEach(file => {
+        if (file.size > 10 * 1024 * 1024) {
+            showToast('File too large: ' + file.name, 'error');
+            return;
+        }
+        
+        uploadedFiles.push(file);
+        
+        const fileEl = document.createElement('div');
+        fileEl.className = 'uploaded-file pending-upload';
+        fileEl.innerHTML = `
+            <span class="file-icon">${getFileIcon(file.name)}</span>
+            <span class="file-name">${escapeHtml(file.name)}</span>
+            <span class="file-size">${formatFileSize(file.size)}</span>
+            <span class="pending-badge">Pending</span>
+            <button class="remove-btn" onclick="removeLocalFile(this, '${escapeHtml(file.name)}')">×</button>
+        `;
+        container.appendChild(fileEl);
+    });
+    
+    if (uploadedFiles.length > 0) {
+        showToast('Files will be uploaded when you save the chatbot', 'info');
+    }
+}
+
+function removeLocalFile(btn, filename) {
+    uploadedFiles = uploadedFiles.filter(f => f.name !== filename);
+    btn.parentElement.remove();
+}
+
+async function deleteKnowledgeFile(fileId, filename) {
+    if (!confirm(`Delete "${filename}"? This cannot be undone.`)) {
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/chatbots/${currentWidgetId}/knowledge/${fileId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            showToast('File deleted', 'success');
+            loadKnowledgeFiles();
+        } else {
+            showToast('Failed to delete: ' + data.error, 'error');
+        }
+    } catch (error) {
+        showToast('Error deleting file', 'error');
+    }
+}
+
+function refreshKnowledgeFiles() {
+    loadKnowledgeFiles();
+    showToast('Refreshed', 'info');
+}
+
+// Upload pending files after chatbot is created
+async function uploadPendingFiles(chatbotId) {
+    if (uploadedFiles.length === 0) return;
+    
+    for (const file of uploadedFiles) {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+            await fetch(`/api/chatbots/${chatbotId}/knowledge`, {
+                method: 'POST',
+                body: formData
+            });
+        } catch (error) {
+            console.error('Error uploading pending file:', error);
+        }
+    }
+    
+    // Clear pending files
+    uploadedFiles = [];
+    document.getElementById('uploadedFiles').innerHTML = '';
+}
+
+// Legacy function for backward compatibility
+function handleFileUpload(files) {
+    handleKnowledgeUpload(files);
+}
+
+function removeFile(btn, filename) {
+    removeLocalFile(btn, filename);
+}
+
+function addPrompt() {
+    const container = document.getElementById('suggestedPrompts');
+    if (container.children.length >= 5) {
+        alert('Maximum 5 prompts allowed');
+        return;
+    }
+    
+    const div = document.createElement('div');
+    div.className = 'prompt-input';
+    div.innerHTML = `
+        <input type="text" placeholder="Enter a prompt...">
+        <button class="remove-btn" onclick="removePrompt(this)">×</button>
+    `;
+    container.appendChild(div);
+}
+
+function removePrompt(btn) {
+    btn.parentElement.remove();
+}
+
+function updatePreview() {
+    // Delegate to the unified preview module
+    if (window.ChatbotPreview) {
+        ChatbotPreview.updateAllPreviews();
+    }
+}
+
+function togglePreviewChat() {
+    const container = document.getElementById('deployPreviewContainer');
+    if (window.ChatbotPreview && container) {
+        ChatbotPreview.toggleChat(container);
+    } else {
+        // Fallback
+        const chat = document.getElementById('previewChat');
+        if (chat) chat.classList.toggle('open');
+    }
+}
+
+function sendPreviewMessage() {
+    const input = document.getElementById('previewInput');
+    const message = input.value.trim();
+    if (!message) return;
+    
+    const messagesContainer = document.getElementById('previewMessages');
+    
+    // Add user message
+    const userMsg = document.createElement('div');
+    userMsg.className = 'message user';
+    userMsg.textContent = message;
+    messagesContainer.appendChild(userMsg);
+    
+    input.value = '';
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    // Simulate bot response (or use real endpoint if widget is generated)
+    const loadingMsg = document.createElement('div');
+    loadingMsg.className = 'message bot typing';
+    loadingMsg.innerHTML = '<span class="typing-dots">...</span>';
+    messagesContainer.appendChild(loadingMsg);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    // If we have a widget ID, use the real chat API
+    if (currentWidgetId) {
+        fetch(`/api/chat/${currentWidgetId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: message })
+        })
+        .then(res => res.json())
+        .then(data => {
+            loadingMsg.remove();
+            const botMsg = document.createElement('div');
+            botMsg.className = 'message bot';
+            botMsg.textContent = data.response || 'I received your message!';
+            messagesContainer.appendChild(botMsg);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        })
+        .catch(() => {
+            loadingMsg.remove();
+            const botMsg = document.createElement('div');
+            botMsg.className = 'message bot';
+            botMsg.textContent = 'Sorry, there was an error processing your message.';
+            messagesContainer.appendChild(botMsg);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        });
+    } else {
+        // Mock response for preview
+        setTimeout(() => {
+            loadingMsg.remove();
+            const responses = [
+                "Thanks for your message! I'm here to help.",
+                "I understand. Let me assist you with that.",
+                "Great question! Here's what I can tell you...",
+                "I'd be happy to help with that!",
+            ];
+            const botMsg = document.createElement('div');
+            botMsg.className = 'message bot';
+            botMsg.textContent = responses[Math.floor(Math.random() * responses.length)];
+            messagesContainer.appendChild(botMsg);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }, 800);
+    }
+}
+
+async function generateWidget() {
+    const config = {
+        name: document.getElementById('widgetName').value,
+        position: document.querySelector('input[name="position"]:checked').value,
+        theme: document.querySelector('input[name="theme"]:checked').value,
+        primaryColor: document.getElementById('primaryColor').value,
+        bgColor: document.getElementById('bgColor').value,
+        textColor: document.getElementById('textColor').value,
+        greeting: document.getElementById('greeting').value,
+        systemPrompt: document.getElementById('systemPrompt').value,
+        suggestedPrompts: Array.from(document.querySelectorAll('#suggestedPrompts input')).map(i => i.value).filter(v => v),
+        allowedDomains: document.getElementById('allowedDomains').value,
+        ratePerMinute: parseInt(document.getElementById('ratePerMinute').value) || 10,
+        ratePerHour: parseInt(document.getElementById('ratePerHour').value) || 100,
+        enableAnalytics: document.getElementById('enableAnalytics').checked,
+        showWatermark: document.getElementById('showWatermark').checked,
+        icon: document.getElementById('chatbotIcon').value,
+        iconType: document.getElementById('chatbotIconType').value
+    };
+    
+    // Check if we're updating an existing chatbot (#40)
+    const isUpdate = currentWidgetId !== null;
+    const endpoint = isUpdate ? `/api/chatbots/${currentWidgetId}` : '/api/widget/generate';
+    const method = isUpdate ? 'PUT' : 'POST';
+    
+    try {
+        const res = await fetch(endpoint, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config)
+        });
+        
+        const data = await res.json();
+        
+        if (data.success || data.id) {
+            const widgetId = data.widgetId || data.id || currentWidgetId;
+            currentWidgetId = widgetId;
+            
+            // Upload any pending knowledge base files
+            if (!isUpdate && uploadedFiles.length > 0) {
+                showToast('Uploading knowledge base files...', 'info');
+                await uploadPendingFiles(widgetId);
+                showToast('Knowledge base files uploaded', 'success');
+            }
+            
+            // Update preview module state
+            if (window.ChatbotPreview) {
+                ChatbotPreview.setEditMode(widgetId, config);
+            }
+            
+            document.getElementById('embedCode').textContent = data.embedCode || generateEmbedCode(widgetId, config);
+            
+            const action = isUpdate ? 'updated' : 'generated';
+            showToast(`Widget ${action} successfully! ID: ${widgetId}`, 'success');
+            
+            // Reload chatbots list and knowledge files
+            loadChatbots();
+            loadKnowledgeFiles();
+        } else {
+            showToast('Error: ' + (data.error || 'Failed to save widget'), 'error');
+        }
+        
+    } catch (error) {
+        console.error('Error saving widget:', error);
+        showToast('Error saving widget: ' + error.message, 'error');
+    }
+}
+
+function generateEmbedCode(widgetId, config) {

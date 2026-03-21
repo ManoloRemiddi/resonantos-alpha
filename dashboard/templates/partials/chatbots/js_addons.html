@@ -1,0 +1,128 @@
+    renderAddons();
+    renderActiveAddons();
+}
+
+function renderAddons() {
+    const grid = document.getElementById('addonsGrid');
+    if (!grid) return;
+    
+    grid.innerHTML = addons.filter(a => !a.purchased).map(addon => `
+        <div class="addon-card ${addon.popular ? 'popular' : ''} ${addon.bundle ? 'bundle' : ''}" data-id="${addon.id}">
+            ${addon.popular ? '<div class="popular-badge">Popular</div>' : ''}
+            <div class="addon-icon"><img src="${addon.icon}" alt="${addon.name}" class="addon-icon-img"></div>
+            <div class="addon-info">
+                <h3>${addon.name}</h3>
+                <p>${addon.description}</p>
+            </div>
+            <div class="addon-pricing">
+                <span class="addon-price">${addon.price} $RES</span>
+                <span class="addon-period">/${addon.period}</span>
+            </div>
+            <div class="addon-actions">
+                <button class="btn-addon btn-purchase" onclick="payWithCrypto('${addon.id}', 'RES')">
+                    Pay with $RES
+                </button>
+            </div>
+            <div class="payment-options">
+                <span class="pay-with">Or pay with:</span>
+                <div class="crypto-options">
+                    <button class="crypto-btn crypto-btn-secondary" onclick="payWithCrypto('${addon.id}', 'SOL')">SOL</button>
+                    <button class="crypto-btn crypto-btn-secondary" onclick="payWithCrypto('${addon.id}', 'USDT')">USDT</button>
+                    <button class="crypto-btn crypto-btn-secondary" onclick="payWithCrypto('${addon.id}', 'USDC')">USDC</button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderActiveAddons() {
+    const list = document.getElementById('activeAddonsList');
+    if (!list) return;
+    
+    const active = addons.filter(a => a.purchased);
+    
+    if (active.length === 0) {
+        list.innerHTML = '<p class="no-addons">No active addons. Purchase below to upgrade!</p>';
+        return;
+    }
+    
+    list.innerHTML = active.map(addon => `
+        <div class="active-addon-item">
+            <span class="addon-icon"><img src="${addon.icon}" alt="${addon.name}" class="addon-icon-img addon-icon-img-sm"></span>
+            <span class="addon-name">${addon.name}</span>
+            <span class="addon-status">Active</span>
+            <button class="btn-manage" onclick="manageAddon('${addon.id}')">Manage</button>
+        </div>
+    `).join('');
+}
+
+function purchaseAddon(id) {
+    const addon = addons.find(a => a.id === id);
+    if (addon) {
+        showToast(`Connect your Symbiotic Wallet to purchase ${addon.name} for ${addon.price} $RES/${addon.period}`, 'info');
+    }
+}
+
+function payWithCrypto(id, currency) {
+    const addon = addons.find(a => a.id === id);
+    if (addon) {
+        if (currency === 'RES') {
+            showToast('Symbiotic Wallet integration coming soon. Join the alpha to get early access!', 'info');
+            return;
+        }
+        // Calculate crypto equivalent (placeholder - would use real price feed)
+        let cryptoAmount;
+        if (currency === 'SOL') {
+            cryptoAmount = (addon.price / 150).toFixed(4); // Placeholder SOL price
+        } else {
+            cryptoAmount = addon.price.toFixed(2); // USDT/USDC = USD
+        }
+        showToast(`Pay ${cryptoAmount} ${currency} to subscribe to ${addon.name}`, 'info');
+        // Future: Open crypto payment modal with QR code
+    }
+}
+
+function manageAddon(id) {
+    const addon = addons.find(a => a.id === id);
+    if (addon) {
+        showToast(`Managing ${addon.name} - Cancel or modify subscription`, 'info');
+    }
+}
+
+// Tab switching
+const originalSwitchTab = window.switchTab;
+window.switchTab = function(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    
+    if (tab === 'chatbots') {
+        document.querySelector('.tab:nth-child(1)').classList.add('active');
+        document.getElementById('chatbotsPanel').classList.add('active');
+        loadChatbots();
+    } else if (tab === 'conversations') {
+        document.querySelector('.tab:nth-child(2)').classList.add('active');
+        document.getElementById('conversationsPanel').classList.add('active');
+        loadConversations();
+    } else if (tab === 'addons') {
+        document.querySelector('.tab:nth-child(3)').classList.add('active');
+        document.getElementById('addonsPanel').classList.add('active');
+        loadAddons();
+    } else if (tab === 'analytics') {
+        document.querySelector('.tab:nth-child(4)').classList.add('active');
+        document.getElementById('analyticsPanel').classList.add('active');
+        initAnalyticsTab();
+    } else if (tab === 'widget') {
+        document.getElementById('widgetPanel').classList.add('active');
+    }
+};
+
+// ============================================
+// ANALYTICS TAB FUNCTIONALITY
+// ============================================
+
+let analyticsCurrentRange = '7d';
+let analyticsCurrentChatbot = 'all';
+let analyticsChartInstance = null;
+let analyticsInitialized = false;
+
+function initAnalyticsTab() {

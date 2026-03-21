@@ -1,0 +1,413 @@
+    // Switch to widget tab and load chatbot data
+    currentWidgetId = id;
+    
+    fetch(`/api/chatbots/${id}`)
+        .then(res => res.json())
+        .then(bot => {
+            if (bot.error) {
+                showToast('Error loading chatbot: ' + bot.error, 'error');
+                return;
+            }
+            
+            // Populate form fields
+            document.getElementById('widgetName').value = bot.name || '';
+            document.getElementById('greeting').value = bot.greeting || '';
+            document.getElementById('systemPrompt').value = bot.system_prompt || '';
+            document.getElementById('primaryColor').value = bot.primary_color || '#4ade80';
+            document.getElementById('bgColor').value = bot.bg_color || '#1a1a1a';
+            document.getElementById('textColor').value = bot.text_color || '#e0e0e0';
+            document.getElementById('allowedDomains').value = bot.allowed_domains || '';
+            document.getElementById('ratePerMinute').value = bot.rate_per_minute || 10;
+            document.getElementById('ratePerHour').value = bot.rate_per_hour || 100;
+            document.getElementById('enableAnalytics').checked = bot.enable_analytics;
+            document.getElementById('showWatermark').checked = bot.show_watermark !== false;
+            
+            // Set position radio
+            const positionRadio = document.querySelector(`input[name="position"][value="${bot.position || 'bottom-right'}"]`);
+            if (positionRadio) positionRadio.checked = true;
+            
+            // Set theme radio
+            const themeRadio = document.querySelector(`input[name="theme"][value="${bot.theme || 'dark'}"]`);
+            if (themeRadio) themeRadio.checked = true;
+            
+            // Load icon
+            const botIcon = bot.icon || '💬';
+            const botIconType = bot.icon_type || 'emoji';
+            document.getElementById('chatbotIcon').value = botIcon;
+            document.getElementById('chatbotIconType').value = botIconType;
+            if (botIconType === 'image') {
+                document.getElementById('iconPreview').innerHTML = `<img src="${botIcon}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">`;
+            } else {
+                document.getElementById('iconPreview').textContent = botIcon;
+            }
+            
+            // Load AI configuration
+            const apiTypeRadio = document.querySelector(`input[name="apiType"][value="${bot.api_type || 'internal'}"]`);
+            if (apiTypeRadio) apiTypeRadio.checked = true;
+            document.getElementById('modelSelector').value = bot.model_id || 'claude-sonnet';
+            document.getElementById('apiKeyInput').value = '';  // Clear - never send actual key to frontend
+            document.getElementById('apiKeyInput').placeholder = bot.api_key_encrypted ? '••••••••' : 'sk-ant-...';
+            handleApiTypeChange();
+            
+            // Load suggested prompts
+            const prompts = JSON.parse(bot.suggested_prompts || '[]');
+            const promptsContainer = document.getElementById('suggestedPrompts');
+            promptsContainer.innerHTML = '';
+            if (prompts.length === 0) {
+                // Add one empty prompt input
+                const div = document.createElement('div');
+                div.className = 'prompt-input';
+                div.innerHTML = `
+                    <input type="text" placeholder="Enter a prompt...">
+                    <button class="remove-btn" onclick="removePrompt(this)">×</button>
+                `;
+                promptsContainer.appendChild(div);
+            } else {
+                prompts.forEach(prompt => {
+                    const div = document.createElement('div');
+                    div.className = 'prompt-input';
+                    div.innerHTML = `
+                        <input type="text" value="${escapeHtml(prompt)}">
+                        <button class="remove-btn" onclick="removePrompt(this)">×</button>
+                    `;
+                    promptsContainer.appendChild(div);
+                });
+            }
+            
+            // Update preview module with edit mode (#40 - Smart button label)
+            if (window.ChatbotPreview) {
+                ChatbotPreview.setEditMode(id, bot);
+            }
+            
+            // Load knowledge base files
+            loadKnowledgeFiles();
+            
+            // Clear any pending local files
+            uploadedFiles = [];
+            document.getElementById('uploadedFiles').innerHTML = '';
+            
+            // Switch to widget panel and Settings builder tab
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById('widgetPanel').classList.add('active');
+            
+            // Show back button and breadcrumbs
+            const navBar = document.getElementById('editNavBar');
+            if (navBar) navBar.style.display = 'flex';
+            const breadcrumbName = document.getElementById('breadcrumbBotName');
+            if (breadcrumbName) breadcrumbName.textContent = bot.name || 'Untitled';
+            
+            // Open Settings builder tab by default when editing
+            switchBuilderTab('settings');
+            
+            showToast('Editing chatbot: ' + bot.name, 'info');
+        })
+        .catch(err => {
+            showToast('Error loading chatbot', 'error');
+            console.error(err);
+        });
+}
+
+function backToChatbotList() {
+    const navBar = document.getElementById('editNavBar');
+    if (navBar) navBar.style.display = 'none';
+    currentWidgetId = null;
+    window.switchTab('chatbots');
+}
+
+function viewAnalytics(id) {
+    // For now, show a modal with basic stats
+    fetch(`/api/chatbots/${id}`)
+        .then(res => res.json())
+        .then(bot => {
+            alert(`Analytics for ${bot.name}\n\nConversations: ${bot.conversations || 0}\nSatisfaction: ${bot.satisfaction_rate || 0}%\n\nDetailed analytics coming soon!`);
+        })
+        .catch(() => {
+            showToast('Error loading analytics', 'error');
+        });
+}
+
+// ============================================================================
+// AI Configuration Functions
+// ============================================================================
+
+let systemKeysCache = null;
+
+function handleApiTypeChange() {
+    const apiType = document.querySelector('input[name="apiType"]:checked').value;
+    const customSection = document.getElementById('customApiSection');
+    const systemKeysSection = document.getElementById('systemKeysSection');
+    const internalNotice = document.getElementById('internalApiNotice');
+    
+    if (apiType === 'custom') {
+        customSection.style.display = 'block';
+        systemKeysSection.style.display = 'none';
+        internalNotice.style.display = 'none';
+        
+        // Load custom models (all providers)
+        loadModels('custom');
+        
+        // Show provider-specific models based on custom provider selection
+        handleProviderChange();
+    } else {
+        customSection.style.display = 'none';
+        systemKeysSection.style.display = 'block';
+        internalNotice.style.display = 'flex';
+        
+        // Load system keys and their available models
+        loadSystemKeys();
+    }
+    
+    updateApiKeyHint();
+}
+
+async function loadSystemKeys() {
+    const statusEl = document.getElementById('systemKeysStatus');
+    const listEl = document.getElementById('systemKeysList');
+    
+    statusEl.style.display = 'flex';
+    listEl.style.display = 'none';
+    
+    try {
+        const res = await fetch('/api/system-keys');
+        const data = await res.json();
+        
+        systemKeysCache = data;
+        
+        statusEl.style.display = 'none';
+        listEl.style.display = 'block';
+        
+        if (!data.hasSystemKeys || data.providers.length === 0) {
+            listEl.innerHTML = `
+                <div class="no-system-keys">
+                    <span class="info-icon">ℹ️</span>
+                    <p>System keys unavailable.</p>
+                    <p class="hint">Configure API keys in your clawdbot.json or use a custom key.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Show available providers
+        listEl.innerHTML = `
+            <div class="system-keys-available">
+                <span class="success-icon">✓</span>
+                <span>Available providers:</span>
+                <div class="provider-badges">
+                    ${data.providers.map(p => `
+                        <span class="provider-badge ${p.id}">${p.name}</span>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        
+        // Update model selector to only show available models
+        updateModelSelectorForSystemKeys(data.providers);
+        
+    } catch (error) {
+        console.error('Error loading system keys:', error);
+        statusEl.style.display = 'none';
+        listEl.style.display = 'block';
+        listEl.innerHTML = `
+            <div class="system-keys-available" style="opacity:0.7;">
+                <span class="info-icon" style="font-size:1.1em;">ℹ️</span>
+                <span>System keys unavailable. You can use a custom API key instead.</span>
+            </div>
+        `;
+    }
+}
+
+function updateModelSelectorForSystemKeys(providers) {
+    const selector = document.getElementById('modelSelector');
+    const currentValue = selector.value;
+    
+    // Build model options from available providers
+    let html = '';
+    
+    providers.forEach(provider => {
+        html += `<optgroup label="${provider.name}">`;
+        provider.models.forEach(model => {
+            html += `<option value="${model.id}">${model.name}</option>`;
+        });
+        html += '</optgroup>';
+    });
+    
+    if (html) {
+        selector.innerHTML = html;
+        
+        // Try to preserve selection if still valid
+        const allModels = providers.flatMap(p => p.models.map(m => m.id));
+        if (allModels.includes(currentValue)) {
+            selector.value = currentValue;
+        }
+    }
+}
+
+async function loadModels(apiType) {
+    try {
+        const res = await fetch(`/api/models?apiType=${apiType}`);
+        const data = await res.json();
+        
+        const selector = document.getElementById('modelSelector');
+        const currentValue = selector.value;
+        
+        selector.innerHTML = data.models.map(model => 
+            `<option value="${model.id}">${model.name} - ${model.description}</option>`
+        ).join('');
+        
+        // Try to preserve the current selection
+        if (data.models.find(m => m.id === currentValue)) {
+            selector.value = currentValue;
+        }
+    } catch (error) {
+        console.error('Error loading models:', error);
+    }
+}
+
+function handleProviderChange() {
+    const provider = document.getElementById('customProvider')?.value || 'anthropic';
+    const modelSelector = document.getElementById('modelSelector');
+    
+    // Define models for each provider
+    const providerModels = {
+        anthropic: [
+            { id: 'claude-sonnet', name: 'Claude Sonnet 4 - Fast and capable' },
+            { id: 'claude-opus', name: 'Claude Opus 4 - Most capable' },
+            { id: 'claude-haiku', name: 'Claude Haiku 4 - Fastest' },
+        ],
+        openai: [
+            { id: 'gpt-4o', name: 'GPT-4o - OpenAI flagship' },
+            { id: 'gpt-4o-mini', name: 'GPT-4o Mini - Faster, cheaper' },
+        ],
+        google: [
+            { id: 'gemini-pro', name: 'Gemini Pro - Google AI' },
+            { id: 'gemini-flash', name: 'Gemini Flash - Fast Google AI' },
+        ]
+    };
+    
+    const models = providerModels[provider] || providerModels.anthropic;
+    modelSelector.innerHTML = models.map(m => 
+        `<option value="${m.id}">${m.name}</option>`
+    ).join('');
+    
+    updateApiKeyHint();
+}
+
+function handleModelChange() {
+    updateApiKeyHint();
+}
+
+function updateApiKeyHint() {
+    const modelId = document.getElementById('modelSelector').value;
+    const hint = document.getElementById('apiKeyHint');
+    
+    if (!hint) return;
+    
+    if (modelId.startsWith('claude')) {
+        hint.textContent = 'Enter your Anthropic API key (starts with sk-ant-)';
+    } else if (modelId.startsWith('gpt')) {
+        hint.textContent = 'Enter your OpenAI API key (starts with sk-)';
+    } else if (modelId.startsWith('gemini')) {
+        hint.textContent = 'Enter your Google AI API key';
+    } else {
+        hint.textContent = 'Enter your API key';
+    }
+}
+
+function toggleApiKeyVisibility() {
+    const input = document.getElementById('apiKeyInput');
+    const btn = event.currentTarget;
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🙈';
+    } else {
+        input.type = 'password';
+        btn.textContent = '👁️';
+    }
+}
+
+async function testApiConnection() {
+    const apiType = document.querySelector('input[name="apiType"]:checked').value;
+    const modelId = document.getElementById('modelSelector').value;
+    const apiKey = document.getElementById('apiKeyInput').value;
+    
+    const statusEl = document.getElementById('apiKeyStatus');
+    statusEl.style.display = 'flex';
+    statusEl.className = 'api-key-status testing';
+    statusEl.querySelector('.status-icon').textContent = '⏳';
+    statusEl.querySelector('.status-text').textContent = 'Testing connection...';
+    
+    try {
+        const res = await fetch(`/api/chatbots/${currentWidgetId || 'new'}/test-connection`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ apiType, modelId, apiKey })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            statusEl.className = 'api-key-status success';
+            statusEl.querySelector('.status-icon').textContent = '✓';
+            statusEl.querySelector('.status-text').textContent = data.message;
+        } else {
+            statusEl.className = 'api-key-status error';
+            statusEl.querySelector('.status-icon').textContent = '✗';
+            statusEl.querySelector('.status-text').textContent = data.error;
+        }
+    } catch (error) {
+        statusEl.className = 'api-key-status error';
+        statusEl.querySelector('.status-icon').textContent = '✗';
+        statusEl.querySelector('.status-text').textContent = 'Connection test failed';
+    }
+}
+
+async function loadAiConfig(chatbotId) {
+    try {
+        const res = await fetch(`/api/chatbots/${chatbotId}/ai-config`);
+        const config = await res.json();
+        
+        // Set API type
+        const apiTypeRadio = document.querySelector(`input[name="apiType"][value="${config.apiType || 'internal'}"]`);
+        if (apiTypeRadio) apiTypeRadio.checked = true;
+        
+        // Set model
+        document.getElementById('modelSelector').value = config.modelId || 'claude-sonnet';
+        
+        // Show masked key if exists
+        if (config.hasApiKey && config.apiKeyMasked) {
+            document.getElementById('apiKeyInput').placeholder = config.apiKeyMasked;
+        }
+        
+        handleApiTypeChange();
+    } catch (error) {
+        console.error('Error loading AI config:', error);
+    }
+}
+
+async function saveAiConfig(chatbotId) {
+    const apiType = document.querySelector('input[name="apiType"]:checked').value;
+    const modelId = document.getElementById('modelSelector').value;
+    const apiKey = document.getElementById('apiKeyInput').value;
+    
+    try {
+        const res = await fetch(`/api/chatbots/${chatbotId}/ai-config`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ apiType, modelId, apiKey: apiKey || undefined })
+        });
+        
+        const data = await res.json();
+        if (!data.success) {
+            throw new Error(data.error);
+        }
+        return true;
+    } catch (error) {
+        console.error('Error saving AI config:', error);
+        showToast('Error saving AI configuration', 'error');
+        return false;
+    }
+}
+
+function showToast(message, type = 'info') {

@@ -1,0 +1,208 @@
+<div class="tab-panel" id="analyticsPanel">
+    <!-- Date Range Selector -->
+    <div class="analytics-header">
+        <div class="date-range-picker">
+            <button class="range-btn active" data-range="7d">7 Days</button>
+            <button class="range-btn" data-range="30d">30 Days</button>
+            <button class="range-btn" data-range="90d">90 Days</button>
+            <button class="range-btn" data-range="all">All Time</button>
+        </div>
+        <div class="analytics-actions">
+            <select id="analyticsChatbotFilter" onchange="loadAnalyticsData()">
+                <option value="all">All Chatbots</option>
+            </select>
+            <button class="btn-secondary" onclick="exportAnalyticsData()">
+                📥 Export Data
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="analytics-stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">💬</div>
+            <div class="stat-content">
+                <span class="stat-value" id="analyticsTotalConversations">-</span>
+                <span class="stat-label">Total Conversations</span>
+                <span class="stat-change positive" id="analyticsConversationsChange">-</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📨</div>
+            <div class="stat-content">
+                <span class="stat-value" id="analyticsTotalMessages">-</span>
+                <span class="stat-label">Messages Exchanged</span>
+                <span class="stat-change positive" id="analyticsMessagesChange">-</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">⚡</div>
+            <div class="stat-content">
+                <span class="stat-value" id="analyticsAvgResponseTime">-</span>
+                <span class="stat-label">Avg Response Time</span>
+                <span class="stat-change" id="analyticsResponseTimeChange">-</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">😊</div>
+            <div class="stat-content">
+                <span class="stat-value" id="analyticsSatisfactionRate">-</span>
+                <span class="stat-label">Satisfaction Rate</span>
+                <span class="stat-change positive" id="analyticsSatisfactionChange">-</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conversations Over Time Chart -->
+    <div class="card chart-card">
+        <div class="card-header">
+            <h2 class="card-title">Conversations Over Time</h2>
+            <div class="chart-legend">
+                <span class="legend-item"><span class="dot" style="background: #4ade80;"></span> Conversations</span>
+                <span class="legend-item"><span class="dot" style="background: #60a5fa;"></span> Messages</span>
+            </div>
+        </div>
+        <div class="card-content">
+            <div class="chart-container" id="analyticsConversationsChart">
+                <div class="chart-placeholder" id="analyticsChartPlaceholder">
+                    <span class="placeholder-icon">📊</span>
+                    <p>Analytics data will appear here once chatbots are active</p>
+                </div>
+                <canvas id="analyticsConversationsCanvas" style="display: none;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Two Column Layout -->
+    <div class="analytics-columns">
+        <!-- Popular Questions -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Popular Questions</h2>
+            </div>
+            <div class="card-content">
+                <div class="popular-list" id="analyticsPopularQuestions">
+                    <div class="empty-placeholder">
+                        <span>📝</span>
+                        <p>No questions recorded yet</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Response Metrics -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Response Metrics</h2>
+            </div>
+            <div class="card-content">
+                <div class="metrics-grid">
+                    <div class="metric-item">
+                        <span class="metric-label">User Messages</span>
+                        <span class="metric-value" id="analyticsUserMessages">-</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Bot Responses</span>
+                        <span class="metric-value" id="analyticsBotResponses">-</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Error Rate</span>
+                        <span class="metric-value" id="analyticsErrorRate">-</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Avg Conversation Length</span>
+                        <span class="metric-value" id="analyticsAvgConvLength">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Satisfaction -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">User Satisfaction</h2>
+        </div>
+        <div class="card-content">
+            <div class="satisfaction-container" id="analyticsSatisfactionContainer">
+                <div class="satisfaction-bars">
+                    <div class="satisfaction-row">
+                        <span class="rating-label">😍 Very Satisfied</span>
+                        <div class="rating-bar">
+                            <div class="rating-fill" id="analyticsRating5" style="width: 0%;"></div>
+                        </div>
+                        <span class="rating-percent" id="analyticsRating5Percent">0%</span>
+                    </div>
+                    <div class="satisfaction-row">
+                        <span class="rating-label">😊 Satisfied</span>
+                        <div class="rating-bar">
+                            <div class="rating-fill" id="analyticsRating4" style="width: 0%;"></div>
+                        </div>
+                        <span class="rating-percent" id="analyticsRating4Percent">0%</span>
+                    </div>
+                    <div class="satisfaction-row">
+                        <span class="rating-label">😐 Neutral</span>
+                        <div class="rating-bar">
+                            <div class="rating-fill" id="analyticsRating3" style="width: 0%;"></div>
+                        </div>
+                        <span class="rating-percent" id="analyticsRating3Percent">0%</span>
+                    </div>
+                    <div class="satisfaction-row">
+                        <span class="rating-label">😕 Dissatisfied</span>
+                        <div class="rating-bar">
+                            <div class="rating-fill" id="analyticsRating2" style="width: 0%;"></div>
+                        </div>
+                        <span class="rating-percent" id="analyticsRating2Percent">0%</span>
+                    </div>
+                    <div class="satisfaction-row">
+                        <span class="rating-label">😠 Very Dissatisfied</span>
+                        <div class="rating-bar">
+                            <div class="rating-fill" id="analyticsRating1" style="width: 0%;"></div>
+                        </div>
+                        <span class="rating-percent" id="analyticsRating1Percent">0%</span>
+                    </div>
+                </div>
+                <div class="satisfaction-summary">
+                    <div class="summary-stat">
+                        <span class="summary-value" id="analyticsTotalRatings">0</span>
+                        <span class="summary-label">Total Ratings</span>
+                    </div>
+                    <div class="summary-stat">
+                        <span class="summary-value" id="analyticsFeedbackRate">0%</span>
+                        <span class="summary-label">Feedback Rate</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity Table -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Recent Conversations</h2>
+            <a href="#" class="card-link" onclick="switchTab('conversations'); return false;">View All →</a>
+        </div>
+        <div class="card-content">
+            <div class="table-container">
+                <table class="data-table" id="analyticsRecentConversations">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Chatbot</th>
+                            <th>Messages</th>
+                            <th>Duration</th>
+                            <th>Rating</th>
+                        </tr>
+                    </thead>
+                    <tbody id="analyticsConversationsTableBody">
+                        <tr>
+                            <td colspan="5" class="empty-row">No conversations recorded yet</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Widget Generator Tab (Settings) -->

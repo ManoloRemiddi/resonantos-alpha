@@ -1,0 +1,438 @@
+<div class="tab-panel" id="widgetPanel">
+    <div class="widget-builder">
+        <!-- Back Button & Breadcrumbs -->
+        <div class="edit-nav-bar" id="editNavBar" style="display:none; align-items:center; gap:12px; margin-bottom:12px;">
+            <button class="btn-secondary" onclick="backToChatbotList()" style="padding:6px 14px; font-size:0.95em;">← Back</button>
+            <span class="breadcrumbs" id="editBreadcrumbs" style="color:#aaa; font-size:0.95em;">My Chatbots → <span id="breadcrumbBotName">...</span> → <span id="breadcrumbTab">Settings</span></span>
+        </div>
+        <!-- Builder Tabs -->
+        <div class="builder-tabs">
+            <button class="builder-tab active" onclick="switchBuilderTab('settings')">⚙️ Settings</button>
+            <button class="builder-tab" onclick="switchBuilderTab('appearance')">🎨 Appearance</button>
+            <button class="builder-tab" onclick="switchBuilderTab('knowledge')">📚 Knowledge</button>
+            <button class="builder-tab" onclick="switchBuilderTab('deploy')">🚀 Deploy</button>
+        </div>
+        
+        <div class="builder-content">
+            <!-- Appearance Tab -->
+            <div class="builder-panel" id="appearancePanel">
+                <div class="appearance-layout">
+                    <!-- Left: Settings -->
+                    <div class="appearance-settings">
+                        <div class="form-section">
+                            <h3>Widget Position</h3>
+                            <div class="position-picker">
+                                <label class="position-option">
+                                    <input type="radio" name="position" value="bottom-right" checked>
+                                    <span class="position-box"><span class="dot br"></span></span>
+                                    <span>Bottom Right</span>
+                                </label>
+                                <label class="position-option">
+                                    <input type="radio" name="position" value="bottom-left">
+                                    <span class="position-box"><span class="dot bl"></span></span>
+                                    <span>Bottom Left</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h3>Colors</h3>
+                            <div class="color-pickers">
+                                <div class="color-picker">
+                                    <label>Primary Color</label>
+                                    <input type="color" id="primaryColor" value="#4ade80">
+                                </div>
+                                <div class="color-picker">
+                                    <label>Background</label>
+                                    <input type="color" id="bgColor" value="#1a1a1a">
+                                </div>
+                                <div class="color-picker">
+                                    <label>Text Color</label>
+                                    <input type="color" id="textColor" value="#e0e0e0">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h3>Theme</h3>
+                            <div class="theme-options">
+                                <label class="theme-option">
+                                    <input type="radio" name="theme" value="dark" checked>
+                                    <span class="theme-preview dark">🌙 Dark</span>
+                                </label>
+                                <label class="theme-option">
+                                    <input type="radio" name="theme" value="light">
+                                    <span class="theme-preview light">☀️ Light</span>
+                                </label>
+                                <label class="theme-option">
+                                    <input type="radio" name="theme" value="auto">
+                                    <span class="theme-preview auto">🔄 Auto</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h3>Initial Greeting</h3>
+                            <textarea id="greeting" rows="2" placeholder="Hi! How can I help you today?">Hi! How can I help you today?</textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Right: Live Preview (#36) -->
+                    <div class="appearance-preview">
+                        <h3>Live Preview</h3>
+                        <div class="widget-preview-container" id="appearancePreviewContainer">
+                            <div class="preview-frame">
+                                <div class="preview-website-mock">
+                                    <div class="mock-header">
+                                        <div class="mock-dots">
+                                            <span></span><span></span><span></span>
+                                        </div>
+                                        <div class="mock-url">yourwebsite.com</div>
+                                    </div>
+                                    <div class="mock-content">
+                                        <div class="mock-line w60"></div>
+                                        <div class="mock-line w80"></div>
+                                        <div class="mock-line w40"></div>
+                                    </div>
+                                </div>
+                                <div class="preview-widget position-bottom-right theme-dark" id="appearancePreviewWidget">
+                                    <div class="widget-button" onclick="ChatbotPreview.toggleChat(this.closest('.widget-preview-container'))">
+                                        <span>💬</span>
+                                    </div>
+                                    <div class="widget-chat open">
+                                        <div class="chat-header">
+                                            <span class="chat-title">ResonantOS Assistant</span>
+                                            <button class="chat-close" onclick="ChatbotPreview.toggleChat(this.closest('.widget-preview-container'))">×</button>
+                                        </div>
+                                        <div class="chat-messages">
+                                            <div class="message bot preview-greeting">Hi! How can I help you today?</div>
+                                        </div>
+                                        <div class="chat-input">
+                                            <input type="text" placeholder="Type a message..." readonly>
+                                            <button>→</button>
+                                        </div>
+                                        <div class="chat-watermark">Powered by <a href="https://resonantos.com" target="_blank">ResonantOS</a></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Knowledge Tab -->
+            <div class="builder-panel" id="knowledgePanel">
+                <div class="form-section">
+                    <h3>Knowledge Base Files</h3>
+                    <p class="form-hint">Upload documents to train your chatbot on. The chatbot will search these files to answer questions.</p>
+                    
+                    <!-- Existing Files -->
+                    <div class="kb-existing-files" id="kbExistingFiles">
+                        <div class="kb-files-header">
+                            <span>Uploaded Files</span>
+                            <button class="btn-small" onclick="refreshKnowledgeFiles()" title="Refresh file list">🔄 Refresh</button>
+                        </div>
+                        <div class="kb-files-list" id="kbFilesList">
+                            <p class="kb-no-files">No files uploaded yet. Upload documents below.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Upload Area -->
+                    <div class="file-upload-area" id="dropZone">
+                        <span class="upload-icon">📁</span>
+                        <p>Drag & drop files here or <button class="link-btn" onclick="document.getElementById('fileInput').click()">browse</button></p>
+                        <p class="upload-hint">Supported: .md, .txt, .pdf, .docx (Max 10MB per file)</p>
+                        <input type="file" id="fileInput" multiple accept=".md,.txt,.pdf,.docx" style="display:none" onchange="handleKnowledgeUpload(this.files)">
+                    </div>
+                    
+                    <!-- Upload Progress -->
+                    <div class="kb-upload-progress" id="kbUploadProgress" style="display: none;">
+                        <div class="progress-bar"><div class="progress-fill" id="kbProgressFill"></div></div>
+                        <span id="kbUploadStatus">Uploading...</span>
+                    </div>
+                    
+                    <!-- Pending files for new chatbots -->
+                    <div class="uploaded-files" id="uploadedFiles">
+                        <!-- Pending uploads listed here for new chatbots -->
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h3>System Prompt</h3>
+                    <p class="form-hint">Define your chatbot's personality and behavior.</p>
+                    <textarea id="systemPrompt" rows="6" placeholder="You are a helpful assistant...">You are a helpful assistant for ResonantOS.
+
+Your role:
+- Answer questions about the platform
+- Be friendly and informative
+- Admit when you don't know something</textarea>
+                </div>
+                
+                <div class="form-section">
+                    <h3>Suggested Prompts</h3>
+                    <p class="form-hint">Quick questions shown when chat opens (max 5).</p>
+                    <div class="suggested-prompts" id="suggestedPrompts">
+                        <div class="prompt-input">
+                            <input type="text" placeholder="What is ResonantOS?" value="What is ResonantOS?">
+                            <button class="remove-btn" onclick="removePrompt(this)">×</button>
+                        </div>
+                        <div class="prompt-input">
+                            <input type="text" placeholder="How do I get started?" value="How do I get started?">
+                            <button class="remove-btn" onclick="removePrompt(this)">×</button>
+                        </div>
+                    </div>
+                    <button class="btn-secondary" onclick="addPrompt()">+ Add Prompt</button>
+                </div>
+            </div>
+            
+            <!-- Settings Tab -->
+            <div class="builder-panel active" id="settingsPanel">
+                <div class="form-section">
+                    <h3>Widget Name</h3>
+                    <input type="text" id="widgetName" placeholder="My Chatbot" value="ResonantOS Assistant">
+                </div>
+                
+                <!-- Icon Picker -->
+                <div class="form-section">
+                    <h3>Chatbot Icon</h3>
+                    <p class="form-hint">Choose an icon for your chatbot. Select from presets or enter a custom emoji.</p>
+                    <div class="icon-picker">
+                        <div class="icon-picker-selected" id="iconPickerSelected" onclick="toggleIconPicker()">
+                            <span class="icon-picker-preview" id="iconPreview">💬</span>
+                            <span class="icon-picker-label">Click to change</span>
+                        </div>
+                        <div class="icon-picker-dropdown" id="iconPickerDropdown">
+                            <div class="icon-picker-section">
+                                <div class="icon-section-label">ResonantOS Icons</div>
+                                <div class="icon-grid" id="iconGridImages">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                            <div class="icon-picker-section">
+                                <div class="icon-section-label">Emoji</div>
+                                <div class="icon-grid" id="iconGridEmoji">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                            <div class="icon-picker-section">
+                                <div class="icon-section-label">Custom</div>
+                                <div class="icon-custom-input">
+                                    <input type="text" id="iconCustomEmoji" placeholder="Paste emoji or URL..." maxlength="64" onkeyup="previewCustomIcon(this.value)">
+                                    <button class="btn-small" onclick="selectCustomIcon()">Apply</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="chatbotIcon" value="💬">
+                    <input type="hidden" id="chatbotIconType" value="emoji">
+                </div>
+                
+                <!-- AI Configuration Section -->
+                <div class="form-section ai-config-section">
+                    <h3>🤖 AI Configuration</h3>
+                    <p class="form-hint">Configure which AI model powers your chatbot.</p>
+                    
+                    <div class="api-type-selector">
+                        <label class="api-option">
+                            <input type="radio" name="apiType" value="internal" checked onchange="handleApiTypeChange()">
+                            <div class="api-option-card">
+                                <div class="api-option-header">
+                                    <span class="api-icon">🏠</span>
+                                    <span class="api-name">Use System Keys</span>
+                                </div>
+                                <p class="api-description">Use API keys already configured in your ResonantOS system.</p>
+                                <span class="api-badge included">Recommended</span>
+                            </div>
+                        </label>
+                        <label class="api-option">
+                            <input type="radio" name="apiType" value="custom" onchange="handleApiTypeChange()">
+                            <div class="api-option-card">
+                                <div class="api-option-header">
+                                    <span class="api-icon">🔑</span>
+                                    <span class="api-name">Use Custom Key</span>
+                                </div>
+                                <p class="api-description">Bring your own API key from Anthropic, OpenAI, or Google.</p>
+                                <span class="api-badge custom">Your Key</span>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <!-- System Keys Section (shown when using system keys) -->
+                    <div class="system-keys-section" id="systemKeysSection">
+                        <div class="system-keys-status" id="systemKeysStatus">
+                            <div class="loading-spinner-small"></div>
+                            <span>Loading available API keys...</span>
+                        </div>
+                        <div class="system-keys-list" id="systemKeysList" style="display: none;">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                    
+                    <!-- Model Selector -->
+                    <div class="model-selector-section">
+                        <label>AI Model</label>
+                        <select id="modelSelector" onchange="handleModelChange()">
+                            <optgroup label="Anthropic (Claude)">
+                                <option value="claude-sonnet">Claude Sonnet 4 - Fast and capable</option>
+                                <option value="claude-opus">Claude Opus 4 - Most capable</option>
+                                <option value="claude-haiku">Claude Haiku 4 - Fastest</option>
+                            </optgroup>
+                            <optgroup label="OpenAI" id="openaiModels" style="display: none;">
+                                <option value="gpt-4o">GPT-4o - OpenAI flagship</option>
+                                <option value="gpt-4o-mini">GPT-4o Mini - Faster, cheaper</option>
+                            </optgroup>
+                            <optgroup label="Google" id="googleModels" style="display: none;">
+                                <option value="gemini-pro">Gemini Pro - Google AI</option>
+                                <option value="gemini-flash">Gemini Flash - Fast Google AI</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    
+                    <!-- Custom API Key Section (hidden by default) -->
+                    <div class="custom-api-section" id="customApiSection" style="display: none;">
+                        <label>Provider</label>
+                        <select id="customProvider" onchange="handleProviderChange()">
+                            <option value="anthropic">Anthropic (Claude)</option>
+                            <option value="openai">OpenAI (GPT)</option>
+                            <option value="google">Google (Gemini)</option>
+                        </select>
+                        
+                        <label>API Key</label>
+                        <div class="api-key-input-wrapper">
+                            <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off">
+                            <button type="button" class="toggle-visibility" onclick="toggleApiKeyVisibility()">👁️</button>
+                        </div>
+                        <p class="form-hint" id="apiKeyHint">Enter your Anthropic API key</p>
+                        
+                        <div class="api-key-status" id="apiKeyStatus" style="display: none;">
+                            <span class="status-icon"></span>
+                            <span class="status-text"></span>
+                        </div>
+                        
+                        <button type="button" class="btn-secondary btn-test" onclick="testApiConnection()">
+                            🔌 Test Connection
+                        </button>
+                    </div>
+                    
+                    <!-- Internal API Notice -->
+                    <div class="internal-api-notice" id="internalApiNotice">
+                        <span class="notice-icon">✓</span>
+                        <div class="notice-content">
+                            <strong>Using System API Keys</strong>
+                            <p>Your chatbot will use API keys configured in your ResonantOS system.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h3>Allowed Domains</h3>
+                    <p class="form-hint">Leave empty for any domain, or specify domains for security.</p>
+                    <input type="text" id="allowedDomains" placeholder="example.com, www.example.com">
+                </div>
+                
+                <div class="form-section">
+                    <h3>Rate Limiting</h3>
+                    <div class="rate-limits">
+                        <div class="limit-input">
+                            <label>Messages per minute</label>
+                            <input type="number" id="ratePerMinute" value="10" min="1" max="60">
+                        </div>
+                        <div class="limit-input">
+                            <label>Messages per hour</label>
+                            <input type="number" id="ratePerHour" value="100" min="1" max="1000">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h3>Analytics</h3>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="enableAnalytics" checked>
+                        <span class="slider"></span>
+                        <span class="toggle-label">Enable analytics tracking</span>
+                    </label>
+                </div>
+                
+                <div class="form-section">
+                    <h3>Watermark</h3>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="showWatermark" checked>
+                        <span class="slider"></span>
+                        <span class="toggle-label">Show "Powered by ResonantOS"</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Deploy Tab -->
+            <div class="builder-panel" id="deployPanel">
+                <div class="form-section">
+                    <h3>Live Preview</h3>
+                    <div class="widget-preview-container" id="deployPreviewContainer">
+                        <div class="preview-frame">
+                            <div class="preview-website-mock">
+                                <div class="mock-header">
+                                    <div class="mock-dots">
+                                        <span></span><span></span><span></span>
+                                    </div>
+                                    <div class="mock-url">yourwebsite.com</div>
+                                </div>
+                                <div class="mock-content">
+                                    <div class="mock-line w60"></div>
+                                    <div class="mock-line w80"></div>
+                                    <div class="mock-line w40"></div>
+                                </div>
+                            </div>
+                            <div class="preview-widget position-bottom-right theme-dark" id="deployPreviewWidget">
+                                <div class="widget-button" id="previewButton" onclick="togglePreviewChat()">
+                                    <span>💬</span>
+                                </div>
+                                <div class="widget-chat" id="previewChat">
+                                    <div class="chat-header">
+                                        <span class="chat-title" id="previewTitle">ResonantOS Assistant</span>
+                                        <button class="chat-close" onclick="togglePreviewChat()">×</button>
+                                    </div>
+                                    <div class="chat-messages" id="previewMessages">
+                                        <div class="message bot preview-greeting" id="previewGreeting">Hi! How can I help you today?</div>
+                                    </div>
+                                    <div class="chat-input">
+                                        <input type="text" id="previewInput" placeholder="Type a message..." onkeypress="if(event.key==='Enter')sendPreviewMessage()">
+                                        <button onclick="sendPreviewMessage()">→</button>
+                                    </div>
+                                    <div class="chat-watermark" id="previewWatermark">Powered by <a href="https://resonantos.com" target="_blank">ResonantOS</a></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h3>Embed Code</h3>
+                    <p class="form-hint">Copy this code and paste it before the &lt;/body&gt; tag on your website.</p>
+                    <div class="code-block">
+                        <pre id="embedCode">&lt;!-- ResonantOS Chat Widget --&gt;
+&lt;script&gt;
+  (function() {
+    var widget = document.createElement('script');
+    widget.src = 'https://resonantos.com/widget.js';
+    widget.dataset.widgetId = 'demo-widget';
+    widget.dataset.position = 'bottom-right';
+    widget.dataset.theme = 'dark';
+    widget.dataset.primaryColor = '#4ade80';
+    document.body.appendChild(widget);
+  })();
+&lt;/script&gt;</pre>
+                        <button class="copy-btn" onclick="copyEmbedCode()">📋 Copy</button>
+                    </div>
+                </div>
+                
+                <div class="deploy-actions">
+                    <button class="btn-secondary" onclick="downloadPackage()">📦 Download Package</button>
+                </div>
+            </div>
+        </div>
+        <!-- Persistent Save Footer (visible on all sub-tabs) -->
+        <div class="builder-save-footer" style="position:sticky; bottom:0; background:linear-gradient(transparent, #1a1a2e 20%); padding:18px 0 8px 0; display:flex; justify-content:flex-end; gap:10px; z-index:10;">
+            <button class="btn-primary" id="generateWidgetBtn" onclick="generateWidget()" style="font-size:1.05em; padding:10px 28px;">💾 Save &amp; Update</button>
+        </div>
+    </div>
+</div>

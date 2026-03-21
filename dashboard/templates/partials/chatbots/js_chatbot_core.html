@@ -1,0 +1,232 @@
+    const grid = document.getElementById('chatbotsGrid');
+    
+    // Create "Add New" card that always appears first (#33)
+    const createNewCard = `
+        <div class="chatbot-card create-new-card" onclick="createNewChatbot()">
+            <div class="create-new-content">
+                <div class="create-new-icon">➕</div>
+                <h3>Create New Chatbot</h3>
+                <p>Build a custom AI chatbot for your website</p>
+            </div>
+        </div>
+    `;
+    
+    if (!chatbots || chatbots.length === 0) {
+        // Show just the create new card when no chatbots exist
+        grid.innerHTML = createNewCard;
+        return;
+    }
+    
+    // Render create new card + existing chatbots side by side
+    grid.innerHTML = createNewCard + chatbots.map(bot => {
+        const lastUsed = bot.last_used_at ? formatTimeAgo(bot.last_used_at) : 'Never';
+        const modelName = getModelDisplayName(bot.model_id || 'claude-sonnet');
+        const apiIcon = bot.api_type === 'custom' ? '🔑' : '🏠';
+        
+        return `
+            <div class="chatbot-card" onclick="editChatbot('${bot.id}')">
+                <div class="chatbot-header">
+                    <div class="chatbot-icon">${chatbotIconHtml(bot)}</div>
+                    <div class="chatbot-info">
+                        <h3>${escapeHtml(bot.name)}</h3>
+                        <div class="chatbot-meta">
+                            <span class="status-badge status-${bot.status || 'active'}">${bot.status || 'active'}</span>
+                            <span class="model-badge" title="AI Model">${apiIcon} ${modelName}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chatbot-stats">
+                    <div class="stat">
+                        <span class="stat-value">${(bot.conversations || 0).toLocaleString()}</span>
+                        <span class="stat-label">Conversations</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value">${bot.avgResponseTime || '< 2s'}</span>
+                        <span class="stat-label">Avg Response</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value">${bot.satisfaction_rate > 0 ? Math.round(bot.satisfaction_rate) + '%' : '-'}</span>
+                        <span class="stat-label">Satisfaction</span>
+                    </div>
+                </div>
+                <div class="chatbot-footer">
+                    <span class="last-used">Last used: ${lastUsed}</span>
+                    <div class="chatbot-actions">
+                        <button class="btn-small" onclick="event.stopPropagation(); editChatbot('${bot.id}')">Edit</button>
+                        <button class="btn-small" onclick="event.stopPropagation(); viewAnalytics('${bot.id}')">Analytics</button>
+                        <button class="btn-small btn-danger-small" onclick="event.stopPropagation(); deleteChatbot('${bot.id}', '${escapeHtml(bot.name)}')">Delete</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function formatTimeAgo(timestamp) {
+    if (!timestamp) return 'Never';
+    const now = Date.now();
+    const diff = now - timestamp;
+    
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+    if (diff < 604800000) return Math.floor(diff / 86400000) + 'd ago';
+    return new Date(timestamp).toLocaleDateString();
+}
+
+function chatbotIconHtml(bot) {
+    if (bot.icon_type === 'image' && bot.icon) {
+        return `<img src="${escapeHtml(bot.icon)}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">`;
+    }
+    return bot.icon || '💬';
+}
+
+function getModelDisplayName(modelId) {
+    const models = {
+        'claude-sonnet': 'Sonnet',
+        'claude-opus': 'Opus',
+        'claude-haiku': 'Haiku',
+        'gpt-4o': 'GPT-4o',
+        'gpt-4o-mini': 'GPT-4o Mini',
+        'gemini-pro': 'Gemini Pro',
+        'gemini-flash': 'Gemini Flash'
+    };
+    return models[modelId] || modelId;
+}
+
+function createNewChatbot() {
+    // Reset form and switch to widget tab
+    currentWidgetId = null;
+    document.getElementById('widgetName').value = 'My Chatbot';
+    document.getElementById('greeting').value = 'Hi! How can I help you today?';
+    document.getElementById('systemPrompt').value = 'You are a helpful assistant.';
+    document.getElementById('primaryColor').value = '#4ade80';
+    document.getElementById('bgColor').value = '#1a1a1a';
+    document.getElementById('textColor').value = '#e0e0e0';
+    document.getElementById('allowedDomains').value = '';
+    document.getElementById('ratePerMinute').value = 10;
+    document.getElementById('ratePerHour').value = 100;
+    document.getElementById('enableAnalytics').checked = true;
+    document.getElementById('showWatermark').checked = true;
+    
+    // Reset icon
+    document.getElementById('chatbotIcon').value = '💬';
+    document.getElementById('chatbotIconType').value = 'emoji';
+    document.getElementById('iconPreview').textContent = '💬';
+    document.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
+    
+    // Reset AI config
+    document.querySelector('input[name="apiType"][value="internal"]').checked = true;
+    document.getElementById('modelSelector').value = 'claude-sonnet';
+    document.getElementById('apiKeyInput').value = '';
+    handleApiTypeChange();
+    
+    // Reset suggested prompts
+    document.getElementById('suggestedPrompts').innerHTML = `
+        <div class="prompt-input">
+            <input type="text" placeholder="Enter a prompt...">
+            <button class="remove-btn" onclick="removePrompt(this)">×</button>
+        </div>
+    `;
+    
+    // Reset knowledge base
+    uploadedFiles = [];
+    knowledgeFiles = [];
+    document.getElementById('uploadedFiles').innerHTML = '';
+    document.getElementById('kbFilesList').innerHTML = 
+        '<p class="kb-no-files">Save the chatbot first to upload knowledge files.</p>';
+    
+    updatePreview();
+    switchToWidgetTab('New Chatbot');
+}
+
+function switchToWidgetTab(botName) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('widgetPanel').classList.add('active');
+    
+    // Show back button and breadcrumbs
+    const navBar = document.getElementById('editNavBar');
+    if (navBar) navBar.style.display = 'flex';
+    const breadcrumbName = document.getElementById('breadcrumbBotName');
+    if (breadcrumbName) breadcrumbName.textContent = botName || 'New Chatbot';
+    
+    // Open Settings builder tab by default
+    switchBuilderTab('settings');
+}
+
+async function deleteChatbot(id, name) {
+    if (!confirm(`Are you sure you want to delete "${name}"? This cannot be undone.`)) {
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/chatbots/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        
+        if (data.success) {
+            showToast('Chatbot deleted', 'success');
+            loadChatbots();
+        } else {
+            showToast('Error: ' + (data.error || 'Failed to delete'), 'error');
+        }
+    } catch (error) {
+        showToast('Error deleting chatbot', 'error');
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function setupDragDrop() {
+    const dropZone = document.getElementById('dropZone');
+    
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+    
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+    
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        handleFileUpload(e.dataTransfer.files);
+    });
+}
+
+let uploadedFiles = [];
+let knowledgeFiles = []; // Server-side files
+
+// ============================================================================
+// Knowledge Base Functions
+// ============================================================================
+
+async function loadKnowledgeFiles() {
+    if (!currentWidgetId) {
+        document.getElementById('kbFilesList').innerHTML = 
+            '<p class="kb-no-files">Save the chatbot first to upload knowledge files.</p>';
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/chatbots/${currentWidgetId}/knowledge`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        
+        knowledgeFiles = Array.isArray(data) ? data : (data.files || []);
+        renderKnowledgeFiles();
+    } catch (error) {
+        console.error('Error loading knowledge files:', error);
+        document.getElementById('kbFilesList').innerHTML = 
+            '<p class="kb-error">Error loading files</p>';
+    }
+}
+
+function renderKnowledgeFiles() {

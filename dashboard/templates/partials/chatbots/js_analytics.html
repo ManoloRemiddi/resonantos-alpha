@@ -1,0 +1,408 @@
+    if (!analyticsInitialized) {
+        loadAnalyticsChatbotFilter();
+        setupAnalyticsRangeButtons();
+        analyticsInitialized = true;
+    }
+    loadAnalyticsData();
+}
+
+function setupAnalyticsRangeButtons() {
+    document.querySelectorAll('#analyticsPanel .range-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('#analyticsPanel .range-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            analyticsCurrentRange = this.dataset.range;
+            loadAnalyticsData();
+        });
+    });
+}
+
+async function loadAnalyticsChatbotFilter() {
+    try {
+        const res = await fetch('/api/chatbots');
+        const data = await res.json();
+        
+        const select = document.getElementById('analyticsChatbotFilter');
+        if (!select) return;
+        
+        // Clear existing options except first
+        while (select.options.length > 1) {
+            select.remove(1);
+        }
+        
+        data.chatbots.forEach(bot => {
+            const option = document.createElement('option');
+            option.value = bot.id;
+            option.textContent = bot.name;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading chatbots for analytics filter:', error);
+    }
+}
+
+async function loadAnalyticsData() {
+    const filterEl = document.getElementById('analyticsChatbotFilter');
+    analyticsCurrentChatbot = filterEl ? filterEl.value : 'all';
+    
+    try {
+        const params = new URLSearchParams({
+            range: analyticsCurrentRange,
+            chatbot_id: analyticsCurrentChatbot !== 'all' ? analyticsCurrentChatbot : ''
+        });
+        
+        const res = await fetch(`/api/analytics?${params}`);
+        const data = await res.json();
+        
+        updateAnalyticsStats(data);
+        updateAnalyticsChart(data.chartData || []);
+        updateAnalyticsPopularQuestions(data.popularQuestions || []);
+        updateAnalyticsMetrics(data);
+        updateAnalyticsSatisfaction(data.satisfaction || {});
+        updateAnalyticsRecentConversations(data.recentConversations || []);
+        
+    } catch (error) {
+        console.error('Error loading analytics:', error);
+        showAnalyticsPlaceholder();
+    }
+}
+
+function updateAnalyticsStats(data) {
+    document.getElementById('analyticsTotalConversations').textContent = 
+        data.totalConversations?.toLocaleString() || '0';
+    document.getElementById('analyticsTotalMessages').textContent = 
+        data.totalMessages?.toLocaleString() || '0';
+    document.getElementById('analyticsAvgResponseTime').textContent = 
+        data.avgResponseTime || '< 2s';
+    document.getElementById('analyticsSatisfactionRate').textContent = 
+        data.satisfactionRate ? Math.round(data.satisfactionRate) + '%' : '-';
+    
+    // Update change indicators
+    updateAnalyticsChangeIndicator('analyticsConversationsChange', data.conversationsChange);
+    updateAnalyticsChangeIndicator('analyticsMessagesChange', data.messagesChange);
+    updateAnalyticsChangeIndicator('analyticsResponseTimeChange', data.responseTimeChange, true);
+    updateAnalyticsChangeIndicator('analyticsSatisfactionChange', data.satisfactionChange);
+}
+
+function updateAnalyticsChangeIndicator(elementId, change, invertPositive = false) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    
+    if (change === undefined || change === null) {
+        el.textContent = '-';
+        el.className = 'stat-change';
+        return;
+    }
+    
+    const isPositive = invertPositive ? change < 0 : change > 0;
+    const arrow = change > 0 ? '↑' : change < 0 ? '↓' : '';
+    
+    el.textContent = `${arrow} ${Math.abs(change)}%`;
+    el.className = 'stat-change ' + (isPositive ? 'positive' : 'negative');
+}
+
+function updateAnalyticsChart(chartData) {
+    const canvas = document.getElementById('analyticsConversationsCanvas');
+    const placeholder = document.getElementById('analyticsChartPlaceholder');
+    const container = document.getElementById('analyticsConversationsChart');
+    
+    if (!canvas || !placeholder || !container) return;
+    
+    if (!chartData || chartData.length === 0) {
+        canvas.style.display = 'none';
+        placeholder.style.display = 'flex';
+        return;
+    }
+    
+    placeholder.style.display = 'none';
+    canvas.style.display = 'block';
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Get dimensions from the container, with safety bounds
+    const rect = container.getBoundingClientRect();
+    const maxHeight = 210; // card-content is 250px with 20px padding on each side
+    const canvasWidth = Math.max(100, Math.min(rect.width, 2000));
+    const canvasHeight = Math.max(100, Math.min(rect.height, maxHeight));
+    
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    canvas.style.width = canvasWidth + 'px';
+    canvas.style.height = canvasHeight + 'px';
+    canvas.style.position = 'absolute';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Create a clipping region to ensure nothing draws outside the canvas
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, canvasWidth, canvasHeight);
+    ctx.clip();
+    
+    const maxConv = Math.max(...chartData.map(d => d.conversations || 0), 1);
+    const padding = 40;
+    const chartWidth = canvas.width - padding * 2;
+    const chartHeight = canvas.height - padding * 2;
+    
+    // Draw grid
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+        const y = padding + (chartHeight / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(padding, y);
+        ctx.lineTo(canvas.width - padding, y);
+        ctx.stroke();
+    }
+    
+    // Helper to clamp Y within chart bounds
+    const clampY = (y) => Math.max(padding, Math.min(canvas.height - padding, y));
+    
+    // Draw line
+    ctx.strokeStyle = '#4ade80';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    
+    chartData.forEach((point, i) => {
+        const x = padding + (chartWidth / (chartData.length - 1 || 1)) * i;
+        const rawY = canvas.height - padding - ((point.conversations || 0) / maxConv) * chartHeight;
+        const y = clampY(rawY);
+        
+        if (i === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    });
+    
+    ctx.stroke();
+    
+    // Draw points
+    ctx.fillStyle = '#4ade80';
+    chartData.forEach((point, i) => {
+        const x = padding + (chartWidth / (chartData.length - 1 || 1)) * i;
+        const rawY = canvas.height - padding - ((point.conversations || 0) / maxConv) * chartHeight;
+        const y = clampY(rawY);
+        
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    
+    // Restore context (removes clipping)
+    ctx.restore();
+}
+
+function updateAnalyticsPopularQuestions(questions) {
+    const container = document.getElementById('analyticsPopularQuestions');
+    if (!container) return;
+    
+    if (!questions || questions.length === 0) {
+        container.innerHTML = `
+            <div class="empty-placeholder">
+                <span>📝</span>
+                <p>No questions recorded yet</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = questions.slice(0, 10).map(q => `
+        <div class="popular-item">
+            <span class="popular-question">${escapeHtml(q.question)}</span>
+            <span class="popular-count">${q.count} times</span>
+        </div>
+    `).join('');
+}
+
+function updateAnalyticsMetrics(data) {
+    const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    
+    setEl('analyticsUserMessages', data.userMessages?.toLocaleString() || '0');
+    setEl('analyticsBotResponses', data.botResponses?.toLocaleString() || '0');
+    setEl('analyticsErrorRate', data.errorRate ? data.errorRate.toFixed(1) + '%' : '0%');
+    setEl('analyticsAvgConvLength', data.avgConvLength ? data.avgConvLength.toFixed(1) + ' msgs' : '-');
+}
+
+function updateAnalyticsSatisfaction(satisfaction) {
+    const total = satisfaction.total || 0;
+    
+    for (let i = 1; i <= 5; i++) {
+        const count = satisfaction[`rating${i}`] || 0;
+        const percent = total > 0 ? (count / total * 100) : 0;
+        
+        const bar = document.getElementById(`analyticsRating${i}`);
+        const percentEl = document.getElementById(`analyticsRating${i}Percent`);
+        
+        if (bar) bar.style.width = percent + '%';
+        if (percentEl) percentEl.textContent = percent.toFixed(0) + '%';
+    }
+    
+    const totalRatingsEl = document.getElementById('analyticsTotalRatings');
+    const feedbackRateEl = document.getElementById('analyticsFeedbackRate');
+    
+    if (totalRatingsEl) totalRatingsEl.textContent = total.toLocaleString();
+    if (feedbackRateEl) feedbackRateEl.textContent = satisfaction.feedbackRate ? satisfaction.feedbackRate.toFixed(0) + '%' : '0%';
+}
+
+function updateAnalyticsRecentConversations(conversations) {
+    const tbody = document.getElementById('analyticsConversationsTableBody');
+    if (!tbody) return;
+    
+    if (!conversations || conversations.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="empty-row">No conversations recorded yet</td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = conversations.slice(0, 10).map(conv => {
+        const ratingClass = conv.rating >= 4 ? 'good' : conv.rating >= 3 ? 'neutral' : 'bad';
+        const ratingText = conv.rating ? '⭐'.repeat(conv.rating) : '-';
+        
+        return `
+            <tr>
+                <td>${formatTimeAgo(conv.started_at)}</td>
+                <td>${escapeHtml(conv.chatbot_name || 'Unknown')}</td>
+                <td>${conv.message_count || 0}</td>
+                <td>${formatAnalyticsDuration(conv.duration_ms)}</td>
+                <td><span class="rating-badge ${ratingClass}">${ratingText}</span></td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function formatAnalyticsDuration(ms) {
+    if (!ms) return '-';
+    if (ms < 60000) return Math.floor(ms / 1000) + 's';
+    return Math.floor(ms / 60000) + 'm';
+}
+
+function showAnalyticsPlaceholder() {
+    const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    
+    setEl('analyticsTotalConversations', '0');
+    setEl('analyticsTotalMessages', '0');
+    setEl('analyticsAvgResponseTime', '-');
+    setEl('analyticsSatisfactionRate', '-');
+}
+
+async function exportAnalyticsData() {
+    try {
+        const params = new URLSearchParams({
+            range: analyticsCurrentRange,
+            chatbot_id: analyticsCurrentChatbot !== 'all' ? analyticsCurrentChatbot : '',
+            format: 'csv'
+        });
+        
+        const res = await fetch(`/api/analytics/export?${params}`);
+        
+        if (!res.ok) {
+            throw new Error('Export failed');
+        }
+        
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `analytics-${analyticsCurrentRange}-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        showToast('Analytics exported successfully!', 'success');
+    } catch (error) {
+        console.error('Export error:', error);
+        showToast('Export failed: ' + error.message, 'error');
+    }
+}
+
+// ============================================================================
+// Icon Picker
+// ============================================================================
+
+const RESONANTOS_ICONS = [
+    { id: 'augmentor', src: '/static/img/augmentor-icon.jpg', label: 'Augmentor' },
+    { id: 'dao', src: '/static/img/dao-icon.webp', label: 'DAO' },
+    { id: 'youtube', src: '/static/img/youtube-icon.webp', label: 'YouTube' },
+    { id: 'website', src: '/static/img/website-icon.webp', label: 'Website' },
+    { id: 'watchdog', src: '/static/img/watchdog-icon.webp', label: 'Watchdog' },
+    { id: 'doer', src: '/static/img/doer-icon.webp', label: 'Doer' },
+    { id: 'decoder', src: '/static/img/decoder-icon.webp', label: 'Decoder' },
+];
+
+const EMOJI_PRESETS = ['💬','🤖','🧠','⚡','🎯','🛡️','🔮','🌐','📡','🎭','🦾','🐕','🏛️','🎬','💡','🔥','✨','🚀'];
+
+function initIconPicker() {
+    const imgGrid = document.getElementById('iconGridImages');
+    const emojiGrid = document.getElementById('iconGridEmoji');
+
+    imgGrid.innerHTML = RESONANTOS_ICONS.map(ic => `
+        <div class="icon-option" onclick="selectIcon('image', '${ic.src}', this)" title="${ic.label}">
+            <img src="${ic.src}" alt="${ic.label}">
+        </div>
+    `).join('');
+
+    emojiGrid.innerHTML = EMOJI_PRESETS.map(e => `
+        <div class="icon-option" onclick="selectIcon('emoji', '${e}', this)">
+            <span>${e}</span>
+        </div>
+    `).join('');
+}
+
+function toggleIconPicker() {
+    document.getElementById('iconPickerDropdown').classList.toggle('open');
+}
+
+function selectIcon(type, value, el) {
+    document.getElementById('chatbotIcon').value = value;
+    document.getElementById('chatbotIconType').value = type;
+
+    const preview = document.getElementById('iconPreview');
+    if (type === 'image') {
+        preview.innerHTML = `<img src="${value}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">`;
+    } else {
+        preview.textContent = value;
+    }
+
+    // highlight
+    document.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
+    if (el) el.classList.add('selected');
+
+    document.getElementById('iconPickerDropdown').classList.remove('open');
+}
+
+function previewCustomIcon(val) {
+    if (!val) return;
+    const preview = document.getElementById('iconPreview');
+    if (val.startsWith('http') || val.startsWith('/')) {
+        preview.innerHTML = `<img src="${val}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">`;
+    } else {
+        preview.textContent = val;
+    }
+}
+
+function selectCustomIcon() {
+    const val = document.getElementById('iconCustomEmoji').value.trim();
+    if (!val) return;
+    const type = (val.startsWith('http') || val.startsWith('/')) ? 'image' : 'emoji';
+    selectIcon(type, val, null);
+}
+
+// Close picker when clicking outside
+document.addEventListener('click', function(e) {
+    const picker = document.getElementById('iconPickerDropdown');
+    const selected = document.getElementById('iconPickerSelected');
+    if (picker && !picker.contains(e.target) && !selected.contains(e.target)) {
+        picker.classList.remove('open');
+    }
+});
+
+// Init on load
+document.addEventListener('DOMContentLoaded', initIconPicker);
+</script>
