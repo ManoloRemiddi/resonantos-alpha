@@ -430,7 +430,19 @@ def register_system_routes(app):
                 ws_url = cfg.get("gateway", {}).get("wsUrl") or cfg.get("gateway", {}).get("url")
                 if isinstance(ws_url, str) and ws_url:
                     gateway_ws_url = ws_url
-                gateway_token = cfg.get("gateway", {}).get("auth", {}).get("token", "")
+        except Exception:
+            pass
+
+        try:
+            token_result = subprocess.run(
+                ["openclaw", "dashboard", "--no-open"],
+                capture_output=True, text=True, timeout=10
+            )
+            for line in token_result.stdout.splitlines():
+                m = re.search(r'#token=([a-f0-9]+)', line)
+                if m:
+                    gateway_token = m.group(1)
+                    break
         except Exception:
             pass
 

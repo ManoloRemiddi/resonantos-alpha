@@ -539,12 +539,33 @@ def register_memory_routes(app):
 
     @app.route("/api/r-memory/available-models", methods=["GET"])
     def api_r_memory_available_models():
-        """Return list of available models for the agent model selector."""
+        """Return list of available models — dynamically from OpenClaw, with fallback."""
+        try:
+            result = subprocess.run(
+                ["openclaw", "models", "list", "--json"],
+                capture_output=True, text=True, timeout=15
+            )
+            if result.returncode == 0:
+                raw = json.loads(result.stdout)
+                models = []
+                for m in (raw if isinstance(raw, list) else []):
+                    mid = m.get("id", "") or m.get("model", "")
+                    label = m.get("label") or m.get("name") or m.get("model", "")
+                    if mid and label:
+                        models.append({"model": mid, "label": label})
+                if models:
+                    return jsonify({"models": models})
+        except Exception:
+            pass
         return jsonify({
             "models": [
+                {"model": "openrouter/google/gemini-2.5-flash-lite", "label": "Gemini 2.5 Flash Lite (OpenRouter)"},
+                {"model": "openrouter/google/gemini-3-flash-preview", "label": "Gemini 3 Flash Preview (OpenRouter)"},
+                {"model": "openrouter/google/gemini-2.5-flash", "label": "Gemini 2.5 Flash (OpenRouter)"},
+                {"model": "opencode/kimi-k2.5-free", "label": "Kimi K2.5 Free (OpenCode)"},
+                {"model": "openrouter/auto", "label": "OpenRouter Auto-Select"},
                 {"model": "anthropic/claude-haiku-4-5", "label": "Claude Haiku 4.5"},
                 {"model": "anthropic/claude-sonnet-4-7", "label": "Claude Sonnet 4.7"},
-                {"model": "anthropic/claude-opus-4-7", "label": "Claude Opus 4.7"},
                 {"model": "openai/gpt-4o-mini", "label": "GPT-4o Mini"},
                 {"model": "google/gemini-2.0-flash", "label": "Gemini 2.0 Flash"},
             ]
