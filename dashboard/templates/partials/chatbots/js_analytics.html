@@ -21,17 +21,17 @@ async function loadAnalyticsChatbotFilter() {
     try {
         const res = await fetch('/api/chatbots');
         const raw = await res.json();
-        const data = Array.isArray(raw) ? raw : (raw.chatbots || []);
-        
+        const bots = Array.isArray(raw) ? raw : (raw.chatbots || []);
+
         const select = document.getElementById('analyticsChatbotFilter');
         if (!select) return;
-        
+
         // Clear existing options except first
         while (select.options.length > 1) {
             select.remove(1);
         }
-        
-        data.chatbots.forEach(bot => {
+
+        bots.forEach(bot => {
             const option = document.createElement('option');
             option.value = bot.id;
             option.textContent = bot.name;
