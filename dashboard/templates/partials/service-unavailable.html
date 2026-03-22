@@ -1,0 +1,124 @@
+<div id="service-unavailable-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:99999; align-items:center; justify-content:center;">
+  <div style="background:#1a1a2e; border:1px solid #333; border-radius:12px; max-width:480px; width:90%; padding:32px; font-family:system-ui,sans-serif; color:#e0e0e0; box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+    <div style="text-align:center; margin-bottom:20px;">
+      <div style="font-size:48px; line-height:1; margin-bottom:12px;">⚠️</div>
+      <h2 style="margin:0 0 8px; font-size:22px; color:#fff;">OpenClaw Gateway Not Available</h2>
+      <p style="margin:0; color:#aaa; font-size:14px; line-height:1.5;">
+        The OpenClaw gateway is required for AI agents, setup, and core features to work.
+        It's not running or not reachable at the configured address.
+      </p>
+    </div>
+
+    <div id="svc-unavail-services" style="margin-bottom:20px;"></div>
+
+    <div style="background:#111; border-radius:8px; padding:14px 16px; margin-bottom:20px;">
+      <p style="margin:0 0 8px; font-size:13px; color:#888; text-transform:uppercase; letter-spacing:0.05em; font-weight:600;">Install OpenClaw</p>
+      <code style="display:block; font-size:13px; color:#7fdbca; word-break:break-all;">npm install -g openclaw</code>
+    </div>
+
+    <div style="background:#111; border-radius:8px; padding:14px 16px; margin-bottom:20px;">
+      <p style="margin:0 0 8px; font-size:13px; color:#888; text-transform:uppercase; letter-spacing:0.05em; font-weight:600;">Start Gateway</p>
+      <code style="display:block; font-size:13px; color:#7fdbca; word-break:break-all;">openclaw gateway start</code>
+    </div>
+
+    <div style="display:flex; gap:10px;">
+      <button id="svc-unavail-retry" style="flex:1; padding:10px 16px; background:#2d7dff; color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer;">
+        Check Again
+      </button>
+      <button id="svc-unavail-dismiss" style="flex:1; padding:10px 16px; background:transparent; color:#888; border:1px solid #444; border-radius:8px; font-size:14px; cursor:pointer;">
+        Continue Anyway
+      </button>
+    </div>
+    <p id="svc-unavail-error" style="display:none; margin:12px 0 0; font-size:13px; color:#ff6b6b; text-align:center;"></p>
+  </div>
+</div>
+
+<script>
+(function() {
+  const OVERLAY_ID = 'service-unavailable-overlay';
+  const STORAGE_KEY = 'svc_unavail_dismissed';
+  const CHECK_URL = '/api/services/status';
+
+  function checkServices() {
+    return fetch(CHECK_URL)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var services = data.services || [];
+        var allReachable = services.every(function(s) { return s.reachable; });
+        return { services: services, allReachable: allReachable };
+      })
+      .catch(function() {
+        return { services: [], allReachable: false };
+      });
+  }
+
+  function showOverlay(services) {
+    var overlay = document.getElementById(OVERLAY_ID);
+    if (!overlay) return;
+    var listEl = document.getElementById('svc-unavail-services');
+    if (listEl) {
+      listEl.innerHTML = '';
+      services.forEach(function(s) {
+        var div = document.createElement('div');
+        div.style.cssText = 'background:#111; border-radius:6px; padding:10px 14px; margin-bottom:8px; border-left:3px solid ' + (s.reachable ? '#2ecc71' : '#e74c3c') + ';';
+        div.innerHTML = '<div style="font-size:13px; font-weight:600; color:' + (s.reachable ? '#2ecc71' : '#e0e0e0') + ';">' + s.name + ' — ' + (s.reachable ? '✓ reachable' : '✗ unreachable') + '</div>' +
+          (s.error ? '<div style="font-size:12px; color:#888; margin-top:2px;">' + s.error + '</div>' : '') +
+          (s.version ? '<div style="font-size:12px; color:#888; margin-top:2px;">version: ' + s.version + '</div>' : '');
+        listEl.appendChild(div);
+      });
+    }
+    overlay.style.display = 'flex';
+    document.getElementById('svc-unavail-error').textContent = '';
+  }
+
+  function hideOverlay() {
+    var overlay = document.getElementById(OVERLAY_ID);
+    if (overlay) overlay.style.display = 'none';
+  }
+
+  function onDismiss() {
+    try { localStorage.setItem(STORAGE_KEY, '1'); } catch(e) {}
+    hideOverlay();
+  }
+
+  function onRetry() {
+    var btn = document.getElementById('svc-unavail-retry');
+    var errEl = document.getElementById('svc-unavail-error');
+    if (btn) { btn.disabled = true; btn.textContent = 'Checking…'; }
+    if (errEl) errEl.textContent = '';
+    checkServices().then(function(result) {
+      if (result.allReachable) {
+        try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+        hideOverlay();
+      } else {
+        if (btn) { btn.disabled = false; btn.textContent = 'Check Again'; }
+        if (errEl) errEl.textContent = 'Still not reachable. Try starting the gateway.';
+        showOverlay(result.services);
+      }
+    }).catch(function() {
+      if (btn) { btn.disabled = false; btn.textContent = 'Check Again'; }
+      if (errEl) errEl.textContent = 'Could not reach the dashboard. Check your connection.';
+    });
+  }
+
+  function init() {
+    if (try { return localStorage.getItem(STORAGE_KEY) !== '1'; } catch(e) { return true; }) {
+      checkServices().then(function(result) {
+        if (!result.allReachable) {
+          showOverlay(result.services);
+        }
+      });
+    }
+    var dismissBtn = document.getElementById('svc-unavail-dismiss');
+    if (dismissBtn) dismissBtn.addEventListener('click', onDismiss);
+    var retryBtn = document.getElementById('svc-unavail-retry');
+    if (retryBtn) retryBtn.addEventListener('click', onRetry);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
