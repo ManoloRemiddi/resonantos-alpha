@@ -392,6 +392,30 @@ def register_system_routes(app):
                 pass
         return jsonify({"token": ""}), 200
 
+    @app.route("/api/gateway/last-error")
+    def api_gateway_last_error():
+        """Get last setup-agent related error from gateway logs."""
+        try:
+            log_dir = Path("/tmp/openclaw")
+            if not log_dir.exists():
+                return jsonify({"error": ""})
+            log_files = sorted(log_dir.glob("openclaw-*.log"), key=lambda p: p.stat().st_mtime, reverse=True)
+            if not log_files:
+                return jsonify({"error": ""})
+            lines = log_files[0].read_text(errors="ignore").splitlines()
+            patterns = (
+                "lane=session:agent:setup:main",
+                "Embedded agent failed before reply",
+                "No API key found for provider",
+                "Key limit exceeded (monthly limit)",
+            )
+            for line in reversed(lines[-400:]):
+                if any(p in line for p in patterns):
+                    return jsonify({"error": line[:1200]})
+            return jsonify({"error": ""})
+        except Exception as e:
+            return jsonify({"error": str(e)})
+
     @app.route("/api/agents")
     def api_agents():
         """List all agents with agentId and mainModel fields (setup page format)."""

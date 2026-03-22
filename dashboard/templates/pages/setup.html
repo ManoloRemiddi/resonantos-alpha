@@ -1145,7 +1145,17 @@ class SetupGatewayClient {
         }
 
         if (payload.state === 'error') {
-            const errorMessage = payload.error || payload.message || 'Setup chat failed';
+            let errorMessage = payload.error || payload.message || payload.reason || '';
+            if (errorMessage && typeof errorMessage === 'object') {
+                errorMessage = errorMessage.message || errorMessage.error || '';
+            }
+            if (!errorMessage) {
+                try {
+                    errorMessage = JSON.stringify(payload);
+                } catch (jsonError) {
+                    errorMessage = 'Setup chat failed';
+                }
+            }
             this._rejectChatStream(sessionKey, new Error(String(errorMessage)));
         }
     }
@@ -1844,17 +1854,32 @@ async function sendSetupMessage(stepId) {
             content: typeof responseText === 'string' ? responseText : JSON.stringify(responseText, null, 2)
         });
     } catch (error) {
-        const rawMessage = error && error.message ? error.message : 'Setup chat failed';
+        let rawMessage = error && error.message ? error.message : 'Setup chat failed';
+        if (!rawMessage || rawMessage === 'Setup chat failed' || rawMessage === '{}') {
+            try {
+                const diagResp = await fetch('/api/gateway/last-error');
+                if (diagResp.ok) {
+                    const diag = await diagResp.json();
+                    if (diag && typeof diag.error === 'string' && diag.error.trim()) {
+                        rawMessage = diag.error.trim();
+                    }
+                }
+            } catch (diagError) {
+            }
+        }
         const chatUnavailable = rawMessage === 'SETUP_CHAT_UNAVAILABLE' || /Gateway WebSocket error|Gateway connection closed|Gateway is not connected|control ui requires device identity/i.test(rawMessage);
+        const authOrQuotaIssue = /No API key found for provider|Key limit exceeded \(monthly limit\)|rate_limit|AUTH_/i.test(rawMessage);
         const displayMessage = chatUnavailable
             ? 'Setup chat is unavailable from this browser context. Use http://127.0.0.1:19100 on the server, or expose the dashboard over HTTPS to enable gateway chat.'
-            : `Error: ${rawMessage}`;
+            : (authOrQuotaIssue
+                ? `Setup chat failed due to model credentials/quota. ${rawMessage}`
+                : `Error: ${rawMessage}`);
         console.error('Setup chat failed', error);
         state.messagesByStep[stepId].push({
             role: 'agent',
             content: displayMessage
         });
-        showToast(chatUnavailable ? 'Setup chat unavailable in current browser context' : (error.message || 'Setup chat failed'), 'error');
+        showToast(chatUnavailable ? 'Setup chat unavailable in current browser context' : (authOrQuotaIssue ? 'Setup chat failed: credentials or quota issue' : (error.message || 'Setup chat failed')), 'error');
     } finally {
         delete state.streamingByStep[stepId];
         state.sendingStepId = null;
