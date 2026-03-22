@@ -67,7 +67,7 @@ async function loadAnalyticsData() {
             popularQuestions: raw.popular_questions ?? [],
             userMessages: raw.user_messages ?? 0,
             botResponses: raw.bot_responses ?? 0,
-            errorRate: raw.error_rate ?? '0.0',
+            errorRate: parseFloat(raw.error_rate) || 0,
             avgConvLength: raw.avg_conv_length ?? 0,
             feedback: raw.feedback ?? {},
             ratings: raw.ratings ?? {},
