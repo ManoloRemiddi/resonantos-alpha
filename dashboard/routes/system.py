@@ -15,11 +15,24 @@ def register_system_routes(app):
     """Register all system-related routes."""
 
     def _get_openclaw_version():
-        """Get OpenClaw version if available."""
+        """Get OpenClaw gateway version via HTTP probe."""
         try:
-            result = subprocess.run(["openclaw", "--version"], capture_output=True, text=True, timeout=5)
-            if result.returncode == 0:
-                return result.stdout.strip()
+            import urllib.request
+            cfg_path = Path.home() / ".openclaw" / "openclaw.json"
+            gateway_url = "http://127.0.0.1:18789"
+            if cfg_path.exists():
+                cfg = json.loads(cfg_path.read_text())
+                ws_url = cfg.get("gateway", {}).get("wsUrl", "")
+                if ws_url:
+                    gateway_url = ws_url.replace("ws://", "http://").replace("wss://", "https://")
+            req = urllib.request.Request(gateway_url, headers={"User-Agent": "ResonantOS-Dashboard/1.0"}, method="GET")
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                if resp.status == 200:
+                    try:
+                        body = json.loads(resp.read().decode())
+                        return body.get("version") or body.get("gateway", {}).get("version") or "ok"
+                    except Exception:
+                        return "ok"
         except Exception:
             pass
         return None
