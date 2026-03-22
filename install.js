@@ -93,6 +93,74 @@ function writeJsonIfMissing(filePath, data, label) {
   }
 }
 
+// ── Subcommands (optional) ───────────────────────────────────
+
+const subcmd = process.argv[2] || "";
+if (subcmd) {
+  const isMac = process.platform === "darwin";
+  const dockerAvail = (() => {
+    if (!hasCmd("docker")) return false;
+    try { execSync("docker compose version", { stdio: "ignore" }); return true; } catch { return false; }
+  })();
+  try {
+    if (subcmd === "docker:up") {
+      if (!dockerAvail) fail("Docker Compose not available");
+      run("docker compose up -d");
+      process.exit(0);
+    }
+    if (subcmd === "docker:rebuild") {
+      if (!dockerAvail) fail("Docker Compose not available");
+      run("docker compose down");
+      run("docker compose up --build -d");
+      process.exit(0);
+    }
+    if (subcmd === "docker:logs") {
+      if (!dockerAvail) fail("Docker Compose not available");
+      run("docker compose logs -f");
+      process.exit(0);
+    }
+    if (subcmd === "docker:ensure-env") {
+      if (!dockerAvail) fail("Docker Compose not available");
+      const envPath = path.join(SCRIPT_DIR, ".env");
+      const desired = `OPENCLAW_HOME=${HOME}`;
+      let lines = [];
+      if (fs.existsSync(envPath)) {
+        lines = fs.readFileSync(envPath, "utf-8").split(/\r?\n/).filter(Boolean);
+        lines = lines.filter(l => !/^OPENCLAW_HOME=/.test(l));
+      }
+      lines.push(desired);
+      fs.writeFileSync(envPath, lines.join("\n") + "\n");
+      const ocPath = path.join(HOME, ".openclaw", "openclaw.json");
+      if (fs.existsSync(ocPath) && (isWin || isMac)) {
+        try {
+          const cfg = JSON.parse(fs.readFileSync(ocPath, "utf-8"));
+          const gw = cfg.gateway || {};
+          const current = gw.wsUrl || "";
+          const desiredUrl = "ws://host.docker.internal:18789";
+          if (!current || /127\.0\.0\.1|localhost/.test(current)) {
+            gw.wsUrl = desiredUrl;
+            cfg.gateway = gw;
+            fs.writeFileSync(ocPath, JSON.stringify(cfg, null, 2) + "\n");
+          }
+        } catch {}
+      }
+      log("  ✓ Docker environment prepared");
+      process.exit(0);
+    }
+    if (subcmd === "help") {
+      log("Subcommands:");
+      log("  docker:up           Start dashboard container (detached)");
+      log("  docker:rebuild      Rebuild and start container");
+      log("  docker:logs         Tail container logs");
+      log("  docker:ensure-env   Write .env and fix gateway wsUrl for Docker Desktop");
+      process.exit(0);
+    }
+  } catch (e) {
+    console.error(e.message || String(e));
+    process.exit(1);
+  }
+}
+
 // ── Preflight checks ─────────────────────────────────────────
 
 log("=== ResonantOS Alpha Installer ===\n");
@@ -437,6 +505,7 @@ if (dockerAvailable) {
   nextStepsLines.push("  2. View logs:  docker compose logs -f");
   nextStepsLines.push("     Or native (WSGI): cd dashboard && source venv/bin/activate && python -m waitress --host 0.0.0.0 --port 19100 server_v2:app");
   nextStepsLines.push("     Or native (dev): python server_v2.py");
+  nextStepsLines.push("     Subcommands: node install.js docker:up | docker:rebuild | docker:logs | docker:ensure-env");
 } else {
   nextStepsLines.push("  1. cd dashboard && source venv/bin/activate");
   nextStepsLines.push("     python -m waitress --host 0.0.0.0 --port 19100 server_v2:app");
