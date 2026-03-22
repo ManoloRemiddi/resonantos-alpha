@@ -37,7 +37,42 @@
 
 {% block extra_js %}
 <script src="/static/js/chatbot-preview.js"></script>
-<script>async function loadChatbots() { /* stub — chatbots feature incomplete */ }</script>
+<script>
+async function loadChatbots() {
+    try {
+        const res = await fetch('/api/chatbots');
+        if (!res.ok) return;
+        const data = await res.json();
+        const chatbots = Array.isArray(data) ? data : (data.chatbots || []);
+        const grid = document.getElementById('chatbotsGrid');
+        if (!grid) return;
+        if (!chatbots.length) {
+            grid.innerHTML = '<p style="color:var(--text-muted);padding:20px;text-align:center;">No chatbots yet. Create one above.</p>';
+            return;
+        }
+        grid.innerHTML = chatbots.map(bot => `
+            <div class="chatbot-card" onclick="editChatbot('${bot.id}')">
+                <div class="chatbot-name">${escapeHtml(bot.name || bot.id)}</div>
+                <div class="chatbot-desc">${escapeHtml(bot.description || '')}</div>
+            </div>
+        `).join('');
+    } catch(e) { console.error('loadChatbots:', e); }
+}
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+function editChatbot(id) {
+    const panels = document.querySelectorAll('.tab-panel');
+    panels.forEach(p => p.classList.remove('active'));
+    const navs = document.querySelectorAll('.tab');
+    navs.forEach(n => n.classList.remove('active'));
+    const target = document.getElementById('editChatbotPanel') || document.getElementById('chatbotsPanel');
+    if (target) target.classList.add('active');
+}
+</script>
 {% include 'partials/chatbots/js_tab_conversations.html' %}
 {% include 'partials/chatbots/js_chatbot_core.html' %}
 {% include 'partials/chatbots/js_knowledge_files.html' %}
