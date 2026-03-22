@@ -1230,18 +1230,12 @@ document.addEventListener('DOMContentLoaded', initSetupPage);
 
 async function initSetupPage() {
     setupGw = new SetupGatewayClient();
-    setupGwReady = initSetupGateway();
+    setupGwReady = Promise.resolve({connected: false, skipped: true});
     restoreState();
     renderSteps();
     renderPanel();
     bindHintsSidebar();
-    await Promise.all([
-        loadCurrentSetupModel(),
-        setupGwReady.catch(error => {
-            console.error('Failed to initialize setup gateway client', error);
-            return null;
-        })
-    ]);
+    await loadCurrentSetupModel();
     await loadAvailableModels();
     renderSteps();
     renderPanel();
