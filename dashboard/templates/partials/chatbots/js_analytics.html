@@ -20,7 +20,8 @@ function setupAnalyticsRangeButtons() {
 async function loadAnalyticsChatbotFilter() {
     try {
         const res = await fetch('/api/chatbots');
-        const data = await res.json();
+        const raw = await res.json();
+        const data = Array.isArray(raw) ? raw : (raw.chatbots || []);
         
         const select = document.getElementById('analyticsChatbotFilter');
         if (!select) return;
@@ -52,8 +53,27 @@ async function loadAnalyticsData() {
         });
         
         const res = await fetch(`/api/analytics?${params}`);
-        const data = await res.json();
-        
+        const raw = await res.json();
+        const data = {
+            totalConversations: raw.total_conversations ?? 0,
+            totalMessages: raw.total_messages ?? 0,
+            avgResponseTime: raw.avg_response_time ?? '< 2s',
+            satisfactionRate: raw.satisfaction_rate ?? 0,
+            conversationsChange: raw.conversations_change ?? 0,
+            messagesChange: raw.messages_change ?? 0,
+            responseTimeChange: raw.response_time_change ?? 0,
+            satisfactionChange: raw.satisfaction_change ?? 0,
+            chartData: raw.chart_data ?? [],
+            popularQuestions: raw.popular_questions ?? [],
+            userMessages: raw.user_messages ?? 0,
+            botResponses: raw.bot_responses ?? 0,
+            errorRate: raw.error_rate ?? '0.0',
+            avgConvLength: raw.avg_conv_length ?? 0,
+            feedback: raw.feedback ?? {},
+            ratings: raw.ratings ?? {},
+            recentConversations: raw.recent_conversations ?? [],
+            satisfaction: raw.satisfaction ?? {},
+        };
         updateAnalyticsStats(data);
         updateAnalyticsChart(data.chartData || []);
         updateAnalyticsPopularQuestions(data.popularQuestions || []);
