@@ -110,7 +110,6 @@ if (subcmd) {
     }
     if (subcmd === "docker:rebuild") {
       if (!dockerAvail) fail("Docker Compose not available");
-      run("docker compose down");
       run("docker compose up --build -d");
       process.exit(0);
     }
