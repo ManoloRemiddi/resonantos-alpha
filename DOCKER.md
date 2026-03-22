@@ -16,13 +16,21 @@ docker compose version
 ## Quick Start
 
 ```bash
-# 1. Start the dashboard (background)
+# 1. Set OPENCLAW_HOME (first time only)
+# Linux/macOS:
+#   export OPENCLAW_HOME="$HOME"
+# Windows (PowerShell):
+#   setx OPENCLAW_HOME "$env:USERPROFILE"
+# Then create .env once:
+#   cp .env.example .env
+
+# 2. Start the dashboard (background)
 docker compose up -d
 
-# 2. View logs
+# 3. View logs
 docker compose logs -f
 
-# 3. Open your browser
+# 4. Open your browser
 open http://localhost:19100
 ```
 
@@ -103,7 +111,18 @@ The container needs the gateway running **on your host machine** (not inside Doc
 openclaw gateway start
 ```
 
-The container connects to `localhost:18789` on your host via `host.docker.internal`.
+If your `~/.openclaw/openclaw.json` has `wsUrl: "ws://127.0.0.1:18789"`, update it for Docker Desktop:
+
+```json
+{
+  "gateway": {
+    "auth": { "token": "..." },
+    "wsUrl": "ws://host.docker.internal:18789"
+  }
+}
+```
+
+For Linux hosts, `network_mode: host` can be enabled (see docker-compose.yml) and `127.0.0.1` works.
 
 ### "Permission denied" on ~/.openclaw
 

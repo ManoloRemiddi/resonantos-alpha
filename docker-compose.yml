@@ -10,7 +10,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
-      - ${HOME}/.openclaw:/home/app/.openclaw:ro
+      - ${OPENCLAW_HOME}/.openclaw:/root/.openclaw:ro
       - ./dashboard/config.json:/app/config.json:ro
     environment:
       - PYTHONDONTWRITEBYTECODE=1

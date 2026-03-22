@@ -196,6 +196,7 @@ step("Workspace templates (AGENTS, SOUL, USER, etc.)", () => {
   const wsDir = path.join(SCRIPT_DIR, "workspace-templates");
   const templates = ["AGENTS.md", "SOUL.md", "USER.md", "MEMORY.md", "TOOLS.md", "IDENTITY.md", "HEARTBEAT.md"];
   let installed = 0;
+  mkdirp(path.join(OPENCLAW_WORKSPACE, "agents"));
   for (const tpl of templates) {
     const dest = path.join(OPENCLAW_WORKSPACE, tpl);
     const src = path.join(wsDir, tpl);
