@@ -439,8 +439,10 @@ def register_system_routes(app):
                 capture_output=True, text=True, timeout=10
             )
             for line in token_result.stdout.splitlines():
-                if "#token=" in line:
-                    gateway_token = line.split("#token=")[-1].strip()
+                if "#" in line:
+                    fragment = line.split("#", 1)[-1]
+                    if "=" in fragment:
+                        gateway_token = fragment.split("=", 1)[-1].strip()
                     break
         except Exception:
             pass
