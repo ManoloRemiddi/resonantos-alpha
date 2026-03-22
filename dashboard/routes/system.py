@@ -515,9 +515,17 @@ def register_system_routes(app):
 
             stream_text = ""
             final_deadline = time.time() + 90
+            last_debug = time.time()
             while time.time() < final_deadline:
                 raw = ws.recv()
                 msg = json.loads(raw)
+                if time.time() - last_debug > 15:
+                    app.logger.warning(f"[setup-chat debug] msg_type={msg.get('type')} event={msg.get('event')} id={msg.get('id')} state={msg.get('payload',{}).get('state')} keys={list(msg.get('payload',{}).keys())}")
+                    last_debug = time.time()
+                if msg.get("type") == "res" and msg.get("id") == "r1":
+                    payload = msg.get("payload", {})
+                    text = _extract_text_from_gateway_message(payload)
+                    return jsonify({"ok": True, "text": text or "(no response received)"})
                 if msg.get("type") != "event" or msg.get("event") != "chat":
                     continue
                 payload = msg.get("payload") or {}
