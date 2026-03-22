@@ -16,10 +16,13 @@ docker compose version
 ## Quick Start
 
 ```bash
-# 1. Start the dashboard
-docker compose up
+# 1. Start the dashboard (background)
+docker compose up -d
 
-# 2. Open your browser
+# 2. View logs
+docker compose logs -f
+
+# 3. Open your browser
 open http://localhost:19100
 ```
 
@@ -54,11 +57,8 @@ ports:
 ## Updating
 
 ```bash
-# Rebuild and restart
+# Rebuild and restart (detached)
 docker compose up --build -d
-
-# Or pull latest image (future)
-docker compose pull && docker compose up -d
 ```
 
 ## Stopping

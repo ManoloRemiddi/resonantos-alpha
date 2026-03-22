@@ -379,7 +379,7 @@ if (coreFailed || coreErrors.length > 0) {
 
 const nextStepsLines = [];
 if (dockerAvailable) {
-  nextStepsLines.push("  1. [Docker] Run: docker compose up");
+  nextStepsLines.push("  1. [Docker] Run: docker compose up -d");
   nextStepsLines.push("     Or native: cd dashboard && source venv/bin/activate && python server_v2.py");
 } else {
   nextStepsLines.push("  1. cd dashboard && source venv/bin/activate");

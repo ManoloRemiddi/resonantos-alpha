@@ -55,8 +55,13 @@ ensure_ready
 
 item_json="$(project_item_by_issue_number "$ISSUE_NUMBER")"
 current_status="$(item_field_single_select_value "$item_json" "$PROJECT_STATUS_FIELD_NAME")"
-[[ "$current_status" == "$PROJECT_STATUS_IN_PROGRESS" ]] || \
-  fail "issue #$ISSUE_NUMBER cannot move to review from '$current_status'"
+allowed_from=("$PROJECT_STATUS_IN_PROGRESS" "$PROJECT_STATUS_TODOS")
+found=0
+for s in "${allowed_from[@]}"; do
+  [[ "$current_status" == "$s" ]] && found=1 && break
+done
+[[ "$found" == 1 ]] || \
+  fail "issue #$ISSUE_NUMBER cannot move to review from '$current_status' (must be In Progress or TODOS)"
 
 item_id="$(jq -r '.id' <<<"$item_json")"
 set_item_status "$item_id" "$PROJECT_STATUS_IN_REVIEW"
