@@ -1,0 +1,17 @@
+services:
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: resonantos-dashboard
+    # network_mode: host  # Linux only — uncomment if running on Linux
+    ports:
+      - "19100:19100"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ${HOME}/.openclaw:/home/app/.openclaw:ro
+      - ./dashboard/config.json:/app/config.json:ro
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+    restart: unless-stopped

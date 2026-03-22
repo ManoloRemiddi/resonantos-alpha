@@ -110,6 +110,18 @@ step("python3 or python", () => { if (!python) fail("Python 3 is required. Insta
 const pip = hasCmd("pip3") ? "pip3" : hasCmd("pip") ? "pip" : null;
 step("pip3 or pip", () => { if (!pip) warn("pip not found — dashboard dependencies skipped. Install Python pip to enable."); });
 
+const dockerAvailable = (() => {
+  if (!hasCmd("docker")) return false;
+  try { execSync("docker compose version", { stdio: "ignore" }); return true; } catch { return false; }
+})();
+if (dockerAvailable) {
+  log("  ✓ Docker + Docker Compose detected — Docker setup available");
+} else if (hasCmd("docker")) {
+  log("  ⚠ Docker found but Docker Compose not available");
+} else {
+  log("  ⚠ Docker not found — see DOCKER.md for install instructions");
+}
+
 // Check we're in a valid repo
 step("Valid ResonantOS repo", () => {
   const sourceRoot = SCRIPT_DIR;
@@ -365,13 +377,18 @@ if (coreFailed || coreErrors.length > 0) {
   }
 }
 
-log(`
-Next steps:
-  1. Edit dashboard/config.json with your Solana addresses
-  2. Start OpenClaw:  openclaw gateway start
-  3. Start Dashboard:
-       cd dashboard
-       source venv/bin/activate
-       python server_v2.py
-  4. Open http://localhost:19100
-`);
+const nextStepsLines = [];
+if (dockerAvailable) {
+  nextStepsLines.push("  1. [Docker] Run: docker compose up");
+  nextStepsLines.push("     Or native: cd dashboard && source venv/bin/activate && python server_v2.py");
+} else {
+  nextStepsLines.push("  1. cd dashboard && source venv/bin/activate");
+  nextStepsLines.push("     python server_v2.py");
+}
+nextStepsLines.push("  2. Start OpenClaw:  openclaw gateway start");
+nextStepsLines.push("  3. Open http://localhost:19100");
+if (dockerAvailable) {
+  nextStepsLines.push("");
+  nextStepsLines.push("  Docker not working? See DOCKER.md for troubleshooting.");
+}
+log("\n" + nextStepsLines.join("\n"));
