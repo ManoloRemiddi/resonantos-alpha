@@ -8,7 +8,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
-      - ${OPENCLAW_HOME}/.openclaw:/root/.openclaw:ro
+      - ${OPENCLAW_HOME}/.openclaw:/root/.openclaw
       - ./dashboard/config.json:/app/config.json:ro
     environment:
       - PYTHONDONTWRITEBYTECODE=1
