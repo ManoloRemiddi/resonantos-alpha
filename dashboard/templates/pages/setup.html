@@ -1818,6 +1818,9 @@ async function sendSetupMessage(stepId) {
             setupGwReady = initSetupGateway();
         }
         await setupGwReady;
+        if (!setupGw || !setupGw.connected) {
+            throw new Error('SETUP_CHAT_UNAVAILABLE');
+        }
 
         const responseText = await new Promise((resolve, reject) => {
             setupGw.send('agent:setup:main', message, {
@@ -1835,12 +1838,17 @@ async function sendSetupMessage(stepId) {
             content: typeof responseText === 'string' ? responseText : JSON.stringify(responseText, null, 2)
         });
     } catch (error) {
+        const rawMessage = error && error.message ? error.message : 'Setup chat failed';
+        const chatUnavailable = rawMessage === 'SETUP_CHAT_UNAVAILABLE' || /Gateway WebSocket error|Gateway connection closed|Gateway is not connected|control ui requires device identity/i.test(rawMessage);
+        const displayMessage = chatUnavailable
+            ? 'Setup chat is unavailable from this browser context. Use http://127.0.0.1:19100 on the server, or expose the dashboard over HTTPS to enable gateway chat.'
+            : `Error: ${rawMessage}`;
         console.error('Setup chat failed', error);
         state.messagesByStep[stepId].push({
             role: 'agent',
-            content: `Error: ${error.message || 'Setup chat failed'}`
+            content: displayMessage
         });
-        showToast(error.message || 'Setup chat failed', 'error');
+        showToast(chatUnavailable ? 'Setup chat unavailable in current browser context' : (error.message || 'Setup chat failed'), 'error');
     } finally {
         delete state.streamingByStep[stepId];
         state.sendingStepId = null;
