@@ -110,7 +110,8 @@ if (subcmd) {
     }
     if (subcmd === "docker:rebuild") {
       if (!dockerAvail) fail("Docker Compose not available");
-      run("git pull --ff-only origin dev");
+const currentBranch = execSync("git branch --show-current 2>/dev/null || git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'dev'").toString().trim();
+      run(`git fetch origin ${currentBranch} && git reset --hard origin/${currentBranch}`);      
       run("docker compose up --build -d");
       process.exit(0);
     }
