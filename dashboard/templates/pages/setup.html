@@ -1762,8 +1762,14 @@ async function saveSelectedModel() {
             },
             body: JSON.stringify({model: state.selectedModel})
         });
-        const data = await response.json();
-        if (!response.ok || !data.ok) {
+        const raw = await response.text();
+        let data = {};
+        try {
+            data = raw ? JSON.parse(raw) : {};
+        } catch (parseError) {
+            data = {error: `Non-JSON response (${response.status})`};
+        }
+        if (!response.ok || (!data.ok && !data.success)) {
             throw new Error(data.error || 'Failed to save model');
         }
 

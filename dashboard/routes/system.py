@@ -18,7 +18,8 @@ def register_system_routes(app):
         """Get OpenClaw gateway version via HTTP probe."""
         try:
             import urllib.request
-            cfg_path = Path.home() / ".openclaw" / "openclaw.json"
+            from shared import OPENCLAW_CONFIG
+            cfg_path = OPENCLAW_CONFIG
             gateway_url = "http://127.0.0.1:18789"
             if cfg_path.exists():
                 cfg = json.loads(cfg_path.read_text())
@@ -379,7 +380,8 @@ def register_system_routes(app):
     @app.route("/api/gateway/token")
     def api_gateway_token():
         """Get gateway auth token from openclaw.json."""
-        openclaw_cfg = Path.home() / ".openclaw" / "openclaw.json"
+        from shared import OPENCLAW_CONFIG
+        openclaw_cfg = OPENCLAW_CONFIG
         if openclaw_cfg.exists():
             try:
                 cfg = json.loads(openclaw_cfg.read_text())
@@ -394,7 +396,8 @@ def register_system_routes(app):
     def api_agents():
         """List all agents with agentId and mainModel fields (setup page format)."""
         agents = []
-        openclaw_cfg = Path.home() / ".openclaw" / "openclaw.json"
+        from shared import OPENCLAW_CONFIG
+        openclaw_cfg = OPENCLAW_CONFIG
         if openclaw_cfg.exists():
             try:
                 cfg = json.loads(openclaw_cfg.read_text())
@@ -411,7 +414,8 @@ def register_system_routes(app):
     @app.route("/api/agents/<agent_id>/model", methods=["GET", "PUT"])
     def api_agent_model(agent_id):
         """Get or set the model for a specific agent."""
-        openclaw_cfg = Path.home() / ".openclaw" / "openclaw.json"
+        from shared import OPENCLAW_CONFIG
+        openclaw_cfg = OPENCLAW_CONFIG
         if not openclaw_cfg.exists():
             return jsonify({"error": "openclaw.json not found"}), 404
         try:
@@ -438,8 +442,11 @@ def register_system_routes(app):
         if not found:
             agents_list.append({"id": agent_id, "model": model})
         cfg.setdefault("agents", {})["list"] = agents_list
-        openclaw_cfg.write_text(json.dumps(cfg, indent=2))
-        return jsonify({"success": True, "model": model})
+        try:
+            openclaw_cfg.write_text(json.dumps(cfg, indent=2))
+            return jsonify({"ok": True, "success": True, "model": model})
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
 
     @app.route("/api/settings/update-config", methods=["GET", "PUT"])
     def api_settings_update_config():
@@ -479,7 +486,8 @@ def register_system_routes(app):
         import urllib.request
         import urllib.error
 
-        openclaw_cfg_path = Path.home() / ".openclaw" / "openclaw.json"
+        from shared import OPENCLAW_CONFIG
+        openclaw_cfg_path = OPENCLAW_CONFIG
         gateway_ws_url = "ws://127.0.0.1:18789"
         gateway_http_url = "http://127.0.0.1:18789"
 

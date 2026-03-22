@@ -115,7 +115,7 @@ def load_config():
     """Load dashboard config.json."""
     return Config()
 
-OPENCLAW_HOME = Path.home() / ".openclaw"
+OPENCLAW_HOME = Path(os.getenv("OPENCLAW_HOME", str(Path.home() / ".openclaw"))).expanduser()
 OPENCLAW_CONFIG = OPENCLAW_HOME / "openclaw.json"
 BUILTIN_SKILLS_DIR = get_openclaw_skills_dir()
 CUSTOM_SKILLS_DIR = OPENCLAW_HOME / "workspace" / "skills"
