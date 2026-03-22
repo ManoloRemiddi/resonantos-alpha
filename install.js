@@ -344,6 +344,59 @@ step("Dashboard config.json", () => {
   }
 });
 
+// ── Docker convenience setup ─────────────────────────────────
+
+step("Docker .env (OPENCLAW_HOME)", () => {
+  const envPath = path.join(SCRIPT_DIR, ".env");
+  const desired = `OPENCLAW_HOME=${HOME}`;
+  try {
+    if (dockerAvailable) {
+      let lines = [];
+      if (fs.existsSync(envPath)) {
+        lines = fs.readFileSync(envPath, "utf-8").split(/\r?\n/).filter(Boolean);
+        // Remove existing OPENCLAW_HOME entries
+        lines = lines.filter(l => !/^OPENCLAW_HOME=/.test(l));
+      }
+      lines.push(desired);
+      fs.writeFileSync(envPath, lines.join("\n") + "\n");
+      log(`  ✓ .env updated: ${desired}`);
+    } else {
+      log("  ✓ Docker not detected — skipping .env creation");
+    }
+  } catch (e) {
+    warn("Could not write .env: " + e.message);
+  }
+});
+
+step("Gateway wsUrl for Docker Desktop", () => {
+  const isMac = process.platform === "darwin";
+  if (!(dockerAvailable && (isWin || isMac))) {
+    log("  ✓ Non-Docker-Desktop platform — no wsUrl changes");
+    return;
+  }
+  const ocPath = path.join(HOME, ".openclaw", "openclaw.json");
+  if (!fs.existsSync(ocPath)) {
+    log("  ✓ openclaw.json not found — skipping wsUrl update");
+    return;
+  }
+  try {
+    const cfg = JSON.parse(fs.readFileSync(ocPath, "utf-8"));
+    const gw = cfg.gateway || {};
+    const current = gw.wsUrl || "";
+    const desired = "ws://host.docker.internal:18789";
+    if (!current || /127\.0\.0\.1|localhost/.test(current)) {
+      gw.wsUrl = desired;
+      cfg.gateway = gw;
+      fs.writeFileSync(ocPath, JSON.stringify(cfg, null, 2) + "\n");
+      log(`  ✓ Updated gateway wsUrl for Docker Desktop: ${desired}`);
+    } else {
+      log("  ✓ gateway.wsUrl already set — skipping");
+    }
+  } catch (e) {
+    warn("Could not update openclaw.json: " + e.message);
+  }
+});
+
 // ── Post-install summary ─────────────────────────────────────
 
 const okSteps = steps.filter(s => s.status === "ok");
