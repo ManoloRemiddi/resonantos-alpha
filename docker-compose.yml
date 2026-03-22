@@ -4,9 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: resonantos-dashboard
-    # network_mode: host  # Linux only — uncomment if running on Linux
-    ports:
-      - "19100:19100"
+    network_mode: host  # Set by install.js on Linux; not available on Docker Desktop
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:

@@ -436,33 +436,38 @@ step("Docker .env (OPENCLAW_HOME)", () => {
   }
 });
 
-step("Gateway wsUrl for Docker Desktop", () => {
+step("Docker network config (Linux vs Docker Desktop)", () => {
+  if (!dockerAvailable) { log("  ✓ Docker not available — skipping"); return; }
+  const composePath = path.join(SCRIPT_DIR, "docker-compose.yml");
+  if (!fs.existsSync(composePath)) { log("  ✓ docker-compose.yml not found — skipping"); return; }
+  const isLinux = process.platform === "linux";
   const isMac = process.platform === "darwin";
-  if (!(dockerAvailable && (isWin || isMac))) {
-    log("  ✓ Non-Docker-Desktop platform — no wsUrl changes");
-    return;
-  }
-  const ocPath = path.join(HOME, ".openclaw", "openclaw.json");
-  if (!fs.existsSync(ocPath)) {
-    log("  ✓ openclaw.json not found — skipping wsUrl update");
-    return;
-  }
-  try {
-    const cfg = JSON.parse(fs.readFileSync(ocPath, "utf-8"));
-    const gw = cfg.gateway || {};
-    const current = gw.wsUrl || "";
-    const desired = "ws://host.docker.internal:18789";
-    if (!current || /127\.0\.0\.1|localhost/.test(current)) {
-      gw.wsUrl = desired;
-      cfg.gateway = gw;
-      fs.writeFileSync(ocPath, JSON.stringify(cfg, null, 2) + "\n");
-      log(`  ✓ Updated gateway wsUrl for Docker Desktop: ${desired}`);
+  let compose = fs.readFileSync(composePath, "utf8");
+  if (isLinux) {
+    if (!/^\s*network_mode:\s*host/m.test(compose)) {
+      compose = compose.replace(
+        /^( +)# ?network_mode: host.*$/m, "$1network_mode: host  # Linux — container shares host network"
+      );
+      compose = compose.replace(/^(\s*)ports:$(\n\1  - "\d+:19100")?/m, "");
+      log("  ✓ Linux detected — enabled network_mode: host in docker-compose.yml");
     } else {
-      log("  ✓ gateway.wsUrl already set — skipping");
+      log("  ✓ network_mode: host already set");
     }
-  } catch (e) {
-    warn("Could not update openclaw.json: " + e.message);
+  } else {
+    if (/^\s*network_mode:\s*host/m.test(compose)) {
+      compose = compose.replace(
+        /^( +)network_mode: host.*$/m, "$1# network_mode: host  # Linux only — not available on Docker Desktop"
+      );
+      if (!/^\s+ports:\s*\n+\s+-\s+"19100:19100"/m.test(compose)) {
+        const insertion = `    ports:\n      - "19100:19100"\n`;
+        compose = compose.replace(/(extra_hosts:)/, insertion + "$1");
+      }
+      log("  ✓ Docker Desktop detected — using ports mapping + host.docker.internal");
+    } else {
+      log("  ✓ Docker Desktop networking already configured");
+    }
   }
+  fs.writeFileSync(composePath, compose);
 });
 
 // ── Post-install summary ─────────────────────────────────────

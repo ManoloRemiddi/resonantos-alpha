@@ -420,4 +420,17 @@ def register_memory_routes(app):
         }
         return jsonify(health)
 
+    @app.route("/api/r-memory/available-models", methods=["GET"])
+    def api_r_memory_available_models():
+        """Return list of available models for the agent model selector."""
+        return jsonify({
+            "models": [
+                {"model": "anthropic/claude-haiku-4-5", "label": "Claude Haiku 4.5"},
+                {"model": "anthropic/claude-sonnet-4-7", "label": "Claude Sonnet 4.7"},
+                {"model": "anthropic/claude-opus-4-7", "label": "Claude Opus 4.7"},
+                {"model": "openai/gpt-4o-mini", "label": "GPT-4o Mini"},
+                {"model": "google/gemini-2.0-flash", "label": "Gemini 2.0 Flash"},
+            ]
+        })
+
     return app

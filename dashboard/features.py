@@ -62,4 +62,14 @@ def get_all_flags() -> dict:
 
 
 def get_context():
-    return {"features": get_all_flags()}
+    from pathlib import Path
+    openclaw_cfg = Path.home() / ".openclaw" / "openclaw.json"
+    gw_url = "ws://127.0.0.1:18789"
+    if openclaw_cfg.exists():
+        try:
+            import json
+            cfg = json.loads(openclaw_cfg.read_text())
+            gw_url = cfg.get("gateway", {}).get("wsUrl", gw_url)
+        except Exception:
+            pass
+    return {"features": get_all_flags(), "gateway_ws_url": gw_url}

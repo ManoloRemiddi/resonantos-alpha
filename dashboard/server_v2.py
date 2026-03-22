@@ -116,6 +116,28 @@ def page_docs():
 def page_license():
     return render_template("pages/license.html")
 
+@app.route("/shield")
+def page_shield():
+    return render_template("pages/shield.html")
+
+@app.route("/ssot")
+def page_ssot():
+    return render_template("pages/ssot.html")
+
+@app.route("/todo")
+def page_todo():
+    return render_template("pages/todo.html")
+
+@app.route("/favicon.ico")
+def favicon():
+    from flask import make_response, send_from_directory
+    import os
+    static_dir = os.path.join(os.path.dirname(__file__), "static")
+    path = os.path.join(static_dir, "favicon.ico")
+    if os.path.exists(path):
+        return send_from_directory(static_dir, "favicon.ico")
+    return "", 204
+
 @app.route("/<path:filename>")
 def serve_static(filename):
     return send_from_directory("static", filename)

@@ -102,7 +102,13 @@
   }
 
   function init() {
-    if (try { return localStorage.getItem(STORAGE_KEY) !== '1'; } catch(e) { return true; }) {
+    var shouldCheck;
+    try {
+      shouldCheck = localStorage.getItem(STORAGE_KEY) !== '1';
+    } catch(e) {
+      shouldCheck = true;
+    }
+    if (shouldCheck) {
       checkServices().then(function(result) {
         if (!result.allReachable) {
           showOverlay(result.services);

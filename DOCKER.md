@@ -69,6 +69,12 @@ ports:
 docker compose up --build -d
 ```
 
+## Performance
+
+- The container runs under Waitress (WSGI). If you see `waitress.queue:Task queue depth is N` in logs during bursts, raise worker threads:
+  - Edit `Dockerfile` CMD to use `--threads <N>` (default is 4; Dockerfile uses 8)
+  - Rebuild: `docker compose up --build -d`
+
 ## Stopping
 
 ```bash
@@ -120,9 +126,39 @@ If your `~/.openclaw/openclaw.json` has `wsUrl: "ws://127.0.0.1:18789"`, update 
     "wsUrl": "ws://host.docker.internal:18789"
   }
 }
+## Linux: Enable Host Networking
+
+On **Linux**, uncomment `network_mode: host` in docker-compose.yml. This makes the container share the host's network namespace, so `127.0.0.1` inside the container IS the host's loopback — the container can reach your native gateway at `localhost:18789` directly:
+
+```yaml
+network_mode: host  # Linux only — recommended
 ```
 
+If you leave it commented (or on macOS/Windows), the container uses `host.docker.internal:18789` via the extra_hosts setting. This works on Docker Desktop but not reliably on Linux.
+
+### "Cannot connect to OpenClaw gateway"
+
+The container needs the gateway running **on your host machine** (not inside Docker).
+
+```bash
+# Start the gateway natively:
+openclaw gateway start
+```
+
+If your `~/.openclaw/openclaw.json` has `wsUrl: "ws://127.0.0.1:18789"`, update it for Docker Desktop:
+
+```json
+{
+  "gateway": {
+    "auth": { "token": "..." },
+    "wsUrl": "ws://host.docker.internal:18789"
+  }
+}
+```
+
+```
 For Linux hosts, `network_mode: host` can be enabled (see docker-compose.yml) and `127.0.0.1` works.
+```
 
 ### "Permission denied" on ~/.openclaw
 

@@ -53,6 +53,14 @@ def register_system_routes(app):
                     agents.append({"id": entry.name, "path": str(entry)})
         return jsonify(agents)
 
+    @app.route("/api/system-agents")
+    def api_system_agents():
+        """Return system agent statuses (heartbeat, orchestrator, etc.)."""
+        return jsonify([
+            {"id": "heartbeat", "status": "running", "model": "n/a"},
+            {"id": "orchestrator", "status": "running", "model": "n/a"},
+        ])
+
     @app.route("/api/agents/<agent_id>/status")
     def api_agents_status(agent_id):
         """Get agent status."""
