@@ -1242,11 +1242,19 @@ async function initSetupGateway() {
     let gatewayUrl = shell && shell.dataset.gatewayWsUrl ? shell.dataset.gatewayWsUrl : 'ws://127.0.0.1:18789';
     const pageOrigin = window.location.origin;
     const isLocalhostPage = /^http:\/\/localhost(:[0-9]+)?$/.test(pageOrigin) || /^http:\/\/127\.0\.0\.1(:[0-9]+)?$/.test(pageOrigin);
+    const isHttpsPage = window.location.protocol === 'https:';
+    if (!isLocalhostPage && !isHttpsPage) {
+        return {
+            gatewayUrl,
+            connected: false,
+            skipped: true
+        };
+    }
     if (!isLocalhostPage) {
         const gwHost = gatewayUrl.replace(/^ws(s)?:\/\/([^\/]+)(.*)$/, function(_, secure, host) {
             const isGwLocalhost = /^(localhost|127\.0\.0\.1)$/.test(host);
             if (isGwLocalhost) {
-                return 'ws://' + window.location.hostname + ':18789' + (secure ? 's' : '') + '/';
+                return (secure ? 'wss://' : 'ws://') + window.location.hostname + ':18789/';
             }
             return _;
         });
@@ -1669,19 +1677,31 @@ async function loadAvailableModels() {
     renderPanel();
 
     try {
-        if (!setupGw || !setupGwReady) {
-            console.warn('Gateway not ready, skipping model load');
-            state.modelGroups = [];
-            return;
+        let loaded = false;
+        if (setupGw && setupGwReady) {
+            await setupGwReady;
+            if (setupGw.connected) {
+                const res = await setupGw._request('models.list', {});
+                if (res.ok && res.payload) {
+                    state.modelGroups = extractModelGroups(res.payload);
+                    loaded = true;
+                }
+            }
         }
 
-        await setupGwReady;
-        const res = await setupGw._request('models.list', {});
-        if (!res.ok || !res.payload) {
-            throw new Error((res.error && res.error.message) || 'models.list failed');
+        if (!loaded) {
+            const fallbackRes = await fetch('/api/r-memory/available-models');
+            const fallbackData = await fallbackRes.json();
+            const models = Array.isArray(fallbackData.models) ? fallbackData.models : [];
+            state.modelGroups = models.length ? [{
+                name: 'Gateway',
+                models: models.map(item => ({
+                    id: item.model || item.id || '',
+                    provider: item.provider || 'gateway',
+                    label: item.label || item.model || item.id || ''
+                })).filter(m => m.id)
+            }] : [];
         }
-
-        state.modelGroups = extractModelGroups(res.payload);
 
         // Always prefer the current configured model
         if (state.currentModel) {

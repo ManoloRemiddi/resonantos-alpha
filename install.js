@@ -473,6 +473,28 @@ step("Docker network config (Linux vs Docker Desktop)", () => {
   fs.writeFileSync(composePath, compose);
 });
 
+// ── OpenClaw gateway config for non-HTTPS access ──────────────────────────────
+
+step("Gateway allowInsecureAuth for non-HTTPS", () => {
+  try {
+    const ocPath = path.join(HOME, ".openclaw", "openclaw.json");
+    if (!ocPath || !fs.existsSync(ocPath)) { log("  ✓ openclaw.json not found — skipping"); return; }
+    const cfg = JSON.parse(fs.readFileSync(ocPath, "utf-8"));
+    const cu = cfg.gateway && cfg.gateway.controlUi;
+    if (cu && cu.allowInsecureAuth === true) { log("  ✓ allowInsecureAuth already enabled"); return; }
+    if (!cfg.gateway) cfg.gateway = {};
+    if (!cfg.gateway.controlUi) cfg.gateway.controlUi = {};
+    cfg.gateway.controlUi.allowInsecureAuth = true;
+    cfg.gateway.controlUi.enabled = true;
+    fs.writeFileSync(ocPath, JSON.stringify(cfg, null, 2) + "\n");
+    log("  ✓ gateway.controlUi.allowInsecureAuth: true added to openclaw.json");
+    log("    (Required for WebSocket connection when accessing dashboard via HTTP/non-localhost)");
+    log("    Restart gateway: openclaw gateway restart");
+  } catch (e) {
+    warn("Could not update openclaw.json: " + e.message);
+  }
+});
+
 // ── Post-install summary ─────────────────────────────────────
 
 const okSteps = steps.filter(s => s.status === "ok");
