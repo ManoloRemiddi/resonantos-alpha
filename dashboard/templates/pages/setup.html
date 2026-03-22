@@ -1276,11 +1276,19 @@ async function initSetupGateway() {
         throw new Error('Gateway token is missing');
     }
 
-    await setupGw.connect(gatewayUrl, token);
-    return {
-        gatewayUrl,
-        connected: Boolean(statusData.connected)
-    };
+    try {
+        await setupGw.connect(gatewayUrl, token);
+        return {
+            gatewayUrl,
+            connected: Boolean(statusData.connected)
+        };
+    } catch (error) {
+        return {
+            gatewayUrl,
+            connected: false,
+            skipped: true
+        };
+    }
 }
 
 function restoreState() {
@@ -1679,7 +1687,10 @@ async function loadAvailableModels() {
     try {
         let loaded = false;
         if (setupGw && setupGwReady) {
-            await setupGwReady;
+            try {
+                await setupGwReady;
+            } catch (error) {
+            }
             if (setupGw.connected) {
                 const res = await setupGw._request('models.list', {});
                 if (res.ok && res.payload) {
