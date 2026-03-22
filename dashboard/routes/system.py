@@ -399,7 +399,7 @@ def register_system_routes(app):
         return jsonify({"model": default_model})
 
     @app.route("/api/gateway/token")
-    def api_gateway_token():
+    def api_oc_auth():
         """Get gateway auth token from openclaw.json."""
         from shared import OPENCLAW_CONFIG
         openclaw_cfg = OPENCLAW_CONFIG
@@ -423,7 +423,7 @@ def register_system_routes(app):
 
         from shared import OPENCLAW_CONFIG
         gateway_ws_url = "ws://127.0.0.1:18789"
-        gateway_token = ""
+        oc_auth = ""
         try:
             if OPENCLAW_CONFIG.exists():
                 cfg = json.loads(OPENCLAW_CONFIG.read_text())
@@ -442,7 +442,7 @@ def register_system_routes(app):
                 if "#" in line:
                     fragment = line.split("#", 1)[-1]
                     if "=" in fragment:
-                        gateway_token = fragment.split("=", 1)[-1].strip()
+                        oc_auth = fragment.split("=", 1)[-1].strip()
                     break
         except Exception:
             pass
@@ -475,7 +475,7 @@ def register_system_routes(app):
                 "id": "c0",
                 "method": "connect",
                 "params": {
-                    "auth": {"token": gateway_token},
+                    "auth": {"token": oc_auth},
                     "minProtocol": 3,
                     "maxProtocol": 3,
                     "role": "operator",
