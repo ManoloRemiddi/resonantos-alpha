@@ -252,10 +252,41 @@ echo "⛔ Push blocked by Shield File Guard. Unlock github_push to push."
 exit 1
 """
 
+MANAGED_PRE_PUSH_MARKER = "Shield managed pre-push hook"
+MANAGED_PRE_PUSH_HOOK = """#!/bin/sh
+set -eu
+# Shield managed pre-push hook
+
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null)
+script="$repo_root/shield/data_leak_scanner.py"
+
+if [ ! -f "$script" ]; then
+  echo "Shield pre-push hook: missing $script" >&2
+  exit 1
+fi
+
+python3 "$script" --repo "$repo_root"
+"""
+
 
 def is_hook_locked(repo_path: Path) -> bool:
     hook = repo_path / ".git" / "hooks" / "pre-push"
     return hook.exists() and "Shield File Guard" in hook.read_text()
+
+
+def is_managed_hook(repo_path: Path) -> bool:
+    hook = repo_path / ".git" / "hooks" / "pre-push"
+    return hook.exists() and MANAGED_PRE_PUSH_MARKER in hook.read_text()
+
+
+def install_managed_hook(repo_path: Path) -> dict:
+    hook = repo_path / ".git" / "hooks" / "pre-push"
+    hook.parent.mkdir(parents=True, exist_ok=True)
+    if hook.exists() and not is_managed_hook(repo_path) and "Shield File Guard" not in hook.read_text():
+        hook.rename(hook.with_suffix(".pre-shield-backup"))
+    hook.write_text(MANAGED_PRE_PUSH_HOOK)
+    hook.chmod(0o755)
+    return {"path": str(hook), "installed": True, "mode": "scan"}
 
 
 def lock_hook(repo_path: Path) -> dict:
@@ -275,6 +306,13 @@ def unlock_hook(repo_path: Path) -> dict:
         hook.unlink()
         if backup.exists():
             backup.rename(hook)
+        else:
+            install_managed_hook(repo_path)
+    elif not hook.exists():
+        if backup.exists():
+            backup.rename(hook)
+        else:
+            install_managed_hook(repo_path)
     return {"path": str(hook), "unlocked": True}
 
 
@@ -342,7 +380,7 @@ def migrate_uchg_to_schg() -> dict:
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: file_guard.py [status|lock|unlock|migrate] [group_id|file_path]")
+        print("Usage: file_guard.py [status|lock|unlock|migrate|install-hook] [group_id|file_path|repo_path]")
         print("  migrate — Convert all uchg flags to schg (requires: sudo)")
         sys.exit(1)
 
@@ -351,6 +389,9 @@ if __name__ == "__main__":
         print(json.dumps(get_status(), indent=2))
     elif cmd == "migrate":
         print(json.dumps(migrate_uchg_to_schg(), indent=2))
+    elif cmd == "install-hook":
+        repo_target = Path(sys.argv[2]).resolve() if len(sys.argv) > 2 else Path.cwd()
+        print(json.dumps(install_managed_hook(repo_target), indent=2))
     elif cmd == "lock" and len(sys.argv) > 2:
         target = sys.argv[2]
         if target in GUARD_MANIFEST:
@@ -364,5 +405,5 @@ if __name__ == "__main__":
         else:
             print(json.dumps(unlock_file(target), indent=2))
     else:
-        print("Usage: file_guard.py [status|lock|unlock|migrate] [group_id|file_path]")
+        print("Usage: file_guard.py [status|lock|unlock|migrate|install-hook] [group_id|file_path|repo_path]")
         sys.exit(1)

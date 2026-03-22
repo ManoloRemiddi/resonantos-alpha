@@ -189,6 +189,8 @@ Scans L0/L1 `.ai.md` files for `Updated:` headers. Flags files >14 days old or m
 
 Any step failing → push blocked (exit 1).
 
+The repo-managed hook is installed with `python3 shield/file_guard.py install-hook <repo>` and restored automatically by `unlock github_push` when no prior hook backup exists.
+
 ## 7. Deployment
 
 | Component | Location | Managed By |

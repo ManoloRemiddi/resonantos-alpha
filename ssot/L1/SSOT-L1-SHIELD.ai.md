@@ -8,9 +8,9 @@ Multi-component deterministic security layer. No AI in security decisions.
 ```
 Tool Call → shield-gate.js (before_tool_call) → ALLOW/BLOCK
 Git Push → pre-push hook:
-  1. data_leak_scanner.py (credential/secret scan)
-  2. Logician gRPC (safe_path + can_use_tool)
-  3. verification_gate.py (test evidence for code files)
+  1. data_leak_scanner.py (credential/secret scan of added git diff lines)
+  2. Logician gRPC (safe_path + can_use_tool, when enabled)
+  3. verification_gate.py (test evidence for code files, when enabled)
 Files → file_guard.py (chflags/chattr/chmod)
 Hooks → hook_guardian.sh (self-healing monitor)
 Lock → shield_lock.py (password-protected, human-only)
@@ -21,7 +21,7 @@ Lock → shield_lock.py (password-protected, human-only)
 | Component | Location | Purpose | Fail Mode |
 |-----------|----------|---------|-----------|
 | shield-gate.js | OpenClaw extension | Block destructive exec commands | OPEN |
-| data_leak_scanner.py | shield/ | Scan diffs for credentials/secrets | CLOSED |
+| data_leak_scanner.py | shield/ | Scan added git diff lines for credentials/secrets | CLOSED |
 | verification_gate.py | shield/ | Require test evidence for code | CLOSED |
 | file_guard.py | shield/ | Lock/unlock critical files | N/A |
 | hook_guardian.sh | shield/ | Restore tampered hooks | N/A |
