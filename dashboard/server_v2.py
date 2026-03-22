@@ -116,6 +116,10 @@ def page_docs():
 def page_license():
     return render_template("pages/license.html")
 
+@app.route("/settings")
+def page_settings():
+    return render_template("pages/settings.html")
+
 @app.route("/shield")
 def page_shield():
     return render_template("pages/shield.html")
