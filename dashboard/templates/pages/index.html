@@ -1181,7 +1181,7 @@ function formatAge(ms) {
 }
 
 // --- Open R-Memory Log in Terminal ---
-document.getElementById('btnOpenRmemLog').addEventListener('click', async () => {
+document.getElementById('btnOpenRmemLog')?.addEventListener('click', async () => {
     try {
         await fetch('/api/r-memory/open-log', { method: 'POST' });
     } catch(e) {

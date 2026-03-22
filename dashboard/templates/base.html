@@ -270,6 +270,7 @@
     </div>
     
     <script src="/static/js/dashboard.js"></script>
+    <script>window.features = {{ features | tojson }};</script>
     <script>
         // Symbiotic Shield Status
         async function updateShieldStatus() {
@@ -422,15 +423,15 @@
         document.addEventListener('DOMContentLoaded', () => {
             updateShieldStatus();
             updateGatewayStatus();
-            {% if features.get('logician', false) %}
-            updateLogicianStatus();
-            {% endif %}
+            if (features && features.logician) {
+                updateLogicianStatus();
+            }
             updateVersionBadgeStatus();
             setInterval(updateShieldStatus, 30000);
             setInterval(updateGatewayStatus, 10000);
-            {% if features.get('logician', false) %}
-            setInterval(updateLogicianStatus, 60000);
-            {% endif %}
+            if (features && features.logician) {
+                setInterval(updateLogicianStatus, 60000);
+            }
         });
     </script>
     {% include "partials/service-unavailable.html" %}
