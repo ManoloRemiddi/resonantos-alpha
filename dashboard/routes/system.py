@@ -449,4 +449,67 @@ def register_system_routes(app):
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
+    @app.route("/api/services/status")
+    def api_services_status():
+        """
+        Returns health status for all services the dashboard depends on.
+        Extensible: add new services by appending to the services list.
+        """
+        import urllib.request
+        import urllib.error
+
+        openclaw_cfg_path = Path.home() / ".openclaw" / "openclaw.json"
+        gateway_ws_url = "ws://127.0.0.1:18789"
+        gateway_http_url = "http://127.0.0.1:18789"
+
+        if openclaw_cfg_path.exists():
+            try:
+                cfg = json.loads(openclaw_cfg_path.read_text())
+                ws_url = cfg.get("gateway", {}).get("wsUrl") or cfg.get("gateway", {}).get("url")
+                if ws_url:
+                    gateway_ws_url = ws_url
+                    gateway_http_url = ws_url.replace("ws://", "http://").replace("wss://", "https://")
+            except Exception:
+                pass
+
+        services = []
+
+        def probe_gateway():
+            reachable = False
+            version = None
+            error = None
+            try:
+                req = urllib.request.Request(
+                    gateway_http_url,
+                    headers={"User-Agent": "ResonantOS-Dashboard/1.0"},
+                    method="GET"
+                )
+                with urllib.request.urlopen(req, timeout=3) as resp:
+                    reachable = True
+                    if resp.status == 200:
+                        try:
+                            body = json.loads(resp.read().decode())
+                            version = body.get("version") or body.get("gateway", {}).get("version")
+                        except Exception:
+                            pass
+            except urllib.error.URLError as e:
+                error = str(e.reason)
+            except Exception as e:
+                error = str(e)
+            return reachable, version, error
+
+        reachable, gw_version, gw_error = probe_gateway()
+
+        services.append({
+            "name": "openclaw-gateway",
+            "url": gateway_ws_url,
+            "reachable": reachable,
+            "version": gw_version,
+            "error": gw_error,
+            "installHint": "npm install -g openclaw",
+            "startHint": "openclaw gateway start",
+        })
+
+        return jsonify({"services": services})
+
     return app
