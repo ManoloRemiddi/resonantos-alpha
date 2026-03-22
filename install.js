@@ -434,13 +434,16 @@ if (coreFailed || coreErrors.length > 0) {
 const nextStepsLines = [];
 if (dockerAvailable) {
   nextStepsLines.push("  1. [Docker] Run: docker compose up -d");
-  nextStepsLines.push("     Or native: cd dashboard && source venv/bin/activate && python server_v2.py");
+  nextStepsLines.push("  2. View logs:  docker compose logs -f");
+  nextStepsLines.push("     Or native (WSGI): cd dashboard && source venv/bin/activate && python -m waitress --host 0.0.0.0 --port 19100 server_v2:app");
+  nextStepsLines.push("     Or native (dev): python server_v2.py");
 } else {
   nextStepsLines.push("  1. cd dashboard && source venv/bin/activate");
-  nextStepsLines.push("     python server_v2.py");
+  nextStepsLines.push("     python -m waitress --host 0.0.0.0 --port 19100 server_v2:app");
+  nextStepsLines.push("     Or dev: python server_v2.py");
 }
-nextStepsLines.push("  2. Start OpenClaw:  openclaw gateway start");
-nextStepsLines.push("  3. Open http://localhost:19100");
+nextStepsLines.push("  3. Start OpenClaw:  openclaw gateway start");
+nextStepsLines.push("  4. Open http://localhost:19100");
 if (dockerAvailable) {
   nextStepsLines.push("");
   nextStepsLines.push("  Docker not working? See DOCKER.md for troubleshooting.");
