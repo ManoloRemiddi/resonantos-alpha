@@ -416,7 +416,7 @@ def register_system_routes(app):
 
     @app.route("/api/setup/chat", methods=["POST"])
     def api_setup_chat():
-        """Send a chat message to the setup agent via openclaw CLI (embedded fallback)."""
+        """Send a chat message to the setup agent via openclaw ACP HTTP API."""
         data = request.get_json() or {}
         message = (data.get("message") or "").strip()
         session_id = (data.get("sessionKey") or "setup").strip().split(":")[-1]
@@ -424,27 +424,44 @@ def register_system_routes(app):
             return jsonify({"ok": False, "error": "message is required"}), 400
 
         try:
-            result = subprocess.run(
-                ["openclaw", "agent", "--session-id", session_id, "-m", message, "--json", "--local"],
-                capture_output=True, text=True, timeout=90,
-                env={**os.environ, "TERM": "dumb", "PATH": os.environ.get("PATH", "") + ":/home/evan/.nvm/versions/node/v22.20.0/bin"}
+            import urllib.request, urllib.error
+            body = json.dumps({
+                "jsonrpc": "2.0",
+                "id": "r1",
+                "method": "agent.chat",
+                "params": {
+                    "sessionKey": f"agent:{session_id}:main",
+                    "message": message,
+                    "model": "auto",
+                }
+            }).encode()
+            req = urllib.request.Request(
+                "http://127.0.0.1:18789/__openclaw__/acp/chat",
+                data=body,
+                headers={
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                },
+                method="POST"
             )
-            if result.returncode != 0 or not result.stdout.strip():
-                stderr_lines = result.stderr.strip().splitlines()
-                err = stderr_lines[-1] if stderr_lines else "agent failed"
-                return jsonify({"ok": False, "error": err}), 502
+            with urllib.request.urlopen(req, timeout=90) as resp:
+                result = json.loads(resp.read())
+                if isinstance(result, dict):
+                    error = result.get("error")
+                    if error:
+                        return jsonify({"ok": False, "error": str(error)}), 502
+                    out = result.get("result", {}) or result
+                    text = out.get("text") or out.get("content") or out.get("message", "")
+                    return jsonify({"ok": True, "text": text or "(no response received)"})
+                return jsonify({"ok": True, "text": str(result) or "(no response received)"})
+        except urllib.error.HTTPError as e:
             try:
-                output = json.loads(result.stdout)
+                err_body = json.loads(e.read())
+                return jsonify({"ok": False, "error": str(err_body.get("error", e.reason))}), e.code
             except Exception:
-                return jsonify({"ok": False, "error": "invalid JSON from agent"}), 502
-            payloads = output.get("payloads", [])
-            text_parts = [p.get("text", "") for p in payloads if p.get("text")]
-            text = " ".join(text_parts)
-            return jsonify({"ok": True, "text": text or "(no response received)"})
-        except subprocess.TimeoutExpired:
-            return jsonify({"ok": False, "error": "agent timed out"}), 504
-        except FileNotFoundError:
-            return jsonify({"ok": False, "error": "openclaw CLI not available in this container (try using http://127.0.0.1:19100 on the server itself)"}), 503
+                return jsonify({"ok": False, "error": f"HTTP {e.code}: {e.reason}"}), e.code
+        except urllib.error.URLError as e:
+            return jsonify({"ok": False, "error": f"Gateway unreachable: {e.reason}"}), 503
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
 
