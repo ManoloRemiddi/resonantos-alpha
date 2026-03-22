@@ -413,161 +413,41 @@ def register_system_routes(app):
                 pass
         return jsonify({"token": ""}), 200
 
+
     @app.route("/api/setup/chat", methods=["POST"])
     def api_setup_chat():
+        """Send a chat message to the setup agent via openclaw CLI (embedded fallback)."""
         data = request.get_json() or {}
         message = (data.get("message") or "").strip()
-        session_key = (data.get("sessionKey") or "agent:setup:main").strip()
+        session_id = (data.get("sessionKey") or "setup").strip().split(":")[-1]
         if not message:
             return jsonify({"ok": False, "error": "message is required"}), 400
 
-        from shared import OPENCLAW_CONFIG
-        gateway_ws_url = "ws://127.0.0.1:18789"
-        oc_auth = ""
         try:
-            if OPENCLAW_CONFIG.exists():
-                cfg = json.loads(OPENCLAW_CONFIG.read_text())
-                ws_url = cfg.get("gateway", {}).get("wsUrl") or cfg.get("gateway", {}).get("url")
-                if isinstance(ws_url, str) and ws_url:
-                    gateway_ws_url = ws_url
-        except Exception:
-            pass
-
-        try:
-            token_result = subprocess.run(
-                ["openclaw", "dashboard", "--no-open"],
-                capture_output=True, text=True, timeout=10
+            result = subprocess.run(
+                ["openclaw", "agent", "--session-id", session_id, "-m", message, "--json", "--local"],
+                capture_output=True, text=True, timeout=90,
+                env={**os.environ, "TERM": "dumb", "PATH": os.environ.get("PATH", "") + ":/home/evan/.nvm/versions/node/v22.20.0/bin"}
             )
-            for line in token_result.stdout.splitlines():
-                if "#" in line:
-                    fragment = line.split("#", 1)[-1]
-                    if "=" in fragment:
-                        oc_auth = fragment.split("=", 1)[-1].strip()
-                    break
-        except Exception:
-            pass
-
-        if gateway_ws_url.startswith("http://"):
-            gateway_ws_url = "ws://" + gateway_ws_url[len("http://"):]
-        if gateway_ws_url.startswith("https://"):
-            gateway_ws_url = "wss://" + gateway_ws_url[len("https://"):]
-
-        try:
-            from websocket import create_connection
-        except Exception as e:
-            return jsonify({"ok": False, "error": f"websocket-client unavailable: {e}"}), 500
-
-        ws = None
-        try:
-            ws = create_connection(gateway_ws_url, timeout=8)
-
-            challenge_deadline = time.time() + 8
-            while time.time() < challenge_deadline:
-                raw = ws.recv()
-                msg = json.loads(raw)
-                if msg.get("type") == "event" and msg.get("event") == "connect.challenge":
-                    break
-            else:
-                return jsonify({"ok": False, "error": "gateway challenge timeout"}), 504
-
-            ws.send(json.dumps({
-                "type": "req",
-                "id": "c0",
-                "method": "connect",
-                "params": {
-                    "auth": {"token": oc_auth},
-                    "minProtocol": 3,
-                    "maxProtocol": 3,
-                    "role": "operator",
-                    "scopes": ["operator.read", "operator.write"],
-                    "caps": [],
-                    "client": {
-                        "id": "openclaw-control-ui",
-                        "mode": "webchat",
-                        "version": "1.0.0",
-                        "platform": "web"
-                    }
-                }
-            }))
-
-            connect_deadline = time.time() + 10
-            while time.time() < connect_deadline:
-                raw = ws.recv()
-                msg = json.loads(raw)
-                if msg.get("type") == "res" and msg.get("id") == "c0":
-                    if not msg.get("ok"):
-                        err = (msg.get("error") or {}).get("message") or "gateway connect failed"
-                        return jsonify({"ok": False, "error": err}), 502
-                    break
-            else:
-                return jsonify({"ok": False, "error": "gateway connect response timeout"}), 504
-
-            ws.send(json.dumps({
-                "type": "req",
-                "id": "r1",
-                "method": "chat.send",
-                "params": {
-                    "sessionKey": session_key,
-                    "message": message,
-                    "deliver": False,
-                    "idempotencyKey": str(uuid.uuid4())
-                }
-            }))
-
-            send_deadline = time.time() + 10
-            while time.time() < send_deadline:
-                raw = ws.recv()
-                msg = json.loads(raw)
-                if msg.get("type") == "res" and msg.get("id") == "r1":
-                    if not msg.get("ok"):
-                        err = (msg.get("error") or {}).get("message") or "chat.send failed"
-                        return jsonify({"ok": False, "error": err}), 502
-                    break
-            else:
-                return jsonify({"ok": False, "error": "chat.send response timeout"}), 504
-
-            stream_text = ""
-            final_deadline = time.time() + 90
-            last_debug = time.time()
-            all_messages = []
-            while time.time() < final_deadline:
-                raw = ws.recv()
-                msg = json.loads(raw)
-                all_messages.append(msg)
-                if time.time() - last_debug > 10 and len(all_messages) > 0:
-                    app.logger.warning(f"[setup-chat debug] msgs_received={len(all_messages)} last_type={all_messages[-1].get('type')} last_id={all_messages[-1].get('id')} last_event={all_messages[-1].get('event')}")
-                    last_debug = time.time()
-                if msg.get("type") == "res" and msg.get("id") == "r1":
-                    payload = msg.get("payload", {})
-                    text = _extract_text_from_gateway_message(payload)
-                    app.logger.warning(f"[setup-chat] res r1 payload keys={list(payload.keys())} text={repr(text[:100])}")
-                    return jsonify({"ok": True, "text": text or "(no response received)"})
-                if msg.get("type") != "event" or msg.get("event") != "chat":
-                    continue
-                payload = msg.get("payload") or {}
-                if payload.get("sessionKey") != session_key:
-                    continue
-                state = payload.get("state")
-                if state == "delta":
-                    delta = payload.get("message")
-                    if isinstance(delta, str):
-                        stream_text = delta if delta.startswith(stream_text) else (stream_text + delta)
-                elif state == "final":
-                    final_text = _extract_text_from_gateway_message(payload.get("message")) or stream_text
-                    return jsonify({"ok": True, "text": final_text or "(no response received)"})
-                elif state == "error":
-                    err = payload.get("error") or payload.get("message") or "setup chat failed"
-                    return jsonify({"ok": False, "error": str(err)}), 502
-
-            return jsonify({"ok": False, "error": "chat final response timeout"}), 504
+            if result.returncode != 0 or not result.stdout.strip():
+                stderr_lines = result.stderr.strip().splitlines()
+                err = stderr_lines[-1] if stderr_lines else "agent failed"
+                return jsonify({"ok": False, "error": err}), 502
+            try:
+                output = json.loads(result.stdout)
+            except Exception:
+                return jsonify({"ok": False, "error": "invalid JSON from agent"}), 502
+            payloads = output.get("payloads", [])
+            text_parts = [p.get("text", "") for p in payloads if p.get("text")]
+            text = " ".join(text_parts)
+            return jsonify({"ok": True, "text": text or "(no response received)"})
+        except subprocess.TimeoutExpired:
+            return jsonify({"ok": False, "error": "agent timed out"}), 504
+        except FileNotFoundError:
+            return jsonify({"ok": False, "error": "openclaw CLI not available in this container (try using http://127.0.0.1:19100 on the server itself)"}), 503
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
-        finally:
-            try:
-                if ws is not None:
-                    ws.close()
-            except Exception:
-                pass
+
 
     @app.route("/api/gateway/last-error")
     def api_gateway_last_error():
