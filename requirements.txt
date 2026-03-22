@@ -4,3 +4,4 @@ psutil
 solana>=0.36.0
 solders>=0.25.0
 waitress
+websocket-client

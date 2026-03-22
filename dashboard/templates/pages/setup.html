@@ -1834,20 +1834,49 @@ async function sendSetupMessage(stepId) {
             setupGwReady = initSetupGateway();
         }
         await setupGwReady;
-        if (!setupGw || !setupGw.connected) {
-            throw new Error('SETUP_CHAT_UNAVAILABLE');
-        }
-
-        const responseText = await new Promise((resolve, reject) => {
-            setupGw.send('agent:setup:main', message, {
-                onDelta: text => {
-                    state.streamingByStep[stepId] = text;
-                    updateChatMessages(stepId);
+        const callSetupProxy = async () => {
+            const response = await fetch('/api/setup/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
                 },
-                onFinal: text => resolve(text),
-                onError: error => reject(new Error(error))
+                body: JSON.stringify({
+                    stepId,
+                    sessionKey: 'agent:setup:main',
+                    message
+                })
             });
-        });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.ok) {
+                throw new Error((data && data.error) || `setup proxy failed (${response.status})`);
+            }
+            return data.text || '(no response received)';
+        };
+
+        let responseText = '';
+        if (setupGw && setupGw.connected) {
+            try {
+                responseText = await new Promise((resolve, reject) => {
+                    setupGw.send('agent:setup:main', message, {
+                        onDelta: text => {
+                            state.streamingByStep[stepId] = text;
+                            updateChatMessages(stepId);
+                        },
+                        onFinal: text => resolve(text),
+                        onError: error => reject(new Error(error))
+                    });
+                });
+            } catch (wsError) {
+                const wsMessage = wsError && wsError.message ? wsError.message : '';
+                if (/Gateway WebSocket error|Gateway connection closed|Gateway is not connected|control ui requires device identity/i.test(wsMessage)) {
+                    responseText = await callSetupProxy();
+                } else {
+                    throw wsError;
+                }
+            }
+        } else {
+            responseText = await callSetupProxy();
+        }
 
         state.messagesByStep[stepId].push({
             role: 'agent',

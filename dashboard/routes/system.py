@@ -8,11 +8,32 @@ import platform
 import subprocess
 import shutil
 import time
+import uuid
 from pathlib import Path
 from flask import jsonify, request
 
 def register_system_routes(app):
     """Register all system-related routes."""
+
+    def _extract_text_from_gateway_message(message):
+        if isinstance(message, str):
+            return message
+        if not isinstance(message, dict):
+            return ""
+        content = message.get("content")
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts = []
+            for item in content:
+                if isinstance(item, str):
+                    parts.append(item)
+                elif isinstance(item, dict) and item.get("type") == "text":
+                    parts.append(item.get("text", ""))
+            return "\n".join([p for p in parts if p])
+        if isinstance(message.get("text"), str):
+            return message.get("text")
+        return ""
 
     def _get_openclaw_version():
         """Get OpenClaw gateway version via HTTP probe."""
@@ -391,6 +412,138 @@ def register_system_routes(app):
             except Exception:
                 pass
         return jsonify({"token": ""}), 200
+
+    @app.route("/api/setup/chat", methods=["POST"])
+    def api_setup_chat():
+        data = request.get_json() or {}
+        message = (data.get("message") or "").strip()
+        session_key = (data.get("sessionKey") or "agent:setup:main").strip()
+        if not message:
+            return jsonify({"ok": False, "error": "message is required"}), 400
+
+        from shared import OPENCLAW_CONFIG
+        gateway_ws_url = "ws://127.0.0.1:18789"
+        gateway_token = ""
+        try:
+            if OPENCLAW_CONFIG.exists():
+                cfg = json.loads(OPENCLAW_CONFIG.read_text())
+                ws_url = cfg.get("gateway", {}).get("wsUrl") or cfg.get("gateway", {}).get("url")
+                if isinstance(ws_url, str) and ws_url:
+                    gateway_ws_url = ws_url
+                gateway_token = cfg.get("gateway", {}).get("auth", {}).get("token", "")
+        except Exception:
+            pass
+
+        if gateway_ws_url.startswith("http://"):
+            gateway_ws_url = "ws://" + gateway_ws_url[len("http://"):]
+        if gateway_ws_url.startswith("https://"):
+            gateway_ws_url = "wss://" + gateway_ws_url[len("https://"):]
+
+        try:
+            from websocket import create_connection
+        except Exception as e:
+            return jsonify({"ok": False, "error": f"websocket-client unavailable: {e}"}), 500
+
+        ws = None
+        try:
+            ws = create_connection(gateway_ws_url, timeout=8)
+
+            challenge_deadline = time.time() + 8
+            while time.time() < challenge_deadline:
+                raw = ws.recv()
+                msg = json.loads(raw)
+                if msg.get("type") == "event" and msg.get("event") == "connect.challenge":
+                    break
+            else:
+                return jsonify({"ok": False, "error": "gateway challenge timeout"}), 504
+
+            ws.send(json.dumps({
+                "type": "req",
+                "id": "c0",
+                "method": "connect",
+                "params": {
+                    "auth": {"token": gateway_token},
+                    "minProtocol": 3,
+                    "maxProtocol": 3,
+                    "role": "operator",
+                    "scopes": ["operator.read", "operator.write"],
+                    "caps": [],
+                    "client": {
+                        "id": "openclaw-control-ui",
+                        "mode": "webchat",
+                        "version": "1.0.0",
+                        "platform": "web"
+                    }
+                }
+            }))
+
+            connect_deadline = time.time() + 10
+            while time.time() < connect_deadline:
+                raw = ws.recv()
+                msg = json.loads(raw)
+                if msg.get("type") == "res" and msg.get("id") == "c0":
+                    if not msg.get("ok"):
+                        err = (msg.get("error") or {}).get("message") or "gateway connect failed"
+                        return jsonify({"ok": False, "error": err}), 502
+                    break
+            else:
+                return jsonify({"ok": False, "error": "gateway connect response timeout"}), 504
+
+            ws.send(json.dumps({
+                "type": "req",
+                "id": "r1",
+                "method": "chat.send",
+                "params": {
+                    "sessionKey": session_key,
+                    "message": message,
+                    "deliver": False,
+                    "idempotencyKey": str(uuid.uuid4())
+                }
+            }))
+
+            send_deadline = time.time() + 10
+            while time.time() < send_deadline:
+                raw = ws.recv()
+                msg = json.loads(raw)
+                if msg.get("type") == "res" and msg.get("id") == "r1":
+                    if not msg.get("ok"):
+                        err = (msg.get("error") or {}).get("message") or "chat.send failed"
+                        return jsonify({"ok": False, "error": err}), 502
+                    break
+            else:
+                return jsonify({"ok": False, "error": "chat.send response timeout"}), 504
+
+            stream_text = ""
+            final_deadline = time.time() + 90
+            while time.time() < final_deadline:
+                raw = ws.recv()
+                msg = json.loads(raw)
+                if msg.get("type") != "event" or msg.get("event") != "chat":
+                    continue
+                payload = msg.get("payload") or {}
+                if payload.get("sessionKey") != session_key:
+                    continue
+                state = payload.get("state")
+                if state == "delta":
+                    delta = payload.get("message")
+                    if isinstance(delta, str):
+                        stream_text = delta if delta.startswith(stream_text) else (stream_text + delta)
+                elif state == "final":
+                    final_text = _extract_text_from_gateway_message(payload.get("message")) or stream_text
+                    return jsonify({"ok": True, "text": final_text or "(no response received)"})
+                elif state == "error":
+                    err = payload.get("error") or payload.get("message") or "setup chat failed"
+                    return jsonify({"ok": False, "error": str(err)}), 502
+
+            return jsonify({"ok": False, "error": "chat final response timeout"}), 504
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
+        finally:
+            try:
+                if ws is not None:
+                    ws.close()
+            except Exception:
+                pass
 
     @app.route("/api/gateway/last-error")
     def api_gateway_last_error():
