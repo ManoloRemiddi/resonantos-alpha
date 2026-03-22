@@ -349,6 +349,123 @@ def register_memory_routes(app):
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
+    @app.route("/api/conversations", methods=["GET"])
+    def api_conversations_list():
+        """List chatbot conversations with pagination and filtering."""
+        from shared import WORKSPACE
+        chatbot_id = request.args.get("chatbot_id")
+        limit = min(int(request.args.get("limit", 20)), 100)
+        offset = int(request.args.get("offset", 0))
+        search = request.args.get("search", "").strip()
+        start_date = request.args.get("start_date")
+        end_date = request.args.get("end_date")
+        db_path = WORKSPACE / "chatbots.db"
+        conversations = []
+        total = 0
+        if db_path.exists():
+            try:
+                conn = sqlite3.connect(str(db_path))
+                conn.row_factory = sqlite3.Row
+                cur = conn.cursor()
+                where = []
+                params = []
+                if chatbot_id:
+                    where.append("chatbot_id = ?")
+                    params.append(chatbot_id)
+                if search:
+                    where.append("(user_message LIKE ? OR bot_response LIKE ?)")
+                    params.extend([f"%{search}%", f"%{search}%"])
+                if start_date:
+                    where.append("created_at >= ?")
+                    params.append(int(start_date) / 1000)
+                if end_date:
+                    where.append("created_at <= ?")
+                    params.append(int(end_date) / 1000)
+                where_clause = ("WHERE " + " AND ".join(where)) if where else ""
+                cur.execute(f"SELECT COUNT(*) FROM chatbot_conversations {where_clause}", params)
+                total = cur.fetchone()[0]
+                cur.execute(
+                    f"SELECT id, chatbot_id, user_message, bot_response, created_at FROM chatbot_conversations {where_clause} ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                    params + [limit, offset]
+                )
+                for row in cur.fetchall():
+                    conversations.append({
+                        "id": row["id"],
+                        "chatbot_id": row["chatbot_id"],
+                        "user_message": row["user_message"],
+                        "bot_response": row["bot_response"],
+                        "created_at": row["created_at"] * 1000,
+                    })
+                conn.close()
+            except Exception:
+                pass
+        return jsonify({"conversations": conversations, "total": total, "limit": limit, "offset": offset})
+
+    @app.route("/api/conversations/<conversation_id>", methods=["GET"])
+    def api_conversation_get(conversation_id):
+        from shared import WORKSPACE
+        db_path = WORKSPACE / "chatbots.db"
+        if not db_path.exists():
+            return jsonify({"error": "Conversation not found"}), 404
+        try:
+            conn = sqlite3.connect(str(db_path))
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            cur.execute("SELECT id, chatbot_id, user_message, bot_response, created_at FROM chatbot_conversations WHERE id = ?", (conversation_id,))
+            row = cur.fetchone()
+            conn.close()
+            if not row:
+                return jsonify({"error": "Conversation not found"}), 404
+            return jsonify({
+                "id": row["id"],
+                "chatbot_id": row["chatbot_id"],
+                "user_message": row["user_message"],
+                "bot_response": row["bot_response"],
+                "created_at": row["created_at"] * 1000,
+            })
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/analytics", methods=["GET"])
+    def api_analytics():
+        """Get chatbot analytics for a time range."""
+        from shared import WORKSPACE
+        chatbot_id = request.args.get("chatbot_id", "")
+        range_param = request.args.get("range", "7d")
+        days = {"7d": 7, "30d": 30, "90d": 90}.get(range_param, 7)
+        db_path = WORKSPACE / "chatbots.db"
+        data = {
+            "total_conversations": 0, "total_messages": 0, "avg_response_time": 0,
+            "conversations_change": 0, "messages_change": 0, "response_time_change": 0,
+            "satisfaction_rate": 0, "satisfaction_change": 0,
+            "chart_data": [], "popular_questions": [],
+            "user_messages": 0, "bot_responses": 0, "error_rate": "0.0",
+            "avg_conv_length": 0, "feedback": {}, "ratings": {},
+        }
+        if not db_path.exists():
+            return jsonify(data)
+        try:
+            conn = sqlite3.connect(str(db_path))
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            where = "WHERE created_at >= ?"
+            params = [__import__("time").time() - days * 86400]
+            if chatbot_id:
+                where += " AND chatbot_id = ?"
+                params.append(chatbot_id)
+            cur.execute(f"SELECT COUNT(*) FROM chatbot_conversations {where}", params)
+            data["total_conversations"] = cur.fetchone()[0]
+            cur.execute(f"SELECT COUNT(*) FROM chatbot_messages {where}", params)
+            data["total_messages"] = cur.fetchone()[0]
+            cur.execute(f"SELECT AVG(user_messages), AVG(bot_responses) FROM (SELECT COUNT(*) AS user_messages, COUNT(*) AS bot_responses FROM chatbot_messages {where} GROUP BY conversation_id)", params)
+            row = cur.fetchone()
+            if row and row[0]:
+                data["avg_conv_length"] = round(float(row[0]), 1)
+            conn.close()
+        except Exception:
+            pass
+        return jsonify(data)
+
     @app.route("/api/token-savings", methods=["GET"])
     def api_token_savings():
         """Get token savings data (mock — real data requires gateway usage logs)."""
