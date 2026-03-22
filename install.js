@@ -110,9 +110,11 @@ if (subcmd) {
     }
     if (subcmd === "docker:rebuild") {
       if (!dockerAvail) fail("Docker Compose not available");
-const currentBranch = execSync("git branch --show-current 2>/dev/null || git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'dev'").toString().trim();
-      run(`git fetch origin ${currentBranch} && git reset --hard origin/${currentBranch}`);      
-      run("docker compose up --build -d");
+      const currentBranch = execSync("git branch --show-current 2>/dev/null || git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'dev'").toString().trim();
+      run(`git fetch origin ${currentBranch} && git reset --hard origin/${currentBranch}`);
+      const rebuildArg = `REBUILD=$(date +%s)`;
+      run(`docker compose build --build-arg ${rebuildArg} dashboard`);
+      run("docker compose up -d");
       process.exit(0);
     }
     if (subcmd === "docker:logs") {
