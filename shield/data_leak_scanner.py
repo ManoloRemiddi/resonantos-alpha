@@ -41,11 +41,11 @@ PATTERNS = {
         re.compile(r"(?i)aws[_\- ]?secret[_\- ]?access[_\- ]?key\s*[:=]\s*[A-Za-z0-9/+=]{40}"),
         "CRITICAL",
     ),
-    "OpenClaw Gateway Token": (
-        re.compile(r"Gateway[_\- ]?Token", re.IGNORECASE),
+    "OpenClawGatewayTokenRule": (
+        re.compile(r"Gateway[_\- ]?Token\b"),
         "HIGH",
     ),
-    "Bearer Token Pattern": (
+    "BearerTokenRule": (
         re.compile(r"(?i)(?<![A-Za-z0-9])bearer\s+[A-Za-z0-9\-_.~+/]+=*"),
         "HIGH",
     ),
