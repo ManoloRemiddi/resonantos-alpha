@@ -10,8 +10,11 @@ services:
     volumes:
       - ${OPENCLAW_HOME}/.openclaw:/root/.openclaw
       - ./dashboard/config.json:/app/config.json:ro
+      - /home/evan/.nvm/versions/node/v22.20.0/bin:/root/.nvm/bin:ro
+      - /home/evan/.nvm/versions/node/v22.20.0/lib/node_modules:/root/.nvm/node_modules:ro
     environment:
       - PYTHONDONTWRITEBYTECODE=1
+      - PATH=/root/.nvm/bin:/root/.nvm/node_modules/openclaw/node_modules/.bin:${PATH}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:19100/', timeout=5)"]
       interval: 10s
