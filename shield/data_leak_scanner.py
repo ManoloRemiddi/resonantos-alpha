@@ -41,8 +41,12 @@ PATTERNS = {
         re.compile(r"(?i)aws[_\- ]?secret[_\- ]?access[_\- ]?key\s*[:=]\s*[A-Za-z0-9/+=]{40}"),
         "CRITICAL",
     ),
-    "Bearer Token": (
-        re.compile(r"(?i)\bbearer\s+[A-Za-z0-9\-_.~+/]+=*"),
+    "OpenClaw Gateway Token": (
+        re.compile(r"Gateway[_\- ]?Token", re.IGNORECASE),
+        "HIGH",
+    ),
+    "Bearer Token Pattern": (
+        re.compile(r"(?i)(?<![A-Za-z0-9])bearer\s+[A-Za-z0-9\-_.~+/]+=*"),
         "HIGH",
     ),
     "Private Key Block": (
