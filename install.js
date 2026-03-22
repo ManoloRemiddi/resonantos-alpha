@@ -110,6 +110,7 @@ if (subcmd) {
     }
     if (subcmd === "docker:rebuild") {
       if (!dockerAvail) fail("Docker Compose not available");
+      run("git pull --ff-only origin dev");
       run("docker compose up --build -d");
       process.exit(0);
     }
