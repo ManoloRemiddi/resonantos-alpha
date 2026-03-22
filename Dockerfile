@@ -9,4 +9,4 @@ COPY dashboard/ .
 
 EXPOSE 19100
 
-CMD ["python", "server_v2.py"]
+CMD ["python", "-m", "waitress", "--host", "0.0.0.0", "--port", "19100", "server_v2:app"]

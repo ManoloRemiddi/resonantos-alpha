@@ -46,7 +46,7 @@ Before starting, ensure:
 
 ## How It Works
 
-- The container runs the Flask dashboard on port **19100**
+- The container runs the dashboard under a production WSGI server (Waitress) on port **19100**
 - It accesses your host's `~/.openclaw/` config directory (read-only mount)
 - It connects to the OpenClaw gateway running **natively** on your machine at `localhost:18789`
 - Your browser connects to `localhost:19100` (the container)
