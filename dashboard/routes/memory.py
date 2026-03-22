@@ -349,4 +349,75 @@ def register_memory_routes(app):
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
+    @app.route("/api/token-savings", methods=["GET"])
+    def api_token_savings():
+        """Get token savings data (mock — real data requires gateway usage logs)."""
+        from shared import WORKSPACE
+        data_file = WORKSPACE / "dashboard-audit" / "data" / "token-savings.json"
+        if data_file.exists():
+            try:
+                return jsonify(json.loads(data_file.read_text()))
+            except Exception:
+                pass
+        return jsonify({
+            "days": 7,
+            "totals": {"actualApiCost": 0, "withoutRMemoryCostEstimate": 0, "rMemorySavingsEstimate": 0, "savingPctEstimate": 0},
+            "componentBreakdown": [],
+            "dailyCostBreakdown": [],
+            "compressionStats": {},
+            "sources": {"gatewayError": True}
+        })
+
+    @app.route("/api/token-savings/pricing", methods=["PUT"])
+    def api_token_savings_pricing():
+        """Save pricing reference data for token savings calculations."""
+        from shared import WORKSPACE
+        data_file = WORKSPACE / "dashboard-audit" / "data" / "token-savings.json"
+        data_file.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            current = {}
+            if data_file.exists():
+                current = json.loads(data_file.read_text())
+            patch = request.get_json() or {}
+            current["pricingReference"] = patch.get("pricing", {})
+            current["assumptions"] = patch.get("assumptions", {})
+            data_file.write_text(json.dumps(current, indent=2))
+            return jsonify({"ok": True})
+        except Exception as e:
+            return jsonify({"error": str(e), "ok": False}), 500
+
+    @app.route("/api/memory/health", methods=["GET"])
+    def api_memory_health():
+        """Get memory subsystem health status."""
+        from shared import RMEMORY_DIR, RMEMORY_CONFIG
+        health = {
+            "lastTurn": None,
+            "contextWindow": {
+                "maxTokens": 200000,
+                "actualTotalTokens": 0,
+                "segments": {
+                    "systemPrompt": 0,
+                    "workspaceFiles": 0,
+                    "ssotDocs": 0,
+                    "conversation": 0,
+                    "memoryHeaders": 0,
+                    "lcmSummaries": 0
+                },
+                "injectedSSoTs": 0
+            },
+            "injectedSSoTDocs": [],
+            "subsystems": {}
+        }
+        config = {}
+        if RMEMORY_CONFIG.exists():
+            try:
+                config = json.loads(RMEMORY_CONFIG.read_text())
+            except Exception:
+                pass
+        health["subsystems"] = {
+            "rMemory": {"status": "running" if RMEMORY_DIR.exists() else "off", "label": "R-Memory", "detail": str(RMEMORY_DIR), "lastSeen": None},
+            "lcm": {"status": "running", "label": "LCM (Haiku)", "detail": config.get("model", "anthropic/claude-haiku-4-5"), "lastSeen": None}
+        }
+        return jsonify(health)
+
     return app
