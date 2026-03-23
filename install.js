@@ -417,20 +417,22 @@ step("Dashboard config.json", () => {
 
 // ── Docker convenience setup ─────────────────────────────────
 
-step("Docker .env (OPENCLAW_HOME)", () => {
+step("Docker .env (OPENCLAW_HOME + REPO_DIR)", () => {
   const envPath = path.join(SCRIPT_DIR, ".env");
-  const desired = `OPENCLAW_HOME=${HOME}`;
+  const homeLine = `OPENCLAW_HOME=${HOME}`;
+  const repoLine = `REPO_DIR=${SCRIPT_DIR}`;
   try {
     if (dockerAvailable) {
       let lines = [];
       if (fs.existsSync(envPath)) {
         lines = fs.readFileSync(envPath, "utf-8").split(/\r?\n/).filter(Boolean);
-        // Remove existing OPENCLAW_HOME entries
-        lines = lines.filter(l => !/^OPENCLAW_HOME=/.test(l));
+        lines = lines.filter(l => !/^(OPENCLAW_HOME|REPO_DIR)=/.test(l));
       }
-      lines.push(desired);
+      lines.push(homeLine);
+      lines.push(repoLine);
       fs.writeFileSync(envPath, lines.join("\n") + "\n");
-      log(`  ✓ .env updated: ${desired}`);
+      log(`  ✓ .env updated: ${homeLine}`);
+      log(`  ✓ .env updated: ${repoLine}`);
     } else {
       log("  ✓ Docker not detected — skipping .env creation");
     }
