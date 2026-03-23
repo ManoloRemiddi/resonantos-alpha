@@ -21,8 +21,15 @@
 **Prerequisites:** Node.js 18+ · Python 3 · Git
 
 ```bash
-git clone https://github.com/ResonantOS/resonantos-alpha.git ~/resonantos-alpha
-node ~/resonantos-alpha/install.js
+git clone https://github.com/ResonantOS/resonantos-alpha.git
+cd resonantos-alpha
+node install.js
+```
+
+If you want a native-only setup and want to skip Docker configuration:
+
+```bash
+node install.js --docker=false
 ```
 
 ---

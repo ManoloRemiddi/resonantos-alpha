@@ -95,14 +95,32 @@ function writeJsonIfMissing(filePath, data, label) {
 
 // ── Subcommands (optional) ───────────────────────────────────
 
-const subcmd = process.argv[2] || "";
+const cliArgs = process.argv.slice(2);
+
+function parseBoolFlag(name, defaultValue) {
+  const withValue = cliArgs.find(a => a.startsWith(`--${name}=`));
+  if (withValue) {
+    const raw = withValue.split("=", 2)[1].trim().toLowerCase();
+    if (["1", "true", "yes", "y", "on"].includes(raw)) return true;
+    if (["0", "false", "no", "n", "off"].includes(raw)) return false;
+    return defaultValue;
+  }
+  if (cliArgs.includes(`--no-${name}`)) return false;
+  if (cliArgs.includes(`--${name}`)) return true;
+  return defaultValue;
+}
+
+const dockerEnabled = parseBoolFlag("docker", true);
+const subcmd = cliArgs.find(a => !a.startsWith("--")) || "";
 if (subcmd) {
   const isMac = process.platform === "darwin";
   const dockerAvail = (() => {
+    if (!dockerEnabled) return false;
     if (!hasCmd("docker")) return false;
     try { execSync("docker compose version", { stdio: "ignore" }); return true; } catch { return false; }
   })();
   try {
+    if (subcmd.startsWith("docker:") && !dockerEnabled) fail("Docker disabled via --docker=false");
     if (subcmd === "docker:up") {
       if (!dockerAvail) fail("Docker Compose not available");
       run("docker compose up -d");
@@ -158,6 +176,8 @@ if (subcmd) {
       log("  docker:rebuild      Rebuild and start container");
       log("  docker:logs         Tail container logs");
       log("  docker:ensure-env   Write .env and fix gateway wsUrl for Docker Desktop");
+      log("Flags:");
+      log("  --docker=false      Skip Docker checks/config and run native-only install flow");
       process.exit(0);
     }
   } catch (e) {
@@ -184,10 +204,13 @@ const pip = hasCmd("pip3") ? "pip3" : hasCmd("pip") ? "pip" : null;
 step("pip3 or pip", () => { if (!pip) warn("pip not found — dashboard dependencies skipped. Install Python pip to enable."); });
 
 const dockerAvailable = (() => {
+  if (!dockerEnabled) return false;
   if (!hasCmd("docker")) return false;
   try { execSync("docker compose version", { stdio: "ignore" }); return true; } catch { return false; }
 })();
-if (dockerAvailable) {
+if (!dockerEnabled) {
+  log("  ✓ Docker explicitly disabled via --docker=false");
+} else if (dockerAvailable) {
   log("  ✓ Docker + Docker Compose detected — Docker setup available");
 } else if (hasCmd("docker")) {
   log("  ⚠ Docker found but Docker Compose not available");

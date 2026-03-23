@@ -2,6 +2,12 @@
 
 Docker is **optional**. Native installation always works — Docker just simplifies dependencies.
 
+If you do not want Docker, run the installer in native-only mode:
+
+```bash
+node install.js --docker=false
+```
+
 ## Prerequisites
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (macOS/Windows)

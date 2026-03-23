@@ -21,6 +21,12 @@ git checkout dev
 node install.js
 ```
 
+To skip Docker-related setup and use native-only mode:
+
+```bash
+node install.js --docker=false
+```
+
 The installer will:
 - Install OpenClaw globally (if not present)
 - Copy extensions to ~/.openclaw/extensions/
