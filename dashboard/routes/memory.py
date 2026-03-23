@@ -124,6 +124,32 @@ def register_memory_routes(app):
                         pass
         return jsonify(docs)
 
+    @app.route("/api/r-memory/document", methods=["GET"])
+    def api_rmemory_document():
+        """Get content of a single SSoT document by path."""
+        import os
+        doc_path = request.args.get("path", "")
+        if not doc_path:
+            return jsonify({"error": "path required"}), 400
+        openclaw_home = os.environ.get("OPENCLAW_HOME", str(Path.home()))
+        candidates = [
+            Path("/repo/ssot") / doc_path,
+            Path(openclaw_home) / "ros" / "ssot" / doc_path,
+            Path(openclaw_home) / "resonantos-alpha" / "ssot" / doc_path,
+        ]
+        f = None
+        for candidate in candidates:
+            if candidate.exists() and candidate.is_file():
+                f = candidate
+                break
+        if f is None:
+            return jsonify({"error": "not found"}), 404
+        try:
+            content = f.read_text(errors="ignore")
+            return jsonify({"content": content, "path": str(f)})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
     @app.route("/api/r-memory/list")
     def api_rmemory_list():
         """List all memory files."""
