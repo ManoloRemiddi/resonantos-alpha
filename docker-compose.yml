@@ -9,6 +9,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ${OPENCLAW_HOME}/.openclaw:/root/.openclaw
+      - ${HOME}/ros:/repo:ro
       - ./dashboard/config.json:/app/config.json:ro
       - ${HOME}/.nvm/versions/node/v22.20.0/lib/node_modules:/root/.local-nvm/lib/node_modules:ro
       - ${HOME}/.nvm/versions/node/v22.20.0/node_modules:/root/.local-nvm/node_modules:ro

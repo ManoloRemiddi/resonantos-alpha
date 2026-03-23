@@ -87,20 +87,38 @@ def register_memory_routes(app):
 
     @app.route("/api/r-memory/documents")
     def api_rmemory_documents():
-        """List all R-Memory documents with metadata for the SSoT page."""
-        from shared import RMEMORY_DIR
+        """List all SSoT documents from the repo's ssot/ directory for the SSoT page."""
+        import os
+        openclaw_home = os.environ.get("OPENCLAW_HOME", str(Path.home()))
+        candidates = [
+            Path("/repo/ssot"),
+            Path(openclaw_home) / "ros" / "ssot",
+            Path(openclaw_home) / "resonantos-alpha" / "ssot",
+            Path(openclaw_home).parent / "resonantos-alpha" / "ssot",
+            Path(openclaw_home).parent / "ros" / "ssot",
+        ]
+        repo_dir = None
+        for candidate in candidates:
+            if candidate.exists() and candidate.is_dir():
+                repo_dir = candidate
+                break
         docs = []
-        if RMEMORY_DIR.exists():
-            for f in sorted(RMEMORY_DIR.rglob("*"), key=lambda x: x.stat().st_mtime if x.exists() else 0, reverse=True):
-                if f.is_file() and not f.name.startswith("."):
+        if repo_dir:
+            for f in sorted(repo_dir.rglob("*"), key=lambda x: x.stat().st_mtime if x.exists() else 0, reverse=True):
+                if f.is_file() and not f.name.startswith(".") and f.suffix in (".md", ".ai.md"):
+                    rel = f.relative_to(repo_dir)
+                    parts = rel.parts
+                    layer = parts[0] if parts else "unknown"
                     try:
                         content = f.read_text(errors="ignore")
                         docs.append({
-                            "path": str(f.relative_to(RMEMORY_DIR)),
+                            "path": str(rel),
                             "name": f.name,
                             "size": f.stat().st_size,
                             "modified": int(f.stat().st_mtime * 1000),
                             "preview": content[:200] if content else "",
+                            "layer": layer,
+                            "locked": False,
                         })
                     except Exception:
                         pass
