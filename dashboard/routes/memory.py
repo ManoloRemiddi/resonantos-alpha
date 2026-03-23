@@ -194,6 +194,45 @@ def register_memory_routes(app):
                 return jsonify({"error": str(e)}), 500
         return jsonify({})
 
+    @app.route("/api/memory-bridge/config", methods=["GET"])
+    def api_memory_bridge_config_get():
+        """Get Memory Bridge (MCP) configuration."""
+        from shared import RMEMORY_CONFIG
+        cfg = {}
+        if RMEMORY_CONFIG.exists():
+            try:
+                cfg = json.loads(RMEMORY_CONFIG.read_text())
+            except Exception:
+                pass
+        defaults = {
+            "sources": {"ssot_l0": True, "ssot_l1": True, "ssot_l2": False, "ssot_l3": False, "ssot_l4": False, "research": False, "memory_logs": True},
+            "rag_agents": ["main"],
+            "server": {"enabled": False, "port": 18792}
+        }
+        for k, v in defaults.items():
+            if k not in cfg:
+                cfg[k] = v
+        return jsonify(cfg)
+
+    @app.route("/api/memory-bridge/config", methods=["POST"])
+    def api_memory_bridge_config_update():
+        """Update Memory Bridge (MCP) configuration."""
+        from shared import RMEMORY_CONFIG
+        data = request.get_json() or {}
+        try:
+            RMEMORY_CONFIG.parent.mkdir(parents=True, exist_ok=True)
+            existing = {}
+            if RMEMORY_CONFIG.exists():
+                try:
+                    existing = json.loads(RMEMORY_CONFIG.read_text())
+                except Exception:
+                    pass
+            existing.update(data)
+            RMEMORY_CONFIG.write_text(json.dumps(existing, indent=2))
+            return jsonify({"success": True})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
     @app.route("/api/r-memory/config", methods=["POST"])
     def api_rmemory_config_update():
         """Update R-Memory configuration."""
