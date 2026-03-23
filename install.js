@@ -112,7 +112,7 @@ if (subcmd) {
       if (!dockerAvail) fail("Docker Compose not available");
       const currentBranch = execSync("git branch --show-current 2>/dev/null || git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'dev'").toString().trim();
       run(`git fetch origin ${currentBranch} && git reset --hard origin/${currentBranch}`);
-      const rebuildArg = `REBUILD=$(date +%s)`;
+      const rebuildArg = `REBUILD=${Date.now()}`;
       run(`docker compose build --build-arg ${rebuildArg} dashboard`);
       run("docker compose up -d");
       process.exit(0);
@@ -125,13 +125,15 @@ if (subcmd) {
     if (subcmd === "docker:ensure-env") {
       if (!dockerAvail) fail("Docker Compose not available");
       const envPath = path.join(SCRIPT_DIR, ".env");
-      const desired = `OPENCLAW_HOME=${HOME}`;
+      const homeLine = `OPENCLAW_HOME=${HOME}`;
+      const repoLine = `REPO_DIR=${SCRIPT_DIR}`;
       let lines = [];
       if (fs.existsSync(envPath)) {
         lines = fs.readFileSync(envPath, "utf-8").split(/\r?\n/).filter(Boolean);
-        lines = lines.filter(l => !/^OPENCLAW_HOME=/.test(l));
+        lines = lines.filter(l => !/^(OPENCLAW_HOME|REPO_DIR)=/.test(l));
       }
-      lines.push(desired);
+      lines.push(homeLine);
+      lines.push(repoLine);
       fs.writeFileSync(envPath, lines.join("\n") + "\n");
       const ocPath = path.join(HOME, ".openclaw", "openclaw.json");
       if (fs.existsSync(ocPath) && (isWin || isMac)) {
