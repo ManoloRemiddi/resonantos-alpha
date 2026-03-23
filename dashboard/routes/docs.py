@@ -135,6 +135,34 @@ def register_docs_routes(app):
     # Routes
     # -------------------------------------------------------------------------
 
+    @app.route("/api/ssot/keywords")
+    def api_ssot_keywords():
+        """Get or update SSoT document keywords mapping (R-Awareness)."""
+        import json as _json
+        kw_file = _get_workspace() / "r-awareness" / "keywords.json"
+        if request.method == "PUT":
+            try:
+                data = request.get_json() or {}
+                kw_file.parent.mkdir(parents=True, exist_ok=True)
+                existing = {}
+                if kw_file.exists():
+                    try:
+                        existing = _json.loads(kw_file.read_text())
+                    except Exception:
+                        pass
+                existing.update(data)
+                kw_file.write_text(_json.dumps(existing, indent=2))
+                return jsonify({"success": True})
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
+        else:
+            if kw_file.exists():
+                try:
+                    return jsonify(_json.loads(kw_file.read_text()))
+                except Exception:
+                    pass
+            return jsonify({})
+
     @app.route("/api/docs/tree")
     def api_docs_tree():
         """Get full docs tree."""

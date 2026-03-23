@@ -85,6 +85,27 @@ def register_memory_routes(app):
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
+    @app.route("/api/r-memory/documents")
+    def api_rmemory_documents():
+        """List all R-Memory documents with metadata for the SSoT page."""
+        from shared import RMEMORY_DIR
+        docs = []
+        if RMEMORY_DIR.exists():
+            for f in sorted(RMEMORY_DIR.rglob("*"), key=lambda x: x.stat().st_mtime if x.exists() else 0, reverse=True):
+                if f.is_file() and not f.name.startswith("."):
+                    try:
+                        content = f.read_text(errors="ignore")
+                        docs.append({
+                            "path": str(f.relative_to(RMEMORY_DIR)),
+                            "name": f.name,
+                            "size": f.stat().st_size,
+                            "modified": int(f.stat().st_mtime * 1000),
+                            "preview": content[:200] if content else "",
+                        })
+                    except Exception:
+                        pass
+        return jsonify(docs)
+
     @app.route("/api/r-memory/list")
     def api_rmemory_list():
         """List all memory files."""
