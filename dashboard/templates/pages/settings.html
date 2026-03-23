@@ -1,5 +1,14 @@
 {% extends "base.html" %}
 
+{% block extra_js %}
+{% include 'partials/settings/js_init.html' %}
+{% include 'partials/settings/js_knowledge.html' %}
+{% include 'partials/settings/js_knowledge_preview.html' %}
+{% include 'partials/settings/js_skills.html' %}
+{% include 'partials/settings/js_cron_updates.html' %}
+{% endblock %}
+
+{% block content %}
 {% include 'partials/settings/header.html' %}
 {% include 'partials/settings/section_general.html' %}
 {% include 'partials/settings/section_rules.html' %}
@@ -15,11 +24,4 @@
 {% include 'partials/settings/section_skills.html' %}
 {% include 'partials/settings/section_plugins.html' %}
 {% include 'partials/settings/content_footer.html' %}
-
-{% block extra_js %}
-{% include 'partials/settings/js_init.html' %}
-{% include 'partials/settings/js_knowledge.html' %}
-{% include 'partials/settings/js_knowledge_preview.html' %}
-{% include 'partials/settings/js_skills.html' %}
-{% include 'partials/settings/js_cron_updates.html' %}
 {% endblock %}
