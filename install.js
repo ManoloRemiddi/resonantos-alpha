@@ -95,10 +95,13 @@ if (fs.existsSync(path.join(INSTALL_DIR, ".git"))) {
 log("Installing extensions...");
 const extDir = path.join(OPENCLAW_AGENT_DIR, "extensions");
 mkdirp(extDir);
-copyFile(path.join(INSTALL_DIR, "extensions", "r-memory.js"), path.join(extDir, "r-memory.js"));
 copyFile(path.join(INSTALL_DIR, "extensions", "r-awareness.js"), path.join(extDir, "r-awareness.js"));
 copyFile(path.join(INSTALL_DIR, "extensions", "gateway-lifecycle.js"), path.join(extDir, "gateway-lifecycle.js"));
 ok("Extensions installed");
+// Note: LCM (Lossless Context Management) replaces R-Memory.
+// Install via: openclaw plugins install @martian-engineering/lossless-claw
+// Shield, coherence, and other extensions ship as OpenClaw plugins.
+log("  Note: Install LCM plugin separately: openclaw plugins install @martian-engineering/lossless-claw");
 
 // 5. SSoT template
 log("Setting up SSoT documents...");
@@ -134,21 +137,22 @@ if (templatesInstalled > 0) {
   log("  Workspace templates already exist — skipping");
 }
 
-// 7. R-Memory & R-Awareness configs
-mkdirp(path.join(OPENCLAW_WORKSPACE, "r-memory"));
+// 7. R-Awareness config
 mkdirp(path.join(OPENCLAW_WORKSPACE, "r-awareness"));
 
 writeJsonIfMissing(
   path.join(OPENCLAW_WORKSPACE, "r-awareness", "keywords.json"),
   {
-    system: ["L1/SSOT-L1-IDENTITY-STUB.ai.md"],
+    "system overview": ["L1/SSOT-L1-SYSTEM-OVERVIEW.md"],
     openclaw: ["L1/SSOT-L1-IDENTITY-STUB.ai.md"],
-    philosophy: ["L0/PHILOSOPHY.md"],
-    augmentatism: ["L0/PHILOSOPHY.md"],
-    constitution: ["L0/CONSTITUTION.md"],
-    architecture: ["L1/SYSTEM-ARCHITECTURE.md"],
-    memory: ["L1/R-MEMORY.md"],
-    awareness: ["L1/R-AWARENESS.md"],
+    philosophy: ["L0/SSOT-L0-PHILOSOPHY.ai.md"],
+    augmentatism: ["L0/SSOT-L0-PHILOSOPHY.ai.md"],
+    constitution: ["L0/SSOT-L0-CONSTITUTION.ai.md"],
+    "system architecture": ["L1/SSOT-L1-SYSTEM-OVERVIEW.md"],
+    "context management": ["L1/SSOT-L1-LCM.md"],
+    "context injection": ["L1/SSOT-L1-R-AWARENESS.md"],
+    "shield security": ["L1/SSOT-L1-SHIELD.md"],
+    "memory architecture": ["L1/SSOT-L1-MEMORY-ARCHITECTURE.md"]
   },
   "Default keywords"
 );
@@ -164,19 +168,6 @@ writeJsonIfMissing(
     ttlTurns: 15,
   },
   "R-Awareness config"
-);
-
-writeJsonIfMissing(
-  path.join(OPENCLAW_WORKSPACE, "r-memory", "config.json"),
-  {
-    compressTrigger: 36000,
-    evictTrigger: 50000,
-    blockSize: 4000,
-    minCompressChars: 200,
-    compressionModel: "anthropic/claude-haiku-4-5",
-    maxParallelCompressions: 4,
-  },
-  "R-Memory config"
 );
 
 // 8. Setup Agent (onboarding for new users)
@@ -250,7 +241,7 @@ if (fs.existsSync(openclawCfgPath)) {
 // 10. Dashboard dependencies
 log("Installing dashboard dependencies...");
 const dashDir = path.join(INSTALL_DIR, "dashboard");
-const dashDeps = "flask flask-cors psutil websocket-client solana solders";
+const dashDeps = "flask flask-cors waitress requests solana solders";
 try {
   // Try venv first (works on all platforms, avoids PEP 668 issues on Ubuntu 24.04+)
   const venvDir = path.join(dashDir, "venv");
@@ -289,10 +280,11 @@ log(`
 === Installation Complete ===
 
 Next steps:
-  1. Edit ~/resonantos-alpha/dashboard/config.json with your Solana addresses
-  2. Start OpenClaw:  openclaw gateway start
+  1. Start OpenClaw:  openclaw gateway start
+  2. Install LCM:    openclaw plugins install @martian-engineering/lossless-claw
   3. Start Dashboard: cd ~/resonantos-alpha/dashboard && ${python} server_v2.py
   4. Open http://localhost:19100
+  5. Run the Setup Agent to configure your system
 
 Docs: https://github.com/ResonantOS/resonantos-alpha
 `);
