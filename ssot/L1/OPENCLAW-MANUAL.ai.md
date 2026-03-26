@@ -1,4 +1,4 @@
-Updated: 2026-03-24 (version 2026.3.22)
+Updated: 2026-03-26 (version 2026.3.24)
 # OpenClaw Manual (Compressed) — L1 Reference
 
 > Load this for full OpenClaw awareness. ~2,500 tokens vs ~15,000+ raw.

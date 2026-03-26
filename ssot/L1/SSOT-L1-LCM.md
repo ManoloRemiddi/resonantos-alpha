@@ -1,11 +1,11 @@
 # LCM — Lossless Context Management
 
-**Version:** 0.2.5 (update to 0.3.0 pending)
+**Version:** 0.5.2
 **Plugin:** `@martian-engineering/lossless-claw`
 **Status:** Active — primary context engine
 **DB:** `~/.openclaw/lcm.db` (SQLite)
 **Source:** [github.com/Martian-Engineering/lossless-claw](https://github.com/Martian-Engineering/lossless-claw)
-**Updated:** 2026-03-14
+**Updated:** 2026-03-26
 
 ---
 
