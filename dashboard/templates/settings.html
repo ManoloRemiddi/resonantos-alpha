@@ -687,6 +687,263 @@
 }
 .agent-count { font-size: 0.6rem; color: #666; display: block; margin-top: 4px; }
 .skill-category-badge { font-size: 0.55rem; padding: 1px 4px; border-radius: 3px; margin-left: 6px; white-space: nowrap; }
+.addons-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+.addons-notice {
+    display: none;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px 18px;
+    border-radius: 12px;
+    border: 1px solid rgba(74, 222, 128, 0.28);
+    background: rgba(74, 222, 128, 0.08);
+    color: var(--text-secondary, #cbd5e1);
+}
+.addons-notice strong {
+    color: var(--text-primary, #fff);
+}
+.addons-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+}
+.addon-card {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 18px;
+    min-height: 100%;
+    cursor: pointer;
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.18);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.addon-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(74, 222, 128, 0.35);
+    box-shadow: 0 18px 32px rgba(0, 0, 0, 0.24);
+}
+.addon-screenshot {
+    position: relative;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.08);
+    overflow: hidden;
+}
+.addon-screenshot.is-coming {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+}
+.addon-screenshot.is-enabled {
+    background: linear-gradient(135deg, #0f3460 0%, #1a5276 100%);
+}
+.addon-screenshot::before {
+    content: "";
+    position: absolute;
+    inset: 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.08);
+}
+.addon-screenshot-inner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+.addon-screenshot-icon {
+    font-size: 3rem;
+    line-height: 1;
+    opacity: 0.3;
+}
+.addon-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+.addon-title-wrap {
+    min-width: 0;
+}
+.addon-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    font-size: 1rem;
+    color: var(--text-primary, #fff);
+}
+.addon-icon {
+    font-size: 1.35rem;
+    line-height: 1;
+}
+.addon-id {
+    margin-top: 6px;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted, #94a3b8);
+}
+.addon-description {
+    margin: 0;
+    color: var(--text-secondary, #cbd5e1);
+    line-height: 1.55;
+    font-size: 0.9rem;
+}
+.addon-footer {
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+.addon-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 0.73rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+.addon-badge-core,
+.addon-badge-enabled {
+    color: #86efac;
+    background: rgba(34, 197, 94, 0.14);
+    border-color: rgba(34, 197, 94, 0.28);
+}
+.addon-badge-coming {
+    color: #fcd34d;
+    background: rgba(251, 191, 36, 0.14);
+    border-color: rgba(251, 191, 36, 0.28);
+}
+.addon-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-secondary, #cbd5e1);
+    font-size: 0.82rem;
+}
+.addon-toggle .toggle-switch {
+    flex-shrink: 0;
+}
+.addon-detail-modal-overlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(0,0,0,0.6);
+    z-index: 1300;
+}
+.addon-detail-modal-overlay.active {
+    display: flex;
+}
+.addon-detail-modal {
+    position: relative;
+    width: min(520px, 100%);
+    padding: 24px;
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: var(--card-bg, #1a1a2e);
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+}
+.addon-detail-close {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted, #94a3b8);
+    font-size: 1.6rem;
+    line-height: 1;
+    cursor: pointer;
+}
+.addon-detail-close:hover {
+    color: var(--text-primary, #fff);
+}
+.addon-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+    padding-right: 28px;
+}
+.addon-detail-icon {
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.05);
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+.addon-detail-name {
+    margin: 0;
+    color: var(--text-primary, #fff);
+    font-size: 1.35rem;
+}
+.addon-detail-description {
+    margin: 0 0 18px;
+    color: var(--text-secondary, #cbd5e1);
+    line-height: 1.65;
+}
+.addon-detail-meta {
+    display: grid;
+    gap: 12px;
+}
+.addon-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 0;
+    border-top: 1px solid rgba(255,255,255,0.07);
+}
+.addon-detail-label {
+    color: var(--text-muted, #94a3b8);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+.addon-detail-value {
+    color: var(--text-primary, #fff);
+    text-align: right;
+}
+.addon-detail-id {
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted, #94a3b8);
+}
+@media (max-width: 1100px) {
+    .addons-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 640px) {
+    .addons-grid {
+        grid-template-columns: 1fr;
+    }
+    .addon-footer {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
 </style>
 <div class="settings-layout">
     <!-- Settings Navigation -->
@@ -706,6 +963,10 @@
         <a href="#subscription" class="settings-nav-item" onclick="showSection('subscription')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
             Subscription
+        </a>
+        <a href="#addons" class="settings-nav-item" onclick="showSection('addons')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18"/><path d="M3 12h18"/></svg>
+            Resonant Add-ons
         </a>
         <a href="#notifications" class="settings-nav-item" onclick="showSection('notifications')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -745,13 +1006,13 @@
             <span id="updateBadge" class="update-badge" style="display:none;" aria-label="Update available"></span>
         </a>
     </nav>
-    
+
     <!-- Settings Content -->
     <div class="settings-content">
         <!-- General Section -->
         <section class="settings-section active" id="generalSection">
             <h2 class="section-title">General Settings</h2>
-            
+
             <div class="settings-card">
                 <div class="setting-item">
                     <div class="setting-info">
@@ -766,7 +1027,7 @@
                         </select>
                     </div>
                 </div>
-                
+
                 <div class="setting-item">
                     <div class="setting-info">
                         <h3>Auto Refresh</h3>
@@ -779,7 +1040,7 @@
                         </label>
                     </div>
                 </div>
-                
+
                 <div class="setting-item">
                     <div class="setting-info">
                         <h3>Refresh Interval</h3>
@@ -796,7 +1057,7 @@
                 </div>
             </div>
         </section>
-        
+
         <!-- Rules Section (Logician) -->
         <section class="settings-section" id="rulesSection">
             <h2 class="section-title">Logician Rules</h2>
@@ -832,7 +1093,7 @@
         <section class="settings-section" id="subscriptionSection">
             <h2 class="section-title">Subscription</h2>
             <p class="section-description">Choose your ResonantOS plan.</p>
-            
+
             <!-- Subscription Tiers -->
             <div class="subscription-tiers-grid">
                 <!-- Free Tier - Current -->
@@ -850,7 +1111,7 @@
                         <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Community Support</li>
                     </ul>
                 </div>
-                
+
                 <!-- Professional Tier - Coming Soon -->
                 <div class="subscription-tier-card coming-soon" data-tier="professional">
                     <div class="tier-coming-soon-badge">Coming Soon</div>
@@ -859,7 +1120,7 @@
                         <h3>Professional</h3>
                     </div>
                 </div>
-                
+
                 <!-- Business Tier - Coming Soon -->
                 <div class="subscription-tier-card coming-soon" data-tier="business">
                     <div class="tier-coming-soon-badge">Coming Soon</div>
@@ -870,12 +1131,115 @@
                 </div>
             </div>
         </section>
-        
+
+        <section class="settings-section" id="addonsSection">
+            <h2 class="section-title">Resonant Add-ons</h2>
+            <p class="section-description">Optional modules that extend the dashboard. Enable or disable as needed.</p>
+
+            <div class="addons-panel">
+                <div class="addons-notice" id="addonRestartNotice">
+                    <div style="font-size:1.1rem;line-height:1;">&#9888;</div>
+                    <div><strong>Restart recommended.</strong> Module changes may require a dashboard or gateway restart before every route and sidebar item updates.</div>
+                </div>
+
+                <div class="addons-grid">
+                    {% for mod in all_modules if not mod.core %}
+                    <article class="addon-card" data-module-id="{{ mod.id }}" data-core="{% if mod.core %}true{% else %}false{% endif %}" onclick="openAddonDetail('{{ mod.id }}', event)">
+                        <div class="addon-screenshot {% if mod.enabled %}is-enabled{% else %}is-coming{% endif %}" aria-hidden="true">
+                            <div class="addon-screenshot-inner">
+                                {% if mod.screenshot %}
+                                <img src="{{ mod.screenshot }}" alt="{{ mod.name }}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">
+                                {% else %}
+                                <div class="addon-screenshot-icon">{{ mod.icon or '🧩' }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="addon-header">
+                            <div class="addon-title-wrap">
+                                <h3 class="addon-title">
+                                    <span class="addon-icon">{{ mod.icon or '🧩' }}</span>
+                                    <span class="addon-name">{{ mod.name }}</span>
+                                </h3>
+                                <div class="addon-id">{{ mod.id }}</div>
+                            </div>
+                            {% if mod.core %}
+                            <span class="addon-badge addon-badge-core">Core</span>
+                            {% elif mod.enabled %}
+                            <span class="addon-badge addon-badge-enabled">Enabled</span>
+                            {% else %}
+                            <span class="addon-badge addon-badge-coming">Coming Soon</span>
+                            {% endif %}
+                        </div>
+
+                        <p class="addon-description">{{ mod.description }}</p>
+
+                        <div class="addon-footer">
+                            <div class="addon-status-note" style="font-size:0.78rem;color:var(--text-muted, #94a3b8);">
+                                {% if mod.core %}
+                                Included with the dashboard core experience.
+                                {% elif mod.enabled %}
+                                Active and available in this installation.
+                                {% else %}
+                                Present in the module registry but not currently enabled.
+                                {% endif %}
+                            </div>
+                            {% if not mod.core %}
+                            <label class="addon-toggle" onclick="event.stopPropagation()">
+                                <span>Toggle</span>
+                                <span class="toggle-switch">
+                                    <input type="checkbox" {% if mod.enabled %}checked{% endif %} onchange="toggleModule('{{ mod.id }}', this)" aria-label="Toggle {{ mod.name }}">
+                                    <span class="slider"></span>
+                                </span>
+                            </label>
+                            {% endif %}
+                        </div>
+                    </article>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="addon-detail-modal-overlay" id="addonDetailModal" onclick="if (event.target === this) closeAddonDetail()">
+                <div class="addon-detail-modal" role="dialog" aria-modal="true" aria-labelledby="addonDetailName">
+                    <button type="button" class="addon-detail-close" onclick="closeAddonDetail()" aria-label="Close add-on details">&times;</button>
+                    <div class="addon-detail-header">
+                        <div class="addon-detail-icon" id="addonDetailIcon">🧩</div>
+                        <div>
+                            <h3 class="addon-detail-name" id="addonDetailName">Add-on</h3>
+                            <div class="addon-detail-id" id="addonDetailId">module.id</div>
+                        </div>
+                    </div>
+
+                    <p class="addon-detail-description" id="addonDetailDescription"></p>
+
+                    <div class="addon-detail-meta">
+                        <div class="addon-detail-row">
+                            <span class="addon-detail-label">Status</span>
+                            <span class="addon-badge addon-badge-coming" id="addonDetailStatus">Coming Soon</span>
+                        </div>
+                        <div class="addon-detail-row" id="addonDetailToggleRow">
+                            <span class="addon-detail-label">Toggle</span>
+                            <label class="addon-toggle" onclick="event.stopPropagation()">
+                                <span class="toggle-switch">
+                                    <input type="checkbox" id="addonDetailToggleInput" onchange="toggleModule(document.getElementById('addonDetailModal').dataset.moduleId, this)" aria-label="Toggle add-on from detail modal">
+                                    <span class="slider"></span>
+                                </span>
+                            </label>
+                        </div>
+                        <div class="addon-detail-row">
+                            <span class="addon-detail-label">Module ID</span>
+                            <span class="addon-detail-value addon-detail-id" id="addonDetailModuleValue">module.id</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Permissions Section -->
         <section class="settings-section" id="permissionsSection">
             <h2 class="section-title">AI Permissions</h2>
             <p class="section-description">Control what capabilities the AI has access to. Changes require confirmation.</p>
-            
+
             <div class="settings-card permissions-card">
                 <div class="setting-item permission">
                     <div class="setting-info">
@@ -889,7 +1253,7 @@
                         </label>
                     </div>
                 </div>
-                
+
                 <div class="setting-item permission">
                     <div class="setting-info">
                         <h3>Shell Commands</h3>
@@ -902,7 +1266,7 @@
                         </label>
                     </div>
                 </div>
-                
+
                 <div class="setting-item permission">
                     <div class="setting-info">
                         <h3>File Write Access</h3>
@@ -915,7 +1279,7 @@
                         </label>
                     </div>
                 </div>
-                
+
                 <div class="setting-item permission sensitive">
                     <div class="setting-info">
                         <h3>External Messaging</h3>
@@ -928,7 +1292,7 @@
                         </label>
                     </div>
                 </div>
-                
+
                 <div class="setting-item permission">
                     <div class="setting-info">
                         <h3>Tool Installation</h3>
@@ -943,11 +1307,11 @@
                 </div>
             </div>
         </section>
-        
+
         <!-- Notifications Section -->
         <section class="settings-section" id="notificationsSection">
             <h2 class="section-title">Notifications</h2>
-            
+
             <div class="settings-card">
                 <div class="setting-item">
                     <div class="setting-info">
@@ -961,7 +1325,7 @@
                         </label>
                     </div>
                 </div>
-                
+
                 <div class="setting-item">
                     <div class="setting-info">
                         <h3>Alert Level</h3>
@@ -975,7 +1339,7 @@
                         </select>
                     </div>
                 </div>
-                
+
                 <div class="setting-item">
                     <div class="setting-info">
                         <h3>Sound</h3>
@@ -990,11 +1354,11 @@
                 </div>
             </div>
         </section>
-        
+
         <!-- Advanced Section -->
         <section class="settings-section" id="advancedSection">
             <h2 class="section-title">Advanced Settings</h2>
-            
+
             <div class="settings-card">
                 <div class="setting-item">
                     <div class="setting-info">
@@ -1010,7 +1374,7 @@
                         </select>
                     </div>
                 </div>
-                
+
                 <div class="setting-item">
                     <div class="setting-info">
                         <h3>Debug Mode</h3>
@@ -1024,10 +1388,10 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="settings-card danger-zone">
                 <h3>Danger Zone</h3>
-                
+
                 <div class="setting-item">
                     <div class="setting-info">
                         <h3>Clear Cache</h3>
@@ -1037,7 +1401,7 @@
                         <button class="btn-danger" onclick="clearCache()">Clear Cache</button>
                     </div>
                 </div>
-                
+
                 <div class="setting-item">
                     <div class="setting-info">
                         <h3>Reset Settings</h3>
@@ -1216,7 +1580,7 @@
   "mcpServers": {
     "resonantos": {
       "command": "node",
-      "args": ["$RESONANTOS_HOME/mcp-server/src/index.js"]
+      "args": ["./mcp-server/src/index.js"]
     }
   }
 }</div>
@@ -1446,9 +1810,9 @@
         <div class="modal-body">
             <p class="warning-text">This action will reset all settings to their default values. This cannot be undone.</p>
             <p>To confirm, type <strong>RESET</strong> below:</p>
-            <input type="text" id="resetConfirmInput" class="confirm-input" 
-                   placeholder="Type RESET to confirm" 
-                   onkeyup="checkResetConfirmation()" 
+            <input type="text" id="resetConfirmInput" class="confirm-input"
+                   placeholder="Type RESET to confirm"
+                   onkeyup="checkResetConfirmation()"
                    autocomplete="off">
         </div>
         <div class="modal-footer">
@@ -1486,7 +1850,7 @@ function showSection(section) {
 
     document.querySelectorAll('.settings-nav-item').forEach(function(i) { i.classList.remove('active'); });
     document.querySelectorAll('.settings-section').forEach(function(s) { s.classList.remove('active'); });
-    
+
     var navLink = document.querySelector('a[href="#' + section + '"]');
     if (navLink) navLink.classList.add('active');
     sec.classList.add('active');
@@ -1504,6 +1868,99 @@ function syncSectionWithHash() {
     if (section && document.getElementById(section + 'Section')) {
         showSection(section);
     }
+}
+
+async function toggleModule(moduleId, el) {
+    try {
+        const res = await fetch(`/api/modules/${moduleId}/toggle`, {method:'POST'});
+        const data = await res.json();
+        if (data.ok) {
+            const card = findAddonCard(moduleId);
+            if (card) updateAddonCardState(card, data.enabled);
+            if (el && el.type === 'checkbox') el.checked = !!data.enabled;
+            const notice = document.getElementById('addonRestartNotice');
+            if (notice) notice.style.display = 'flex';
+        }
+    } catch(e) { console.error('Toggle failed:', e); }
+}
+
+function findAddonCard(moduleId) {
+    return Array.from(document.querySelectorAll('.addon-card')).find(function(card) {
+        return card.dataset.moduleId === moduleId;
+    }) || null;
+}
+
+function updateAddonCardState(card, enabled) {
+    const badge = card.querySelector('.addon-badge');
+    const screenshot = card.querySelector('.addon-screenshot');
+    const statusNote = card.querySelector('.addon-status-note');
+    const cardToggle = card.querySelector('.addon-toggle input');
+
+    if (badge) {
+        badge.className = 'addon-badge ' + (enabled ? 'addon-badge-enabled' : 'addon-badge-coming');
+        badge.textContent = enabled ? 'Enabled' : 'Coming Soon';
+    }
+    if (screenshot) {
+        screenshot.classList.toggle('is-enabled', enabled);
+        screenshot.classList.toggle('is-coming', !enabled);
+    }
+    if (statusNote) {
+        statusNote.textContent = enabled
+            ? 'Active and available in this installation.'
+            : 'Present in the module registry but not currently enabled.';
+    }
+    if (cardToggle) cardToggle.checked = enabled;
+
+    const modal = document.getElementById('addonDetailModal');
+    if (modal && modal.classList.contains('active') && modal.dataset.moduleId === card.dataset.moduleId) {
+        syncAddonDetailModal(card);
+    }
+}
+
+function syncAddonDetailModal(card) {
+    const modal = document.getElementById('addonDetailModal');
+    if (!modal || !card) return;
+
+    const icon = card.querySelector('.addon-icon');
+    const name = card.querySelector('.addon-name');
+    const description = card.querySelector('.addon-description');
+    const badge = card.querySelector('.addon-badge');
+    const toggle = card.querySelector('.addon-toggle input');
+    const isCore = card.dataset.core === 'true';
+    const statusText = badge ? badge.textContent.trim() : (toggle && toggle.checked ? 'Enabled' : 'Coming Soon');
+
+    modal.dataset.moduleId = card.dataset.moduleId || '';
+    document.getElementById('addonDetailIcon').textContent = icon ? icon.textContent.trim() : '🧩';
+    document.getElementById('addonDetailName').textContent = name ? name.textContent.trim() : (card.dataset.moduleId || 'Add-on');
+    document.getElementById('addonDetailId').textContent = card.dataset.moduleId || '';
+    document.getElementById('addonDetailModuleValue').textContent = card.dataset.moduleId || '';
+    document.getElementById('addonDetailDescription').textContent = description ? description.textContent.trim() : '';
+
+    const detailStatus = document.getElementById('addonDetailStatus');
+    detailStatus.className = 'addon-badge ' + (toggle && toggle.checked ? 'addon-badge-enabled' : 'addon-badge-coming');
+    detailStatus.textContent = statusText;
+
+    const toggleRow = document.getElementById('addonDetailToggleRow');
+    const detailToggle = document.getElementById('addonDetailToggleInput');
+    toggleRow.style.display = isCore || !toggle ? 'none' : 'flex';
+    detailToggle.checked = !!(toggle && toggle.checked);
+}
+
+function openAddonDetail(modId, event) {
+    if (event && event.target && event.target.closest('.addon-toggle')) return;
+
+    const card = findAddonCard(modId);
+    const modal = document.getElementById('addonDetailModal');
+    if (!card || !modal) return;
+
+    syncAddonDetailModal(card);
+    modal.classList.add('active');
+}
+
+function closeAddonDetail() {
+    const modal = document.getElementById('addonDetailModal');
+    if (!modal) return;
+    modal.classList.remove('active');
 }
 
 async function loadPlugins() {
@@ -1713,18 +2170,18 @@ async function loadSettings() {
     try {
         const res = await fetch('/api/settings');
         const settings = await res.json();
-        
+
         document.getElementById('themeSelect').value = settings.theme;
         document.getElementById('autoRefresh').checked = settings.autoRefresh;
         document.getElementById('refreshInterval').value = settings.refreshInterval;
-        
+
         // Load permissions
         document.getElementById('permBrowser').checked = settings.permissions.browserAccess;
         document.getElementById('permShell').checked = settings.permissions.shellCommands;
         document.getElementById('permFileWrite').checked = settings.permissions.fileWrite;
         document.getElementById('permMessaging').checked = settings.permissions.externalMessaging;
         document.getElementById('permToolInstall').checked = settings.permissions.toolInstallation;
-        
+
     } catch (error) {
         console.error('Error loading settings:', error);
     }
@@ -1744,16 +2201,16 @@ function confirmPermission(checkbox, permName) {
         externalMessaging: `${action} external messaging? This allows the AI to send emails and messages.`,
         toolInstallation: `${action} tool installation?`
     };
-    
+
     pendingPermission = {
         checkbox: checkbox,
         permName: permName,
         value: checkbox.checked
     };
-    
+
     // Revert the checkbox until confirmed
     checkbox.checked = !checkbox.checked;
-    
+
     document.getElementById('confirmMessage').textContent = messages[permName];
     document.getElementById('confirmModal').classList.add('active');
 }
@@ -1765,15 +2222,15 @@ function cancelPermission() {
 
 async function applyPermission() {
     if (!pendingPermission) return;
-    
+
     const { checkbox, permName, value } = pendingPermission;
     checkbox.checked = value;
-    
+
     document.getElementById('confirmModal').classList.remove('active');
-    
+
     await saveSettings();
     showToast(`Permission ${value ? 'enabled' : 'disabled'}`);
-    
+
     pendingPermission = null;
 }
 
@@ -1791,7 +2248,7 @@ async function saveSettings() {
             toolInstallation: document.getElementById('permToolInstall').checked
         }
     };
-    
+
     try {
         await fetch('/api/settings', {
             method: 'POST',
@@ -1831,9 +2288,9 @@ function confirmResetSettings() {
         showToast('Type RESET to confirm', 'error');
         return;
     }
-    
+
     document.getElementById('resetConfirmModal').classList.remove('active');
-    
+
     // Actually reset settings
     localStorage.clear();
     showToast('Settings reset to defaults');
