@@ -1,113 +1,139 @@
-# SSOT-L1-MEMORY-LOG — Shared Memory Log Protocol
+# SSOT-L1-MEMORY-LOG — Memory Log Format Guidelines
+Updated: {{GENERATED_DATE}}
 
-> **Level:** L1 (Architecture)
-> **Created:** 2026-03-11
-> **Status:** Active
-> **Triggers:** "memory log", "shared memory log", "shared log"
+## Purpose
+Memory logs capture high-quality session summaries in a structured 3-part format: Process Log + Trilemma + DNA. These logs serve as:
+- Session continuity across context resets
+- Training data for fine-tuning
+- Audit trail for decisions
+- Failure analysis database
 
----
+## Format: 3-Part DNA
 
-## What Is It
+### Part 1: Process Log
+Strategic view of the session — what happened, why it matters, what was learned.
 
-The **Shared Memory Log** is the structured record of our collaboration. Not a summary — a diagnostic artifact. It captures what we built, what broke, why it broke, and what we learned. It's designed for both human review and future model fine-tuning.
-
-## Location
-
-```
-~/.openclaw/workspace/memory/shared-log/
-```
-
-- **Preamble:** `0000-PREAMBLE.md` (protocols, heuristics — read once for context)
-- **Entries:** `MEMORY-LOG-YYYY-MM-DD.md` (current format, March 2026+)
-- **Legacy entries:** `YYYY-MM-DD.md` (June 2025 – October 2025, pre-OpenClaw era)
-
-## When to Create
-
-- End of each working day (automated via Memory Archivist V2 cron at 05:30 Rome)
-- On explicit request: "create a memory log", "write the memory log"
-- After significant sessions with failures, breakthroughs, or strategic pivots
-
-## Format (3-Part Structure)
-
-Every entry follows this exact structure:
-
+**Structure:**
 ```markdown
-## MEMORY LOG ENTRY YYYY-MM-DD HH:MM
+## PART 1: PROCESS LOG
 
-PART 1: PROCESS LOG (The strategic narrative.)
+### Context
+What was the starting state?
 
-* Human Practitioner's Core Input:
-[The raw, unfiltered thought or directive that initiated the session. The 'Baseline'.]
+### Work Done
+What actions were taken?
 
-* Augmentor's Analysis & DNA Declaration:
-[Initial diagnosis, declared vector (Build/Research/Content), strategic framing.]
+### Decisions Made
+What choices were made and why?
 
-* The Struggle (Decisions, Pivots & Failures):
-- [1-3 critical moments of decision, confusion, or breakthrough]
-- [Document what went wrong and why — this is the most valuable part]
+### Results
+What was the outcome?
 
-* Final Output (The 'Artifacts'):
-- **~HH:MM** [Artifact 1 — what was built/delivered, with specifics]
-- **~HH:MM** [Artifact 2]
-- [Include timestamps, commit hashes, file paths where applicable]
-
-* System Upgrades:
-- [Any new protocols, config changes, infrastructure improvements]
-- [Include file paths and what changed]
-
-PART 2: TRILEMMA DIAGNOSIS STAMP (Systemic Stability Check)
-
-* FAILURE EVENT:
-[Describe any failure, error, or instability from the session]
-
-* PRIMARY CAUSE: [F1 / F2 / F3]
-- F1 = Incomplete World Model (rule was poorly defined in protocols)
-- F2 = Protocol Violation (I violated my own rules — e.g., claimed "fixed" without testing)
-- F3 = Bad Prompt (human command contained ambiguity or anthropomorphic trap)
-
-PART 3: DNA SEQUENCING (MACHINE LEARNING LAYER)
-
-[DNA: TAG_NAME]
-* [CONTEXT]: [What triggered the behavior]
-* [MECHANISM (The "Why")]: [Internal failure state — e.g., "prioritized speed over accuracy"]
-* [PROMPT_VIOLATION]: [The resulting bad output or decision]
-* [CORRECTED_POLICY]: [The ideal reasoning — what should happen next time]
-
-[Repeat DNA blocks for each distinct lesson learned]
-
----
-Generated: YYYY-MM-DD HH:MM
+### Key Insights
+What was learned?
 ```
 
-## DNA Sequencing — Purpose
-
-The DNA blocks are **fine-tuning data**. Each one is a labeled correction pair:
-- `CONTEXT` + `PROMPT_VIOLATION` = the wrong behavior
-- `MECHANISM` + `CORRECTED_POLICY` = the diagnosis and correct behavior
-
-Tag names should be descriptive: `HARDEN_VIOLATION`, `BACKUP_FAILURE`, `VIDEO_AGGRESSION`, etc.
-
-## Trilemma Factors
-
-| Factor | Name | Meaning |
-|--------|------|---------|
-| F1 | Incomplete World Model | Protocol/rule gap — the system didn't constrain properly |
-| F2 | Protocol Violation | Rules existed but were ignored or misapplied |
-| F3 | Bad Prompt | Human input was ambiguous, contained traps, or lacked specificity |
-
-## Governing Heuristic
-
-**Strategic Capitalization (from Preamble):** All work — especially "one-off" tasks — must be evaluated for broader capitalization. Can this failure become a protocol? Can this artifact become content? Signal-to-noise analysis before discarding.
-
-## Rules
-
-1. Every entry MUST have all 3 parts. Placeholders are acceptable if nothing fits, but the structure is non-negotiable.
-2. Timestamps on artifacts where possible.
-3. Commit hashes and file paths for technical work.
-4. DNA tags must be unique and descriptive.
-5. Trilemma diagnosis is mandatory — even if the session was clean, state "No failure events."
-6. **NEVER publish to GitHub.** These files are identity data. Local + encrypted backup only.
+**Quality bar:** Focus on WHY, not just WHAT. Capture reasoning, not just actions.
 
 ---
 
-*Last updated: 2026-03-11*
+### Part 2: Trilemma Diagnosis
+For failures or problems, classify the root cause:
+
+- **F1 (Wrong Approach):** The method/strategy was incorrect
+- **F2 (Missing Data):** Lacked necessary information
+- **F3 (Bad Prompt):** Instructions were unclear or wrong
+
+**Structure:**
+```markdown
+## PART 2: TRILEMMA DIAGNOSIS
+
+**Failure event:** [description]
+
+- **F1 (rule gap):** [if applicable]
+- **F2 (protocol violation):** [if applicable]
+- **F3 (bad prompt):** [if applicable]
+
+**Root cause:** [single sentence]
+
+**Partial mitigation:** [what was done]
+```
+
+**Skip this section if:** No failures occurred in the session.
+
+---
+
+### Part 3: DNA Sequencing
+Extract reusable patterns from the session.
+
+**Structure:**
+```markdown
+## PART 3: DNA SEQUENCING
+
+### [DNA: PATTERN_NAME]
+**Context:** [when this pattern appeared]
+**Mechanism:** [how it works]
+**Prompt violation:** [what assumption was wrong]
+**Corrected policy:** [what to do instead]
+```
+
+**Quality bar:**
+- Each DNA entry must be actionable
+- Focus on novel learnings, not obvious facts
+- Include enough context to apply the pattern later
+
+---
+
+## File Naming Convention
+`MEMORY-LOG-YYYY-MM-DD[-suffix].md`
+
+Examples:
+- `MEMORY-LOG-2026-03-27.md` (single log for the day)
+- `MEMORY-LOG-2026-03-27-MORNING.md` (multiple logs)
+- `MEMORY-LOG-2026-03-27-ALPHA-WORK.md` (topic-specific)
+
+## Storage Location
+`{{WORKSPACE_PATH}}/memory/shared-log/`
+
+## Generation Triggers
+
+### Manual
+Write a memory log when:
+- Natural pause in work (topic change, user steps away)
+- Major decision made
+- Failure occurred and was resolved
+- End of session
+
+### Automatic
+Cron jobs generate memory logs:
+- **intraday-memory-log:** Every 3 hours (live session data)
+- **daily-memory-log-dna:** 04:30 daily (safety net from session history)
+
+## Breadcrumbs (Real-Time Capture)
+During work, append to `{{WORKSPACE_PATH}}/memory/breadcrumbs.jsonl`:
+
+```json
+{"ts":"ISO","event":"what happened","broke":"what went wrong (if anything)","fcode":"F1|F2|F3|null","dna_tag":"SHORT_TAG"}
+```
+
+Breadcrumbs feed into memory log generation.
+
+---
+
+## Quality Examples
+
+### Good Memory Log
+- Captures WHY decisions were made
+- Includes failure analysis with root cause
+- Extracts reusable patterns (DNA)
+- Enough context to understand 6 months later
+
+### Bad Memory Log
+- Just lists actions taken ("did X, then Y, then Z")
+- No reasoning or insights
+- Generic patterns that don't help future work
+- Missing context
+
+---
+
+_This document defines the memory log format. Update as the format evolves._

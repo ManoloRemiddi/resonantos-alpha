@@ -279,12 +279,32 @@ if (!fs.existsSync(cfgPath) && fs.existsSync(cfgExample)) {
 log(`
 === Installation Complete ===
 
-Next steps:
-  1. Start OpenClaw:  openclaw gateway start
-  2. Install LCM:    openclaw plugins install @martian-engineering/lossless-claw
-  3. Start Dashboard: cd ~/resonantos-alpha/dashboard && ${python} server_v2.py
-  4. Open http://localhost:19100
-  5. Run the Setup Agent to configure your system
+ResonantOS has been installed. You have two setup paths:
+
+**A. Fresh OpenClaw Install (first-time users):**
+  1. Run OpenClaw onboarding:
+     openclaw onboard --secret-input-mode ref
+     (Sets up gateway, AI providers, channels, stores secrets securely)
+
+  2. Verify gateway is running:
+     openclaw gateway status
+
+  3. Run ResonantOS Setup Agent:
+     openclaw chat --agent setup
+     (Configures ResonantOS layer: identity, rules, SSoT population)
+
+**B. Existing OpenClaw (already configured):**
+  1. Verify gateway is running:
+     openclaw gateway status
+
+  2. Run ResonantOS Setup Agent directly:
+     openclaw chat --agent setup
+     (It will detect existing OpenClaw and configure ResonantOS only)
+
+**After Setup Agent completes:**
+  • Install LCM: openclaw plugins install @martian-engineering/lossless-claw
+  • Start Dashboard: cd ~/resonantos-alpha/dashboard && ${python} server_v2.py
+  • Open http://localhost:19100
 
 Docs: https://github.com/ResonantOS/resonantos-alpha
 `);

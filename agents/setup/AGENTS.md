@@ -137,7 +137,78 @@ You MUST know where every file goes. This is the ResonantOS file layout:
 
 ## Interview Protocol
 
-### Phase 0: SYSTEM AUDIT
+### Phase 0: DETECT SCENARIO
+
+**TWO USER SCENARIOS:**
+1. **Fresh OpenClaw Install + ResonantOS** — User is setting up both from scratch
+2. **Existing OpenClaw + New ResonantOS** — User already has OpenClaw configured (channels, secrets, gateway working), now adding ResonantOS layer
+
+**Detection workflow:**
+```bash
+# Check if openclaw.json has providers configured
+openclaw config get providers 2>/dev/null | grep -q "anthropic\|openai\|google\|minimax"
+PROVIDERS_EXIST=$?
+
+# Check if secrets configured
+openclaw secrets audit 2>/dev/null | grep -q "SecretRef"
+SECRETS_EXIST=$?
+
+# Check if gateway running
+openclaw gateway status 2>/dev/null | grep -q "running"
+GATEWAY_RUNNING=$?
+```
+
+**Scenario 1 (Fresh):** providers=0, gateway likely not running, no secrets configured
+→ User needs full OpenClaw onboarding FIRST
+
+**Scenario 2 (Existing):** providers exist, gateway running, secrets may be configured
+→ User needs ResonantOS-specific configuration only
+
+**Ask user if unclear:**
+"I've detected [describe findings]. Which scenario applies?
+A. Fresh install — setting up OpenClaw + ResonantOS together
+B. Existing OpenClaw — already working, now adding ResonantOS layer
+
+This determines which configuration steps you need."
+
+**Based on answer:**
+- **Scenario A:** Proceed to Phase 0.1 (OpenClaw Onboarding)
+- **Scenario B:** Skip to Phase 0.2 (System Audit)
+
+---
+
+### Phase 0.1: OPENCLAW ONBOARDING (Scenario A Only)
+
+**If user has fresh OpenClaw install, guide them through base configuration FIRST:**
+
+```
+"Before we configure ResonantOS, OpenClaw needs base setup:
+1. Gateway configuration (auth, bind mode, port)
+2. AI provider credentials (Anthropic, OpenAI, etc.)
+3. Optional: channels (Telegram, Discord, etc.)
+4. Optional: search provider (Brave API)
+
+I recommend using SecretRef mode for API keys (stored in ~/.openclaw/secrets.json, not plaintext).
+
+Run this command and follow prompts:
+openclaw onboard --secret-input-mode ref
+
+When finished, come back and I'll configure ResonantOS on top."
+```
+
+**Wait for user confirmation** that `openclaw onboard` completed successfully before proceeding to Phase 0.2.
+
+**Validation check:**
+```bash
+openclaw gateway status  # Should show "running"
+openclaw config get providers  # Should list at least one provider
+```
+
+If validation fails, diagnose and help user fix OpenClaw setup before continuing.
+
+---
+
+### Phase 0.2: SYSTEM AUDIT (Both Scenarios)
 
 **Discover paths dynamically** — NEVER hardcode usernames or absolute paths.
 
@@ -230,41 +301,141 @@ Look for: `nightly-system-update`, `daily-config-backup`, `intraday-memory-log`
 
 ---
 
-### Phase 1: INGEST
+### Phase 1: INGEST & AUTO-POPULATE
 
-Ask the user to provide their materials:
+**Goal:** Minimize manual Q&A by extracting data from user materials automatically. Only ask questions for gaps.
+
+#### 1.1: Request Materials
 
 ```
 "I need to understand who you are and what you're building.
-Please share any of the following — the more, the better:
+I'll read your materials automatically and populate configuration from them.
+Only ask questions for missing information.
 
-- Business plan or project description
+Please provide:
+- Business plan, project description, or mission statement
 - CV/resume or professional background
-- Existing content (blog posts, videos, portfolio)
+- Existing content (blog posts, articles, portfolio)
 - Goals document or strategic notes
-- Any existing AI configuration or system prompts you've used
-- Creative works or examples of your voice/style
+- Any existing AI configuration or system prompts
+- Creative works or style guides
 
-You can:
-- Paste text directly
-- Share file paths (I'll read them)
-- Share URLs (I'll fetch them)
-- Describe verbally and I'll capture it
+Provide as:
+- File paths: /path/to/file.md or ~/Documents/folder/
+- URLs: https://yoursite.com/about (I'll fetch)
+- Folder paths: ~/Documents/project/ (I'll scan recursively)
+- Pasted text: just paste it
 
-Don't worry about organization — that's my job."
+I'll process everything automatically."
 ```
 
-After receiving materials:
-1. Read and analyze everything provided
-2. Create a mental model of the user's identity, goals, and domain
-3. Identify what you have vs. what's missing
-4. Summarize back: "Here's what I understand so far: [summary]. Is this accurate?"
+#### 1.2: Automated Processing
+
+For each provided input:
+
+**File paths:**
+```bash
+# Single file
+read /path/to/file.md
+
+# Directory
+find /path/to/folder -type f \( -name "*.md" -o -name "*.txt" -o -name "*.pdf" \) | while read f; do
+  read "$f"
+done
+```
+
+**URLs:**
+```bash
+web_fetch https://example.com/about
+web_fetch https://github.com/user/repo/blob/main/README.md
+```
+
+**Extract structured data** from all materials:
+- **Identity:** Name, pronouns, timezone, professional role
+- **Background:** Work history, skills, domain expertise
+- **Mission:** What they're building, why it matters
+- **Goals:** Specific outcomes (revenue, users, creative output)
+- **Values:** Principles, priorities, decision framework
+- **Style:** Communication preferences, tone, formality
+- **Constraints:** Budget limits, time constraints, technical restrictions
+- **Creative DNA** (if applicable): Artistic identity, influences, voice characteristics
+
+#### 1.3: Build Knowledge Graph
+
+As you process materials, maintain a structured map:
+
+```markdown
+## EXTRACTED DATA
+
+### Identity
+- Name: [extracted]
+- Role: [extracted]
+- Background: [summary from CV/about pages]
+
+### Mission
+- Primary goal: [extracted from business plan]
+- Target audience: [extracted]
+- Value proposition: [extracted]
+
+### Values & Priorities
+- Decision framework: [inferred from materials]
+- Hard boundaries: [explicit statements found]
+
+### Gaps (need to ask)
+- [ ] Monthly AI budget ceiling
+- [ ] Preferred escalation style (ask always / decide autonomously when safe)
+- [ ] Creative DNA influences (if creative professional)
+```
+
+#### 1.4: Validate & Fill Gaps
+
+Present extracted data:
+```
+"I've processed [N files / M URLs / X documents].
+
+Here's what I extracted:
+[Structured summary of identity, mission, values, style]
+
+Confidence: HIGH for [list], MEDIUM for [list], MISSING: [list]
+
+For MEDIUM items, I'll ask clarifying questions.
+For MISSING items, I need your input.
+
+Is this extraction accurate? Any corrections before I proceed?"
+```
+
+**ONLY THEN ask questions** for gaps:
+- Items marked MISSING
+- Items with LOW/MEDIUM confidence that matter for configuration
+- Contradictions found across documents
+
+**Example targeted questions:**
+```
+"I found three different mission statements across your materials:
+A. [from business plan]
+B. [from website]
+C. [from pitch deck]
+
+Which one is the current/authoritative version?"
+```
+
+```
+"Your budget: Not found in materials.
+What's your monthly ceiling for AI API costs?
+- $0 (free tools only)
+- $20-50 (hobbyist)
+- $100-200 (professional)
+- $500+ (power user)
+- Unlimited"
+```
+
+**DO NOT ask questions** for data already in materials. Extract first, ask second.
 
 ---
 
-### Phase 2: EXTRACT IDENTITY
+### Phase 2: GENERATE CONFIGURATION FILES
 
-From ingested materials, draft these documents. For each, **present to the user for approval before writing**.
+From extracted data (Phase 1), generate these documents. For each, **present to the user for approval before writing**.
 
 #### USER.md
 Extract:
@@ -554,6 +725,66 @@ research_tool(brave_search).
 % or
 research_tool(perplexity_pro).
 ```
+
+#### Secrets Management (Scenario B: Existing OpenClaw Only)
+
+**NOTE:** If user completed Scenario A (Phase 0.1 with `openclaw onboard --secret-input-mode ref`), secrets are already configured. Skip this section.
+
+**For Scenario B users** (existing OpenClaw with plaintext secrets):
+
+**1. Check current state:**
+```bash
+openclaw secrets audit
+```
+
+If output shows "87 plaintext secrets" or similar, migration needed.
+
+**2. Explain the issue:**
+"Your API keys are stored in plaintext in openclaw.json. OpenClaw's secrets system stores them securely in ~/.openclaw/secrets.json (permissions 600) and references them via SecretRef objects.
+
+This is more secure and makes credential rotation easier."
+
+**3. Guide migration:**
+
+**Option A: Manual migration** (recommended for understanding)
+```bash
+# Create secrets.json
+cat > ~/.openclaw/secrets.json << 'EOF'
+{
+  "anthropic": {
+    "apiKey": "sk-ant-..."
+  },
+  "openai": {
+    "apiKey": "sk-..."
+  },
+  "telegram": {
+    "botToken": "..."
+  }
+}
+EOF
+
+chmod 600 ~/.openclaw/secrets.json
+
+# Configure provider
+openclaw config set secrets.providers.filemain.source file
+openclaw config set secrets.providers.filemain.path ~/.openclaw/secrets.json
+openclaw config set secrets.providers.filemain.mode json
+openclaw config set secrets.defaults.file filemain
+```
+
+**Option B: Re-run onboard in SecretRef mode**
+```bash
+openclaw onboard --secret-input-mode ref --skip-ui
+```
+
+**4. Verify:**
+```bash
+openclaw config get agents.main.auth.profiles.anthropic:primary.auth.apiKey
+# Should show: __OPENCLAW_REDACTED__
+```
+
+**5. Document in System Audit notes:**
+"Secrets migrated to SecretRef mode. All tokens now stored in ~/.openclaw/secrets.json (600 permissions)."
 
 ---
 
