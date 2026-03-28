@@ -5,7 +5,7 @@
 **Status:** Active — primary context engine
 **DB:** `~/.openclaw/lcm.db` (SQLite)
 **Source:** [github.com/Martian-Engineering/lossless-claw](https://github.com/Martian-Engineering/lossless-claw)
-**Updated:** 2026-03-26
+**Updated:** 2026-03-28
 
 ---
 
@@ -92,14 +92,15 @@ Plugin config in openclaw.json under plugins.entries.lossless-claw.config:
 |-----------|---------|-------------|-------------|
 | contextThreshold | 0.75 | 0.75 | Fraction of context window triggering compaction |
 | freshTailCount | 32 | 32 | Recent messages protected from compaction |
-| incrementalMaxDepth | 0 | -1 | Condensation depth (-1 = unlimited cascade) |
+| incrementalMaxDepth | 0 | 3 | Condensation depth (-1 = unlimited cascade, 0 = leaf only, N = N levels max) |
 | leafChunkTokens | 20000 | default | Max source tokens per leaf chunk |
 | leafTargetTokens | 1200 | default | Target tokens for leaf summaries |
 | condensedTargetTokens | 2000 | default | Target tokens for condensed summaries |
 | leafMinFanout | 8 | default | Min messages per leaf summary |
 | condensedMinFanout | 4 | default | Min summaries per condensed node |
+| maxExpandTokens | 4000 | default | Token cap for sub-agent expansion queries (lcm_expand_query) |
 
-**Critical setting:** incrementalMaxDepth: -1 enables unlimited automatic condensation. Without it (default 0), summaries accumulate at depth 0 and never get condensed — wasting context space.
+**⚠️ Bounded depth required:** `incrementalMaxDepth: 3` (max 3 condensation levels). With unlimited depth (-1), the DAG grows indefinitely and all summary nodes get loaded into `context_items` → context window bloat. Use `incrementalMaxDepth: 0` for leaf-only, or a positive integer for a specific depth cap. Default (0) accumulates summaries at depth 0 and wastes context space.
 
 ### Environment Variables (override config)
 
@@ -111,18 +112,50 @@ Plugin config in openclaw.json under plugins.entries.lossless-claw.config:
 
 ---
 
-## Current State (2026-03-14)
+## Setup Agent — Required Config Values
+
+When the setup agent installs LCM for a new user, apply these settings. Do not use defaults.
+
+```json
+"plugins": {
+  "entries": {
+    "lossless-claw": {
+      "enabled": true,
+      "config": {
+        "freshTailCount": 32,
+        "contextThreshold": 0.75,
+        "incrementalMaxDepth": 3
+      }
+    }
+  }
+}
+```
+
+**Key rules:**
+- `incrementalMaxDepth: 3` — must be bounded. Default (0) accumulates summaries at depth 0. Unlimited (-1) creates infinite DAG layers and context_items bloat.
+- `freshTailCount: 32` — protects 32 most recent messages from compaction. Lower values (e.g. 4) risk losing conversation continuity.
+- `contextThreshold: 0.75` — triggers compaction at 75% context fill. Safe default, do not increase above 0.85.
+
+**Why bounded depth matters:** Each condensation level combines 4-8 child summaries into a parent. With unlimited depth, the DAG grows indefinitely and ALL summary nodes load into `context_items` — which feeds directly into the model's context window. The bloat event (Mar 2026) produced 7,359 context_items entries and ~350K token context files.
+
+**Fresh install note:** The `context_items` table only needs clearing on existing installations migrating from unbounded depth. New installations start clean.
+
+---
+
+## Current State (2026-03-27)
 
 | Metric | Value |
 |--------|-------|
-| Conversations | 126 |
-| Messages stored | 14,579 |
-| Summaries | 252 |
-| This session messages | 5,124 |
-| This session summaries | 104 |
+| Conversations | 350 |
+| Messages stored | 23,013 |
+| Summaries | 342 |
+| context_items | 0 (cleared after bloat incident) |
+| Message tokens | ~9.8M chars (~2.5M tokens) |
+| Summary tokens | ~266K chars (~65K tokens) |
 | DB path | ~/.openclaw/lcm.db |
-| Plugin version | 0.2.5 -> 0.3.0 (updating) |
-| FTS5 | Not compiled in (falls back to LIKE search) |
+| DB size | 295 MB |
+| Plugin version | 0.5.2 |
+| **Critical fix** | `incrementalMaxDepth: 3` — was -1 (unlimited) causing context_items bloat (7,359 entries → context window overflow) |
 
 ---
 
@@ -172,7 +205,7 @@ LCM and RAG are orthogonal. LCM manages what the model sees in conversation. RAG
 |----------|-----------|
 | Replace native compaction, don't layer on top | Native compaction is lossy and unrecoverable |
 | DAG over flat summaries | Enables targeted expansion — drill into specific time ranges |
-| incrementalMaxDepth: -1 | Prevents summary accumulation at depth 0 |
+| incrementalMaxDepth: 3 | Bounded condensation (3 levels max) prevents unbounded DAG growth |
 | freshTailCount: 32 | Enough recent context for continuity |
 | Three-level escalation | Compaction always makes progress, even on bad LLM output |
 | contextThreshold: 0.75 | Leaves 25% headroom for model response |
@@ -187,5 +220,8 @@ LCM and RAG are orthogonal. LCM manages what the model sees in conversation. RAG
 | Version | Date | Key Changes |
 |---------|------|-------------|
 | 0.1.4 | 2026-03-07 | Initial install, first day of release |
-| 0.2.5 | 2026-03-14 | Pre-update audit version |
-| 0.3.0 | 2026-03-12 | Latest release, 11 contributors, updating today |
+| 0.4.0 | 2026-03-22 | LCM 0.4.0 release |
+| 0.5.1 | 2026-03-24 | LCM 0.5.1 |
+| 0.5.2 | 2026-03-26 | LCM 0.5.2 — critical fix: incrementalMaxDepth: -1 enables unlimited cascade condensation |
+| config | 2026-03-27 | incrementalMaxDepth: -1 → 3 (bounded). Was causing context_items bloat (7,359 entries). freshTailCount: 4 → 32. Added Setup Agent section. |
+| schema | 2026-03-28 | Added maxExpandTokens (type:number, default:4000) to configSchema.properties. Added to config parameters table. |
