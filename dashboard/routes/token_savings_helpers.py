@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from routes.config import _CFG, _CONFIG_FILE, OPENCLAW_CONFIG, OPENCLAW_HOME, RMEMORY_DIR, WORKSPACE
@@ -611,7 +611,7 @@ def _ts_parse_tracker_timestamp(value: Any) -> datetime | None:
         num = float(value)
         seconds = num / 1000.0 if num > 10_000_000_000 else num
         try:
-            dt = datetime.fromtimestamp(seconds, tz=UTC)
+            dt = datetime.fromtimestamp(seconds, tz=timezone.utc)
         except Exception:
             return None
     elif isinstance(value, str):
@@ -622,7 +622,7 @@ def _ts_parse_tracker_timestamp(value: Any) -> datetime | None:
             try:
                 num = float(raw)
                 seconds = num / 1000.0 if num > 10_000_000_000 else num
-                dt = datetime.fromtimestamp(seconds, tz=UTC)
+                dt = datetime.fromtimestamp(seconds, tz=timezone.utc)
             except Exception:
                 return None
         else:
@@ -634,7 +634,7 @@ def _ts_parse_tracker_timestamp(value: Any) -> datetime | None:
         return None
 
     if dt.tzinfo is None:
-        return dt.replace(tzinfo=UTC)
+        return dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(UTC)
 
 
@@ -719,7 +719,7 @@ def _ts_load_tracker_usage(days: int) -> tuple[dict[str, Any] | None, str | None
             "totalCost": 0.0,
         }
 
-    cutoff = datetime.now(UTC) - timedelta(days=max(1, _ts_int(days, 7)))
+    cutoff = datetime.now(timezone.utc) - timedelta(days=max(1, _ts_int(days, 7)))
     daily = {}
     totals = dict(empty_totals)
 
@@ -1157,7 +1157,7 @@ def build_token_savings_payload(days: int) -> dict[str, Any]:
         "ok": gateway_error is None and total_cost > 0,
         "source": source,
         "days": days,
-        "generatedAt": datetime.now(UTC).isoformat(),
+        "generatedAt": datetime.now(timezone.utc).isoformat(),
         "trackingStartDate": "2026-02-25",
         "sources": {
             "usageTracker": tracker_meta.get("path"),

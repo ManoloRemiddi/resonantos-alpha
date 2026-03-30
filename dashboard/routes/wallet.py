@@ -5,12 +5,12 @@ import json
 import os
 import traceback
 import urllib.request
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, jsonify, render_template, request
 
 from routes.config import (
-    _DASHBOARD_DIR,
+    DASHBOARD_DIR,
     _LEVEL_THRESHOLDS,
     _RCT_DECIMALS,
     _RCT_MINT,
@@ -245,7 +245,7 @@ def api_wallet_mint_nft():
 
         # Update NFT registry for display name resolution
         try:
-            reg_path = str(_DASHBOARD_DIR / "data" / "nft_registry.json")
+            reg_path = str(DASHBOARD_DIR / "data" / "nft_registry.json")
             registry = {}
             if os.path.exists(reg_path):
                 with open(reg_path) as rf:
@@ -575,8 +575,8 @@ def api_wallet_daily_claim():
         if last_claim:
             last_claim_time = datetime.fromisoformat(last_claim.replace("Z", "+00:00"))
             if last_claim_time.tzinfo is None:
-                last_claim_time = last_claim_time.replace(tzinfo=UTC)
-            hours_since = (datetime.now(UTC) - last_claim_time).total_seconds() / 3600
+                last_claim_time = last_claim_time.replace(tzinfo=timezone.utc)
+            hours_since = (datetime.now(timezone.utc) - last_claim_time).total_seconds() / 3600
             if hours_since < 24:
                 hours_remaining = 24 - hours_since
                 return jsonify(
@@ -610,7 +610,7 @@ def api_wallet_daily_claim():
 
         # Record claim and RCT mint
         claims[recipient] = {
-            "last_claim": datetime.now(UTC).isoformat(),
+            "last_claim": datetime.now(timezone.utc).isoformat(),
             "total_claims": user_claims.get("total_claims", 0) + 1,
         }
         _save_daily_claims(claims)
@@ -622,7 +622,7 @@ def api_wallet_daily_claim():
                 "rctAmount": 1,
                 "resAmount": 500,
                 "feePayer": fee_payer_label,
-                "nextClaimAvailable": (datetime.now(UTC) + timedelta(hours=24)).isoformat(),
+                "nextClaimAvailable": (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat(),
                 "transactions": {
                     "rct": rct_result if isinstance(rct_result, str) else rct_result.get("signature"),
                     "res": res_result if isinstance(res_result, str) else res_result.get("signature"),
@@ -719,7 +719,7 @@ def api_wallet_agree_alpha():
             return jsonify({"error": "Already agreed"}), 409
 
         onboarding[address]["alphaAgreed"] = True
-        onboarding[address]["alphaAgreedAt"] = datetime.now(UTC).isoformat()
+        onboarding[address]["alphaAgreedAt"] = datetime.now(timezone.utc).isoformat()
         onboarding[address]["alphaSignature"] = signature
         _save_onboarding(onboarding)
 
@@ -768,7 +768,7 @@ def api_wallet_sign_license():
             onboarding[address] = {}
 
         onboarding[address]["licenseSigned"] = True
-        onboarding[address]["licenseSignedAt"] = datetime.now(UTC).isoformat()
+        onboarding[address]["licenseSignedAt"] = datetime.now(timezone.utc).isoformat()
         onboarding[address]["licenseHash"] = expected_hash
         onboarding[address]["licenseSignature"] = signature
 
@@ -843,7 +843,7 @@ def api_wallet_sign_manifesto():
 
         # Store signing record
         onboarding[address]["manifestoSigned"] = True
-        onboarding[address]["manifestoSignedAt"] = datetime.now(UTC).isoformat()
+        onboarding[address]["manifestoSignedAt"] = datetime.now(timezone.utc).isoformat()
         onboarding[address]["manifestoHash"] = expected_hash
         onboarding[address]["manifestoSignature"] = signature
 
@@ -1167,7 +1167,7 @@ def api_wallet_document():
 
         if doc_type == "license":
             # Try to read from templates/license.html
-            license_path = _DASHBOARD_DIR / "templates" / "license.html"
+            license_path = DASHBOARD_DIR / "templates" / "license.html"
             if license_path.exists():
                 import re
 
@@ -1323,7 +1323,7 @@ def api_wallet_owned_nfts():
                     # Fallback 0: check nft_registry.json
                     if not matched:
                         try:
-                            reg_path = str(_DASHBOARD_DIR / "data" / "nft_registry.json")
+                            reg_path = str(DASHBOARD_DIR / "data" / "nft_registry.json")
                             if os.path.exists(reg_path):
                                 with open(reg_path) as rf:
                                     registry = json.load(rf)

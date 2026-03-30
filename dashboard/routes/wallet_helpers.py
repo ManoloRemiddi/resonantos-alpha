@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import urllib.request
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from flask import current_app
@@ -289,11 +289,11 @@ def _check_rct_cap(recipient: str, amount_human: float) -> tuple[bool, str]:
         tuple[bool, str]: Whether the mint is allowed and the reason.
     """
     caps = _load_rct_caps()
-    year = str(datetime.now(UTC).year)
+    year = str(datetime.now(timezone.utc).year)
     yearly = caps.get("wallets_yearly", {}).get(recipient, {}).get(year, 0)
     if yearly + amount_human > _RCT_MAX_PER_WALLET_YEAR:
         return False, f"Annual cap: {yearly}/{_RCT_MAX_PER_WALLET_YEAR} $RCT ({year})"
-    now = datetime.now(UTC)
+    now = datetime.now(timezone.utc)
     cutoff = (now - timedelta(hours=24)).isoformat()
     daily_total = sum(e["amount"] for e in caps.get("daily", []) if e["ts"] > cutoff)
     holder_count = caps.get("holder_count", 10)
@@ -311,14 +311,14 @@ def _record_rct_mint(recipient: str, amount_human: float) -> None:
         amount_human: Human-readable RCT amount.
     """
     caps = _load_rct_caps()
-    year = str(datetime.now(UTC).year)
+    year = str(datetime.now(timezone.utc).year)
     caps.setdefault("wallets_yearly", {})
     caps["wallets_yearly"].setdefault(recipient, {})
     caps["wallets_yearly"][recipient][year] = caps["wallets_yearly"][recipient].get(year, 0) + amount_human
-    now_iso = datetime.now(UTC).isoformat()
+    now_iso = datetime.now(timezone.utc).isoformat()
     caps.setdefault("daily", [])
     caps["daily"].append({"ts": now_iso, "recipient": recipient, "amount": amount_human})
-    cutoff = (datetime.now(UTC) - timedelta(days=7)).isoformat()
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
     caps["daily"] = [e for e in caps["daily"] if e["ts"] > cutoff]
     _save_rct_caps(caps)
 
