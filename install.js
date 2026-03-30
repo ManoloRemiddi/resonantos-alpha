@@ -47,6 +47,21 @@ function warn(msg) { log(`  ⚠ ${msg}`); }
 
 function fail(msg) { throw Object.assign(new Error(msg), { core: true }); }
 
+function parseSemver(v) {
+  const parts = String(v || '').split('.').map(n => parseInt(n, 10));
+  return [parts[0] || 0, parts[1] || 0, parts[2] || 0];
+}
+
+function semverLt(a, b) {
+  const A = parseSemver(a);
+  const B = parseSemver(b);
+  for (let i = 0; i < 3; i++) {
+    if (A[i] < B[i]) return true;
+    if (A[i] > B[i]) return false;
+  }
+  return false;
+}
+
 function hasCmd(cmd) {
   try {
     execSync(isWin ? `where ${cmd}` : `command -v ${cmd}`, { stdio: "ignore" });
@@ -190,9 +205,12 @@ if (subcmd) {
 
 log("=== ResonantOS Alpha Installer ===\n");
 
-step("Node.js v18+", () => {
-  const nodeVer = parseInt(process.versions.node.split(".")[0], 10);
-  if (nodeVer < 18) fail(`Node.js 18+ required (found v${process.versions.node})`);
+const MIN_NODE_VERSION = "22.12.0";
+step(`Node.js >=${MIN_NODE_VERSION}`, () => {
+  const current = process.versions.node;
+  if (semverLt(current, MIN_NODE_VERSION)) {
+    fail(`Node.js >=${MIN_NODE_VERSION} required (found v${current}). Please install Node 22.12+ and rerun installer.`);
+  }
 });
 
 step("git", () => { if (!hasCmd("git")) fail("git is required. Install: https://git-scm.com"); });

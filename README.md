@@ -18,7 +18,7 @@
 
 ## 🚀 Install  test
 
-**Prerequisites:** Node.js 18+ · Python 3 · Git
+**Prerequisites:** Node.js 22.12+ · Python 3 · Git
 
 ```bash
 git clone https://github.com/ResonantOS/resonantos-alpha.git
@@ -81,7 +81,7 @@ A social contract between human and AI. The human is sovereign — the AI amplif
 <details>
 <summary><strong>What the installer does</strong></summary>
 
-1. Checks dependencies (Node 18+, Python 3, Git, OpenClaw)
+1. Checks dependencies (Node 22.12+, Python 3, Git, OpenClaw)
 2. Installs extensions into OpenClaw (R-Awareness, Gateway Lifecycle, Shield Gate, Coherence Gate, Usage Tracker)
 3. Creates workspace templates (AGENTS.md, SOUL.md, USER.md, MEMORY.md, etc.)
 4. Sets up the SSoT document structure (L0–L4)
