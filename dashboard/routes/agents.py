@@ -18,7 +18,7 @@ agents_bp = Blueprint("agents", __name__)
 logger = get_logger(__name__)
 
 
-@agents_bp.route("/api/agents/setup/model", methods=["POST"])
+@agents_bp.route("/api/agents/setup/model", methods=["PUT", "POST"])
 def api_agents_setup_model() -> Response:
     """Persist the setup agent model override.
 
