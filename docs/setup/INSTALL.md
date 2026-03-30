@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - git
-- Node.js 18+
+- Node.js 22.12+
 - Python 3
 - pip
 
