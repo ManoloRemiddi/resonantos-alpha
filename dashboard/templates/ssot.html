@@ -1,0 +1,1001 @@
+{% extends "base.html" %}
+
+{% block title %}SSOT - ResonantOS Dashboard{% endblock %}
+{% block page_title %}Single Source of Truth{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Layout */
+    .ssot-container { display: flex; flex-direction: column; height: 100%; }
+
+    /* Tabs */
+    .ssot-tabs {
+        display: flex; gap: 4px; margin-bottom: 20px;
+        border-bottom: 1px solid var(--border, #333); padding-bottom: 0;
+    }
+    .ssot-tab {
+        padding: 14px 28px; background: none; border: none;
+        color: var(--text-secondary, #888); cursor: pointer; font-size: 15px;
+        border-bottom: 2px solid transparent; transition: all 0.2s;
+    }
+    .ssot-tab:hover { color: var(--text-primary, #eee); }
+    .ssot-tab.active { color: var(--accent, #4ade80); border-bottom-color: var(--accent, #4ade80); }
+    .ssot-panel { display: none; flex: 1; min-height: 0; }
+    .ssot-panel.active { display: flex; flex-direction: column; }
+
+    /* Filter bar */
+    .filter-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+    .filter-btn {
+        padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border, #333);
+        background: var(--bg-tertiary, #111); color: var(--text-secondary, #888);
+        cursor: pointer; font-size: 13px; transition: all 0.2s;
+    }
+    .filter-btn:hover { border-color: var(--accent, #4ade80); color: var(--text-primary, #eee); }
+    .filter-btn.active { background: var(--accent, #4ade80); color: #000; border-color: var(--accent, #4ade80); }
+    .filter-sep { width: 1px; height: 24px; background: var(--border, #333); margin: 0 4px; }
+    .lock-layer-btn {
+        padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border, #333);
+        background: var(--bg-tertiary, #111); color: var(--text-muted, #666);
+        cursor: pointer; font-size: 12px; transition: all 0.2s;
+        display: inline-flex; align-items: center; gap: 5px;
+    }
+    .lock-layer-btn:hover { border-color: var(--warning, #f59e0b); color: var(--warning, #f59e0b); }
+    .lock-layer-btn.locked { border-color: var(--warning, #f59e0b); color: var(--warning, #f59e0b); background: rgba(245, 158, 11, 0.1); }
+    .lock-layer-btn.partial { border-color: #666; color: #888; }
+
+    /* Split view */
+    .docs-split { display: flex; gap: 16px; flex: 1; min-height: 0; overflow: hidden; }
+    .docs-tree-panel {
+        width: 380px; min-width: 300px; overflow-y: auto;
+        background: var(--bg-secondary, #1a1a2e); border: 1px solid var(--border, #333);
+        border-radius: 8px; padding: 12px;
+    }
+    .docs-editor-panel {
+        flex: 1; display: flex; flex-direction: column;
+        background: var(--bg-secondary, #1a1a2e); border: 1px solid var(--border, #333);
+        border-radius: 8px; overflow: hidden;
+    }
+
+    /* Tree */
+    .tree-layer { margin-bottom: 8px; }
+    .tree-layer-header {
+        display: flex; align-items: center; gap: 8px; padding: 14px 12px;
+        background: var(--bg-tertiary, #111); border-radius: 6px;
+        cursor: pointer; font-weight: 600; font-size: 14px; color: var(--text-primary, #eee);
+        user-select: none;
+    }
+    .tree-layer-header:hover { background: var(--bg-hover, #222); }
+    .tree-layer-header.layer-locked { }
+    .tree-layer-header.layer-locked .tree-layer-count { }
+    .tree-lock-btn {
+        padding: 3px 10px; border-radius: 4px; border: 1px solid var(--border, #333);
+        background: var(--bg-tertiary, #111); color: var(--text-muted, #666);
+        cursor: pointer; font-size: 11px; transition: all 0.2s; margin-left: auto;
+        display: inline-flex; align-items: center; gap: 4px;
+    }
+    .tree-lock-btn:hover { border-color: var(--warning, #f59e0b); color: var(--warning, #f59e0b); }
+    .tree-lock-btn.locked { border-color: var(--warning, #f59e0b); color: var(--warning, #f59e0b); background: rgba(245, 158, 11, 0.15); }
+    .tree-lock-btn.partial { border-color: #666; color: #999; }
+    .tree-layer-header .chevron { transition: transform 0.2s; font-size: 10px; color: var(--text-muted, #666); }
+    .tree-layer-header.collapsed .chevron { transform: rotate(-90deg); }
+    .tree-layer-count { margin-left: auto; font-size: 11px; color: var(--text-muted, #666); font-weight: 400; }
+    .tree-layer-body { padding-left: 8px; }
+    .tree-layer-header.collapsed + .tree-layer-body { display: none; }
+
+    .tree-subdir { margin-top: 4px; }
+    .tree-subdir-header {
+        display: flex; align-items: center; gap: 6px; padding: 4px 8px;
+        font-size: 12px; color: var(--text-secondary, #888); cursor: pointer; user-select: none;
+    }
+    .tree-subdir-header:hover { color: var(--text-primary, #eee); }
+    .tree-subdir-header .chevron { font-size: 9px; transition: transform 0.2s; }
+    .tree-subdir-header.collapsed .chevron { transform: rotate(-90deg); }
+    .tree-subdir-header.collapsed + .tree-subdir-body { display: none; }
+
+    .tree-doc {
+        display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+        border-radius: 4px; cursor: pointer; font-size: 13px; color: var(--text-secondary, #888);
+        transition: all 0.15s;
+    }
+    .tree-doc:hover { background: var(--bg-hover, #222); color: var(--text-primary, #eee); }
+    .tree-doc.active { background: rgba(74, 222, 128, 0.1); color: var(--accent, #4ade80); }
+    .tree-doc .doc-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tree-doc .doc-lock { font-size: 12px; cursor: pointer; padding: 2px 4px; border-radius: 3px; }
+    .tree-doc .doc-lock:hover { background: rgba(255,255,255,0.1); }
+    .tree-doc .doc-lock.locked { color: #f59e0b; }
+    .tree-doc .doc-lock.unlocked { color: var(--text-muted, #666); }
+    .tree-doc .doc-size { font-size: 11px; color: var(--text-muted, #666); white-space: nowrap; }
+    .tree-doc .layer-tag {
+        font-size: 10px; padding: 1px 5px; border-radius: 3px;
+        background: var(--bg-tertiary, #111); color: var(--text-muted, #666);
+        font-weight: 600;
+    }
+    .tree-doc .ai-tag {
+        font-size: 9px; padding: 1px 4px; border-radius: 3px;
+        background: rgba(139, 92, 246, 0.2); color: #a78bfa; font-weight: 600;
+    }
+
+    /* Editor */
+    .editor-header {
+        display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+        border-bottom: 1px solid var(--border, #333); flex-wrap: wrap;
+    }
+    .editor-title { font-weight: 600; font-size: 14px; color: var(--text-primary, #eee); flex: 1; }
+    .editor-actions { display: flex; gap: 8px; align-items: center; }
+    .editor-btn {
+        padding: 5px 12px; border-radius: 5px; border: 1px solid var(--border, #333);
+        background: var(--bg-tertiary, #111); color: var(--text-secondary, #888);
+        cursor: pointer; font-size: 12px; transition: all 0.2s;
+    }
+    .editor-btn:hover { border-color: var(--accent, #4ade80); color: var(--accent, #4ade80); }
+    .editor-btn.primary { background: var(--accent, #4ade80); color: #000; border-color: var(--accent, #4ade80); }
+    .editor-btn.primary:hover { opacity: 0.85; }
+    .editor-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .editor-meta {
+        display: flex; gap: 12px; padding: 8px 16px; font-size: 11px;
+        color: var(--text-muted, #666); border-bottom: 1px solid var(--border, #333);
+        flex-wrap: wrap; align-items: center;
+    }
+    .editor-meta .lock-indicator { cursor: pointer; }
+    .editor-meta .lock-indicator:hover { color: var(--text-secondary, #888); }
+
+    /* Keywords */
+    .keywords-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .keyword-chip {
+        display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px;
+        border-radius: 10px; background: rgba(74, 222, 128, 0.15); color: var(--accent, #4ade80);
+        font-size: 11px;
+    }
+    .keyword-chip .kw-remove { cursor: pointer; opacity: 0.6; }
+    .keyword-chip .kw-remove:hover { opacity: 1; }
+    .keyword-add-btn {
+        font-size: 11px; cursor: pointer; color: var(--text-muted, #666);
+        border: 1px dashed var(--border, #333); padding: 2px 8px; border-radius: 10px;
+        background: none;
+    }
+    .keyword-add-btn:hover { color: var(--accent, #4ade80); border-color: var(--accent, #4ade80); }
+
+    /* Relock countdown */
+    .relock-bar {
+        display: none; padding: 6px 16px; font-size: 11px;
+        background: rgba(245, 158, 11, 0.1); color: var(--warning, #f59e0b);
+        border-bottom: 1px solid var(--border, #333); align-items: center; gap: 8px;
+    }
+    .relock-bar.visible { display: flex; }
+    .relock-keep { cursor: pointer; text-decoration: underline; margin-left: auto; }
+
+    .editor-body { flex: 1; display: flex; min-height: 0; }
+    .editor-textarea {
+        flex: 1; background: var(--bg-tertiary, #111); color: var(--text-primary, #eee);
+        border: none; padding: 16px; font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        font-size: 13px; line-height: 1.6; resize: none; outline: none;
+        tab-size: 4;
+    }
+    .editor-placeholder {
+        flex: 1; display: flex; align-items: center; justify-content: center;
+        color: var(--text-muted, #666); font-size: 14px;
+    }
+
+    /* Compressed toggle */
+    .compressed-toggle { display: flex; align-items: center; gap: 6px; }
+    .toggle-switch {
+        width: 32px; height: 18px; border-radius: 9px;
+        background: var(--bg-tertiary, #111); border: 1px solid var(--border, #333);
+        cursor: pointer; position: relative; transition: all 0.2s;
+    }
+    .toggle-switch.on { background: rgba(139, 92, 246, 0.4); border-color: #a78bfa; }
+    .toggle-switch::after {
+        content: ''; position: absolute; width: 12px; height: 12px;
+        border-radius: 50%; background: var(--text-secondary, #888);
+        top: 2px; left: 2px; transition: all 0.2s;
+    }
+    .toggle-switch.on::after { left: 16px; background: #a78bfa; }
+    .toggle-label { font-size: 11px; color: var(--text-muted, #666); }
+
+    /* Help tab */
+    .help-content {
+        max-width: 760px; padding: 8px 0;
+        color: var(--text-secondary, #888); font-size: 14px; line-height: 1.7;
+    }
+    .help-content h2 { color: var(--text-primary, #eee); font-size: 18px; margin: 24px 0 8px; }
+    .help-content h3 { color: var(--text-primary, #eee); font-size: 15px; margin: 16px 0 6px; }
+    .help-content p { margin: 6px 0; }
+    .help-content code {
+        background: var(--bg-tertiary, #111); padding: 2px 6px; border-radius: 3px;
+        font-size: 13px; color: var(--accent, #4ade80);
+    }
+    .help-layer-grid { display: grid; gap: 12px; margin: 12px 0; }
+    .help-layer-card {
+        padding: 12px 16px; background: var(--bg-tertiary, #111);
+        border: 1px solid var(--border, #333); border-radius: 8px;
+    }
+    .help-layer-card strong { color: var(--accent, #4ade80); }
+    .help-layer-card .layer-desc { color: var(--text-secondary, #888); font-size: 13px; margin-top: 4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ssot-container">
+    <!-- Stats Bar -->
+    <div class="ssot-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;margin-bottom:20px;">
+        <div class="ssot-stat-card" style="background:var(--bg-secondary,#1a1a2e);border:1px solid var(--border,#333);border-radius:8px;padding:14px;text-align:center;">
+            <div id="statDocs" style="font-size:28px;font-weight:700;color:var(--accent,#4ade80);">-</div>
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary,#888);margin-top:4px;">Documents</div>
+        </div>
+        <div class="ssot-stat-card" style="background:var(--bg-secondary,#1a1a2e);border:1px solid var(--border,#333);border-radius:8px;padding:14px;text-align:center;">
+            <div id="statTokens" style="font-size:28px;font-weight:700;color:var(--accent,#4ade80);">-</div>
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary,#888);margin-top:4px;">Total Tokens</div>
+        </div>
+        <div class="ssot-stat-card" style="background:var(--bg-secondary,#1a1a2e);border:1px solid var(--border,#333);border-radius:8px;padding:14px;text-align:center;">
+            <div id="statCompressed" style="font-size:28px;font-weight:700;color:var(--accent,#4ade80);">-</div>
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary,#888);margin-top:4px;">Compressed</div>
+        </div>
+        <div class="ssot-stat-card" style="background:var(--bg-secondary,#1a1a2e);border:1px solid var(--border,#333);border-radius:8px;padding:14px;text-align:center;">
+            <div id="statLayers" style="font-size:28px;font-weight:700;color:var(--accent,#4ade80);">5</div>
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary,#888);margin-top:4px;">Layers</div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="ssot-tabs">
+        <button class="ssot-tab active" onclick="switchTab('documents')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Documents</button>
+        <button class="ssot-tab" onclick="switchTab('help')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Help</button>
+    </div>
+
+    <!-- Documents Panel -->
+    <div class="ssot-panel active" id="panel-documents">
+        <!-- Filter bar -->
+        <div class="filter-bar">
+            <button class="filter-btn active" data-layer="all" onclick="setFilter('all', this)">All</button>
+            <button class="filter-btn" data-layer="L0" onclick="setFilter('L0', this)">L0</button>
+            <button class="filter-btn" data-layer="L1" onclick="setFilter('L1', this)">L1</button>
+            <button class="filter-btn" data-layer="L2" onclick="setFilter('L2', this)">L2</button>
+            <button class="filter-btn" data-layer="L3" onclick="setFilter('L3', this)">L3</button>
+            <button class="filter-btn" data-layer="L4" onclick="setFilter('L4', this)">L4</button>
+        </div>
+
+        <!-- Split view -->
+        <div class="docs-split">
+            <div class="docs-tree-panel" id="docsTree">
+                <div style="color: var(--text-muted); padding: 20px; text-align: center;">Loading documents...</div>
+            </div>
+            <div class="docs-editor-panel" id="docsEditor">
+                <div class="editor-placeholder">← Select a document to view or edit</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Panel -->
+    <div class="ssot-panel" id="panel-help" style="overflow-y:auto;">
+        <div class="help-content">
+            <div style="background:var(--bg-secondary,#1a1a2e);border:1px solid var(--border,#333);border-radius:8px;padding:24px;margin-bottom:20px;">
+                <h2 style="margin:0 0 16px;font-size:20px;">What is SSOT?</h2>
+                <p style="color:var(--text-secondary,#aaa);line-height:1.7;margin-bottom:16px;">
+                    <strong>Single Source of Truth</strong> is the foundational knowledge base of ResonantOS. Instead of relying on RAG (Retrieval-Augmented Generation) which searches through chunks of text, SSOT uses carefully crafted markdown files that get injected directly into the AI's context when relevant topics come up in conversation.
+                </p>
+                <p style="color:var(--text-secondary,#aaa);line-height:1.7;">
+                    Think of it as giving your AI a structured knowledge base it can reference instantly, without searching. Each document has <strong>trigger keywords</strong> — when those words appear in conversation, the document gets loaded into the AI's working memory.
+                </p>
+            </div>
+
+            <div style="background:var(--bg-secondary,#1a1a2e);border:1px solid var(--border,#333);border-radius:8px;padding:24px;margin-bottom:20px;">
+                <h3 style="margin:0 0 12px;font-size:16px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> The Layer System</h3>
+                <p style="color:var(--text-secondary,#aaa);line-height:1.7;margin-bottom:12px;">Documents are organized in 5 layers, from most permanent to most transient:</p>
+                <table style="width:100%;border-collapse:collapse;margin-bottom:12px;">
+                    <tr style="border-bottom:1px solid var(--border,#333);"><td style="padding:8px;font-weight:600;color:var(--accent,#4ade80);">L0 — Foundation</td><td style="padding:8px;color:var(--text-secondary,#aaa);">Your vision, mission, philosophy, manifesto, overall life or business plan. The unchanging truths that define who you are. These should rarely change and are typically locked.</td></tr>
+                    <tr style="border-bottom:1px solid var(--border,#333);"><td style="padding:8px;font-weight:600;color:var(--accent,#4ade80);">L1 — Architecture</td><td style="padding:8px;color:var(--text-secondary,#aaa);">How your systems work. Technical specs, architecture docs, integration patterns. The structural backbone of your project.</td></tr>
+                    <tr style="border-bottom:1px solid var(--border,#333);"><td style="padding:8px;font-weight:600;color:var(--accent,#4ade80);">L2 — Active Projects</td><td style="padding:8px;color:var(--text-secondary,#aaa);">What you're building right now. Project status, milestones, key decisions. Living documents that evolve daily.</td></tr>
+                    <tr style="border-bottom:1px solid var(--border,#333);"><td style="padding:8px;font-weight:600;color:var(--accent,#4ade80);">L3 — Drafts</td><td style="padding:8px;color:var(--text-secondary,#aaa);">Ideas taking shape. Plans, proposals, research. Not yet committed, but worth developing and discussing.</td></tr>
+                    <tr><td style="padding:8px;font-weight:600;color:var(--accent,#4ade80);">L4 — Notes</td><td style="padding:8px;color:var(--text-secondary,#aaa);">Working notes, session logs, incident reports. Raw context that may get promoted to higher layers over time.</td></tr>
+                </table>
+                <p style="color:var(--text-secondary,#888);font-size:13px;font-style:italic;">Tip: Start with L0 — write down your vision and philosophy. Then add L1 docs as you build your system architecture. L2–L4 will grow naturally as you work.</p>
+            </div>
+
+            <div style="background:var(--bg-secondary,#1a1a2e);border:1px solid var(--border,#333);border-radius:8px;padding:24px;margin-bottom:20px;">
+                <h3 style="margin:0 0 12px;font-size:16px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> Keywords &amp; R-Awareness</h3>
+                <p style="color:var(--text-secondary,#aaa);line-height:1.7;margin-bottom:12px;">
+                    Each document has <strong>trigger keywords</strong>. When you or someone mentions these words in conversation with the AI, the R-Awareness system automatically injects the relevant document into the AI's context.
+                </p>
+                <p style="color:var(--text-secondary,#aaa);line-height:1.7;margin-bottom:12px;">
+                    For example, if your philosophy document has keywords <code>philosophy, augmentatism, mission</code>, then any conversation mentioning those words will have your philosophy document loaded automatically.
+                </p>
+                <p style="color:var(--text-secondary,#aaa);line-height:1.7;">
+                    Set keywords when editing a document — they appear in the metadata bar. Use specific terms to avoid false triggers, broad enough to catch relevant conversations.
+                </p>
+            </div>
+
+            <div style="background:var(--bg-secondary,#1a1a2e);border:1px solid var(--border,#333);border-radius:8px;padding:24px;margin-bottom:20px;">
+                <h3 style="margin:0 0 12px;font-size:16px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Compression (.ai.md)</h3>
+                <p style="color:var(--text-secondary,#aaa);line-height:1.7;margin-bottom:12px;">
+                    Each document can have a compressed version (<code>.ai.md</code>) alongside the raw version. The compressed version is what actually gets injected into the AI's context — saving 55–80% tokens while preserving 100% of the information.
+                </p>
+                <p style="color:var(--text-secondary,#aaa);line-height:1.7;margin-bottom:12px;">
+                    Documents with a compressed version show an <span style="color:#a78bfa;font-weight:600;">.ai</span> tag in the tree. Use the toggle in the editor to switch between full and compressed views.
+                </p>
+                <p style="color:var(--text-secondary,#aaa);line-height:1.7;">
+                    Compression is lossless — it uses tables instead of prose, removes filler words, and uses terse notation. Your AI can create compressed versions by asking it to compress a document following the lossless compression rules.
+                </p>
+            </div>
+
+            <div style="background:var(--bg-secondary,#1a1a2e);border:1px solid var(--border,#333);border-radius:8px;padding:24px;margin-bottom:20px;">
+                <h3 style="margin:0 0 12px;font-size:16px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Document Locking</h3>
+                <p style="color:var(--text-secondary,#aaa);line-height:1.7;margin-bottom:16px;">
+                    Lock documents to prevent your AI from accidentally modifying them. This is especially important for L0 (Foundation) and L1 (Architecture) documents that define your core identity and system design.
+                </p>
+
+                <h4 style="margin:0 0 8px;font-size:14px;color:var(--text-primary);">macOS</h4>
+                <p style="color:var(--text-secondary,#aaa);line-height:1.7;margin-bottom:12px;">
+                    Uses <code>chflags schg</code> (system-level immutable flag). Both locking and unlocking require your Mac user password. This is the strongest protection available — even root-level processes cannot bypass it without explicit authorization.
+                </p>
+
+                <h4 style="margin:0 0 8px;font-size:14px;color:var(--text-primary);">Auto-Relock</h4>
+                <p style="color:var(--text-secondary,#aaa);line-height:1.7;margin-bottom:12px;">
+                    After unlocking, a <strong>5-minute countdown</strong> begins. When the timer expires, the document is automatically relocked. Click "Keep Unlocked" to disable the timer for the current session. This prevents accidental exposure of foundational documents.
+                </p>
+
+                <h4 style="margin:0 0 8px;font-size:14px;color:var(--text-primary);">Linux</h4>
+                <p style="color:var(--text-secondary,#aaa);line-height:1.7;margin-bottom:8px;">
+                    Use <code>chattr +i</code> (immutable attribute). Requires root:
+                </p>
+                <pre style="background:var(--bg-tertiary);padding:12px;border-radius:6px;font-size:12px;margin-bottom:12px;overflow-x:auto;"><code>sudo chattr +i /path/to/document.md    # Lock
+sudo chattr -i /path/to/document.md    # Unlock
+lsattr /path/to/document.md            # Check</code></pre>
+
+                <h4 style="margin:0 0 8px;font-size:14px;color:var(--text-primary);">Windows</h4>
+                <pre style="background:var(--bg-tertiary);padding:12px;border-radius:6px;font-size:12px;margin-bottom:12px;overflow-x:auto;"><code>attrib +R "C:\path\to\document.md"      # Lock (read-only)
+attrib -R "C:\path\to\document.md"      # Unlock
+icacls "C:\path\to\doc.md" /deny Everyone:(W,D)  # Stronger</code></pre>
+            </div>
+
+            <div style="background:var(--bg-secondary,#1a1a2e);border:1px solid var(--border,#333);border-radius:8px;padding:24px;">
+                <h3 style="margin:0 0 12px;font-size:16px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg> Getting Help From Your AI</h3>
+                <p style="color:var(--text-secondary,#aaa);line-height:1.7;margin-bottom:12px;">
+                    This dashboard has an architecture document at <code>L1/SSOT-L1-DASHBOARD.md</code> that describes how everything works. Your AI can read this document and help you with:
+                </p>
+                <ul style="color:var(--text-secondary,#aaa);line-height:2;padding-left:20px;">
+                    <li>Implementing file locking for your platform (Linux, Windows)</li>
+                    <li>Creating new pages or features in the dashboard</li>
+                    <li>Setting up compression for your documents</li>
+                    <li>Configuring R-Awareness keywords for optimal injection</li>
+                    <li>Extending the API with new endpoints</li>
+                    <li>Connecting the dashboard to Git for version control</li>
+                </ul>
+                <p style="color:var(--text-secondary,#aaa);line-height:1.7;margin-top:12px;">
+                    Just tell your AI: <em>"Read the dashboard architecture doc and help me [what you need]"</em>. The L1 doc has the full API reference, file structure, and design principles.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% raw %}
+<script>
+(function() {
+    // SVG icons
+    const ICO = {
+        lock: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+        unlock: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 5-5 5 5 0 0 1 5 5"/></svg>',
+        save: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>',
+        folder: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',
+        tag: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>',
+        clock: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+    };
+
+    const LAYER_DESC = {
+        L0: 'Foundation',
+        L1: 'Architecture',
+        L2: 'Active Projects',
+        L3: 'Drafts & Plans',
+        L4: 'Notes & Logs',
+    };
+
+    // Password modal
+    window._pwdResolve = null;
+    function promptPassword(action, target) {
+        return new Promise(resolve => {
+            const overlay = document.getElementById('passwordModal');
+            document.getElementById('pwdAction').textContent = action;
+            document.getElementById('pwdTarget').textContent = target;
+            document.getElementById('pwdInput').value = '';
+            overlay.style.display = 'flex';
+            document.getElementById('pwdInput').focus();
+            window._pwdResolve = resolve;
+        });
+    }
+    window.submitPassword = function() {
+        const pwd = document.getElementById('pwdInput').value;
+        document.getElementById('passwordModal').style.display = 'none';
+        if (window._pwdResolve) window._pwdResolve(pwd);
+    };
+    window.cancelPassword = function() {
+        document.getElementById('passwordModal').style.display = 'none';
+        if (window._pwdResolve) window._pwdResolve(null);
+    };
+
+    // Stats
+    function updateStats() {
+        const total = allDocs.length;
+        const tokens = allDocs.reduce((s, d) => s + (d.rawTokens || 0), 0);
+        const compressed = allDocs.filter(d => d.hasCompressed).length;
+        const layers = new Set(allDocs.map(d => d.layer)).size;
+        document.getElementById('statDocs').textContent = total;
+        document.getElementById('statTokens').textContent = tokens.toLocaleString();
+        document.getElementById('statCompressed').textContent = compressed;
+        document.getElementById('statLayers').textContent = layers || 5;
+    }
+
+    // State
+    let allDocs = [];
+    let allKeywords = {};
+    let currentFilter = 'all';
+    let currentDoc = null;
+    let currentContent = '';
+    let isCompressedView = false;
+    let isDirty = false;
+    let relockTimers = {};
+    let _cachedPwd = null; // Cached for auto-relock; cleared on page unload
+
+    // Track expanded layers/subdirs (persisted in sessionStorage)
+    let expandedNodes = new Set(JSON.parse(sessionStorage.getItem('ssot_expanded') || '[]'));
+    function saveExpanded() { sessionStorage.setItem('ssot_expanded', JSON.stringify(Array.from(expandedNodes))); }
+    window.toggleNode = function(key, el) {
+        if (expandedNodes.has(key)) { expandedNodes.delete(key); el.classList.add('collapsed'); }
+        else { expandedNodes.add(key); el.classList.remove('collapsed'); }
+        saveExpanded();
+    };
+
+    // Tab switching
+    window.switchTab = function(tab) {
+        document.querySelectorAll('.ssot-tab').forEach((t, i) => {
+            t.classList.toggle('active', (tab === 'documents' && i === 0) || (tab === 'help' && i === 1));
+        });
+        document.querySelectorAll('.ssot-panel').forEach(p => p.classList.remove('active'));
+        document.getElementById('panel-' + tab).classList.add('active');
+    };
+
+    // Filter
+    window.setFilter = function(layer, btn) {
+        currentFilter = layer;
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderTree();
+    };
+
+    // Load data
+    async function loadDocs() {
+        try {
+            const res = await fetch('/api/r-memory/documents');
+            allDocs = await res.json();
+        } catch(e) { console.error('Failed to load docs', e); }
+    }
+
+    async function loadKeywords() {
+        try {
+            const res = await fetch('/api/ssot/keywords');
+            allKeywords = await res.json();
+        } catch(e) { allKeywords = {}; }
+    }
+
+    function formatSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+        return (bytes/(1024*1024)).toFixed(1) + ' MB';
+    }
+
+    function isAiFile(path) {
+        return path.endsWith('.ai.md');
+    }
+
+    // Build hierarchical structure
+    function buildTree(docs) {
+        const layers = {};
+        docs.forEach(d => {
+            const layer = d.layer;
+            if (!layers[layer]) layers[layer] = { root: [], subdirs: {} };
+            const parts = d.path.replace(layer + '/', '').split('/');
+            if (parts.length > 1) {
+                const dir = parts.slice(0, -1).join('/');
+                if (!layers[layer].subdirs[dir]) layers[layer].subdirs[dir] = [];
+                layers[layer].subdirs[dir].push(d);
+            } else {
+                layers[layer].root.push(d);
+            }
+        });
+        return layers;
+    }
+
+    function renderTree() {
+        const filtered = currentFilter === 'all' ? allDocs : allDocs.filter(d => d.layer === currentFilter);
+        const tree = buildTree(filtered);
+        const container = document.getElementById('docsTree');
+
+        const layerOrder = ['L0','L1','L2','L3','L4'].filter(l => currentFilter === 'all' || l === currentFilter);
+        let html = '';
+        layerOrder.forEach(layer => {
+            const data = tree[layer];
+            if (!data) return;
+            const total = data.root.length + Object.values(data.subdirs).reduce((s, a) => s + a.length, 0);
+            html += `<div class="tree-layer" data-layer="${layer}">`;
+            const layerDocs = [...data.root, ...Object.values(data.subdirs).flat()];
+            const allLocked = layerDocs.length > 0 && layerDocs.every(d => d.locked);
+            const someLocked = layerDocs.some(d => d.locked);
+            const lockBtnClass = allLocked ? ' locked' : (someLocked ? ' partial' : '');
+            const lockBtnIcon = allLocked ? ICO.lock : ICO.unlock;
+            const lockBtnLabel = allLocked ? 'Locked' : (someLocked ? 'Partial' : 'Unlocked');
+            const layerKey = 'layer-' + layer;
+            const layerCollapsed = !expandedNodes.has(layerKey) ? ' collapsed' : '';
+            html += `<div class="tree-layer-header${layerCollapsed}" onclick="toggleNode('${layerKey}', this)">
+                <span class="chevron">▼</span> ${layer} <span style="font-weight:400;font-size:11px;color:inherit;margin-left:4px">${LAYER_DESC[layer] || ''}</span>
+                <span class="tree-layer-count">${total} docs</span>
+                <button class="tree-lock-btn${lockBtnClass}" onclick="event.stopPropagation(); toggleLayerLock('${layer}')" title="${allLocked ? 'Unlock ' + layer : 'Lock ' + layer}">${lockBtnIcon} ${lockBtnLabel}</button>
+            </div>`;
+            html += `<div class="tree-layer-body">`;
+
+            // Group subdirs by top-level project
+            const projects = {};
+            Object.keys(data.subdirs).sort().forEach(dir => {
+                const topDir = dir.split('/')[0];
+                if (!projects[topDir]) projects[topDir] = { subdirs: {}, isNested: false };
+                if (dir.includes('/')) {
+                    projects[topDir].isNested = true;
+                    const subPath = dir.split('/').slice(1).join('/');
+                    projects[topDir].subdirs[subPath] = data.subdirs[dir];
+                } else {
+                    projects[topDir].subdirs[''] = data.subdirs[dir];
+                }
+            });
+
+            // Root docs that match a project folder name go inside that project
+            const usedRoots = new Set();
+            Object.keys(projects).forEach(proj => {
+                const matchingRoot = data.root.filter(d => {
+                    const name = d.path.replace(layer + '/', '');
+                    return name.toLowerCase().includes(proj.toLowerCase());
+                });
+                if (matchingRoot.length) {
+                    if (!projects[proj].subdirs['']) projects[proj].subdirs[''] = [];
+                    matchingRoot.forEach(d => { projects[proj].subdirs[''].unshift(d); usedRoots.add(d.path); });
+                }
+            });
+
+            // Standalone root docs (not grouped into any project)
+            const standaloneRoot = data.root.filter(d => !usedRoots.has(d.path));
+            standaloneRoot.forEach(d => { html += renderDocItem(d); });
+
+            // Render project groups
+            Object.keys(projects).sort().forEach(proj => {
+                const p = projects[proj];
+                const allProjectDocs = Object.values(p.subdirs).flat();
+                const projName = proj.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                html += `<div class="tree-subdir">`;
+                const projKey = 'proj-' + layer + '-' + proj;
+                const projCollapsed = !expandedNodes.has(projKey) ? ' collapsed' : '';
+                html += `<div class="tree-subdir-header${projCollapsed}" onclick="event.stopPropagation(); toggleNode('${projKey}', this)">
+                    <span class="chevron">▼</span> ${ICO.folder} ${projName}
+                    <span style="font-size:11px;color:var(--text-muted,#666);margin-left:auto">${allProjectDocs.length} docs</span>
+                </div>`;
+                html += `<div class="tree-subdir-body">`;
+                // If there are nested subdirs, render them; otherwise render flat
+                const subKeys = Object.keys(p.subdirs).sort();
+                subKeys.forEach(sub => {
+                    if (sub === '' || subKeys.length <= 1) {
+                        p.subdirs[sub].forEach(d => { html += renderDocItem(d); });
+                    } else {
+                        const subName = sub.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                        html += `<div class="tree-subdir" style="margin-left:12px">`;
+                        const subKey = 'sub-' + layer + '-' + proj + '-' + sub;
+                        const subCollapsed = !expandedNodes.has(subKey) ? ' collapsed' : '';
+                        html += `<div class="tree-subdir-header${subCollapsed}" onclick="event.stopPropagation(); toggleNode('${subKey}', this)">
+                            <span class="chevron">▼</span> ${ICO.folder} ${subName}
+                            <span style="font-size:11px;color:var(--text-muted,#666);margin-left:auto">${p.subdirs[sub].length}</span>
+                        </div>`;
+                        html += `<div class="tree-subdir-body">`;
+                        p.subdirs[sub].forEach(d => { html += renderDocItem(d); });
+                        html += `</div></div>`;
+                    }
+                });
+                html += `</div></div>`;
+            });
+
+            html += `</div></div>`;
+        });
+        container.innerHTML = html || '<div style="color:var(--text-muted);padding:20px;text-align:center;">No documents found</div>';
+    }
+
+    function renderDocItem(d) {
+        const active = currentDoc && currentDoc.path === d.path ? ' active' : '';
+        const showLock = d.locked || d.layer === 'L0' || d.layer === 'L1' || d.layer === 'L2';
+        const lockHtml = showLock
+            ? `<span class="doc-lock ${d.locked ? 'locked' : 'unlocked'}" onclick="event.stopPropagation(); lockDocFromTree('${d.path}', ${d.locked})" title="${d.locked ? 'Locked — click to unlock' : 'Unlocked — click to lock'}">${d.locked ? ICO.lock : ICO.unlock}</span>`
+            : '';
+        const aiTag = d.hasCompressed ? '<span class="ai-tag">.ai</span>' : '';
+        return `<div class="tree-doc${active}" onclick="event.stopPropagation(); openDoc('${d.path}')" title="${d.path}">
+            <span class="doc-name">${d.name}</span>
+            ${aiTag}
+            ${lockHtml}
+            <span class="doc-size">${formatSize(d.size)}</span>
+        </div>`;
+    }
+
+    // Lock/unlock from tree without collapsing
+    window.lockDocFromTree = async function(path, isLocked) {
+        if (isLocked) {
+            const pw = await promptPassword('Unlock document', path.split('/').pop());
+            if (!pw) return;
+            const r = await fetch('/api/r-memory/unlock/' + encodeURIComponent(path), {
+                method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({password: pw})
+            });
+            if (r.ok) { showToast('Unlocked'); await reload(); }
+            else { showToast('Unlock failed', true); }
+        } else {
+            const pw = await promptPassword('Lock document', path.split('/').pop());
+            if (!pw) return;
+            const r = await fetch('/api/r-memory/lock/' + encodeURIComponent(path), {
+                method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({password: pw})
+            });
+            if (r.ok) { showToast('Locked'); await reload(); }
+            else { showToast('Lock failed (wrong password?)', true); }
+        }
+    };
+
+    // Open document
+    window.openDoc = async function(path) {
+        if (isDirty && !confirm('Discard unsaved changes?')) return;
+        isDirty = false;
+        const doc = allDocs.find(d => d.path === path);
+        if (!doc) return;
+        currentDoc = doc;
+        isCompressedView = false;
+        await loadDocContent(false);
+        renderTree();
+    };
+
+    async function loadDocContent(compressed) {
+        const url = `/api/r-memory/document?path=${encodeURIComponent(currentDoc.path)}&compressed=${compressed}`;
+        try {
+            const res = await fetch(url);
+            const data = await res.json();
+            currentContent = data.content || '';
+            renderEditor();
+        } catch(e) {
+            console.error('Failed to load doc', e);
+        }
+    }
+
+    function renderEditor() {
+        const d = currentDoc;
+        if (!d) return;
+        const panel = document.getElementById('docsEditor');
+        const kws = allKeywords[d.path] || [];
+        const isLockable = d.layer === 'L0' || d.layer === 'L1' || d.layer === 'L2';
+        const relock = relockTimers[d.path];
+        const relockVisible = relock && !relock.keepUnlocked ? ' visible' : '';
+
+        let html = `<div class="editor-header">
+            <span class="editor-title">${d.name}</span>
+            <div class="editor-actions">`;
+        if (d.hasCompressed) {
+            html += `<div class="compressed-toggle">
+                <span class="toggle-label">Full</span>
+                <div class="toggle-switch${isCompressedView ? ' on' : ''}" onclick="toggleCompressed()"></div>
+                <span class="toggle-label">.ai.md</span>
+            </div>`;
+        }
+        html += `<button class="editor-btn primary" onclick="saveDoc()" ${d.locked ? 'disabled title="Unlock to edit"' : ''}>${ICO.save} Save</button>`;
+        html += `</div></div>`;
+
+        html += `<div class="editor-meta">`;
+        html += `<span class="layer-tag">${d.layer}</span>`;
+        html += `<span>${formatSize(d.size)}</span>`;
+        if (isLockable) {
+            html += `<span class="lock-indicator" onclick="toggleLock()" title="Click to ${d.locked ? 'unlock' : 'lock'}">${d.locked ? ICO.lock + ' Locked' : ICO.unlock + ' Unlocked'}</span>`;
+        }
+        html += `<span class="keywords-row">${ICO.tag} `;
+        kws.forEach(kw => {
+            html += `<span class="keyword-chip">${kw}<span class="kw-remove" onclick="removeKeyword('${kw}')">&times;</span></span>`;
+        });
+        html += `<button class="keyword-add-btn" onclick="addKeyword()">+ keyword</button>`;
+        html += `</span></div>`;
+
+        // Relock bar
+        html += `<div class="relock-bar${relockVisible}" id="relockBar">
+            ${ICO.clock} Auto-relock in <span id="relockCountdown">${relock ? Math.ceil(relock.remaining / 1000) : 300}</span>s
+            <span class="relock-keep" onclick="keepUnlocked()">Keep unlocked</span>
+        </div>`;
+
+        html += `<div class="editor-body">
+            <textarea class="editor-textarea" id="editorTextarea" ${d.locked ? 'readonly' : ''} 
+                oninput="markDirty()">${escapeHtml(currentContent)}</textarea>
+        </div>`;
+        panel.innerHTML = html;
+    }
+
+    function escapeHtml(s) {
+        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    window.markDirty = function() { isDirty = true; };
+
+    window.toggleCompressed = async function() {
+        isCompressedView = !isCompressedView;
+        await loadDocContent(isCompressedView);
+    };
+
+    // Save
+    window.saveDoc = async function() {
+        if (!currentDoc || currentDoc.locked) return;
+        const content = document.getElementById('editorTextarea').value;
+        try {
+            const res = await fetch('/api/r-memory/document', {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ path: currentDoc.path, content })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                isDirty = false;
+                showToast('Document saved');
+                await loadDocs();
+                currentDoc = allDocs.find(d => d.path === currentDoc.path) || currentDoc;
+                renderEditor();
+            } else {
+                showToast('Save failed: ' + (data.error || 'unknown'), true);
+            }
+        } catch(e) { showToast('Save failed: ' + e.message, true); }
+    };
+
+    // Lock/unlock
+    window.toggleLock = async function() {
+        if (!currentDoc) return;
+        if (currentDoc.locked) {
+            const pw = await promptPassword('Unlock document', currentDoc.name);
+            if (!pw) return;
+            try {
+                const res = await fetch(`/api/r-memory/unlock/${encodeURIComponent(currentDoc.path)}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ password: pw })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    _cachedPwd = pw; // Cache for auto-relock
+                    showToast('Document unlocked');
+                    startRelockTimer(currentDoc.path);
+                    await reload();
+                } else {
+                    showToast('Unlock failed: ' + (data.error || 'wrong password?'), true);
+                }
+            } catch(e) { showToast('Unlock failed', true); }
+        } else {
+            const pw = _cachedPwd || await promptPassword('Lock document', currentDoc.name);
+            if (!pw) return;
+            try {
+                const res = await fetch(`/api/r-memory/lock/${encodeURIComponent(currentDoc.path)}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ password: pw })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    clearRelockTimer(currentDoc.path);
+                    showToast('Document locked');
+                    await reload();
+                } else {
+                    showToast('Lock failed (wrong password?)', true);
+                }
+            } catch(e) { showToast('Lock failed', true); }
+        }
+    };
+
+    // Relock timer
+    function startRelockTimer(path) {
+        clearRelockTimer(path);
+        const end = Date.now() + 5 * 60 * 1000;
+        const info = { keepUnlocked: false, remaining: 5 * 60 * 1000 };
+        const interval = setInterval(() => {
+            info.remaining = end - Date.now();
+            if (info.keepUnlocked) { clearInterval(interval); return; }
+            const el = document.getElementById('relockCountdown');
+            if (el && currentDoc && currentDoc.path === path) {
+                el.textContent = Math.max(0, Math.ceil(info.remaining / 1000));
+            }
+            if (info.remaining <= 0) {
+                clearInterval(interval);
+                delete relockTimers[path];
+                // Auto-relock (uses cached password from unlock)
+                if (_cachedPwd) {
+                    fetch(`/api/r-memory/lock/${encodeURIComponent(path)}`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ password: _cachedPwd })
+                    }).then(() => reload());
+                } else {
+                    showToast('Auto-relock skipped — no cached password', true);
+                }
+            }
+        }, 1000);
+        info.timer = interval;
+        relockTimers[path] = info;
+        renderEditor();
+    }
+
+    function clearRelockTimer(path) {
+        if (relockTimers[path]) {
+            clearInterval(relockTimers[path].timer);
+            delete relockTimers[path];
+        }
+    }
+
+    window.keepUnlocked = function() {
+        if (currentDoc && relockTimers[currentDoc.path]) {
+            relockTimers[currentDoc.path].keepUnlocked = true;
+            const bar = document.getElementById('relockBar');
+            if (bar) bar.classList.remove('visible');
+        }
+    };
+
+    // Lock buttons are now rendered inside tree layer headers by renderTree()
+    function renderLockButtons() { /* no-op, handled by renderTree */ }
+
+    // Toggle layer lock state
+    window.toggleLayerLock = async function(layer) {
+        const layerDocs = allDocs.filter(d => d.layer === layer);
+        const allLocked = layerDocs.every(d => d.locked);
+        if (allLocked) {
+            await unlockLayer(layer);
+        } else {
+            await lockLayer(layer);
+        }
+    };
+
+    // Layer lock/unlock
+    window.lockLayer = async function(layer) {
+        const pw = await promptPassword('Lock layer', layer);
+        if (!pw) return;
+        try {
+            const res = await fetch(`/api/r-memory/lock-layer/${layer}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ password: pw })
+            });
+            const data = await res.json();
+            showToast(data.ok ? `${layer} locked (${data.count} docs)` : 'Failed: ' + data.error, !data.ok);
+            await reload();
+        } catch(e) { showToast('Failed', true); }
+    };
+
+    window.unlockLayer = async function(layer) {
+        const pw = await promptPassword('Unlock layer', layer);
+        if (!pw) return;
+        try {
+            const res = await fetch(`/api/r-memory/unlock-layer/${layer}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ password: pw })
+            });
+            const data = await res.json();
+            showToast(data.ok ? `${layer} unlocked (${data.count} docs)` : 'Failed: ' + data.error, !data.ok);
+            if (data.ok) {
+                _cachedPwd = pw; // Cache for auto-relock
+                // Start relock timers for all unlocked docs
+                allDocs.filter(d => d.layer === layer).forEach(d => startRelockTimer(d.path));
+            }
+            await reload();
+        } catch(e) { showToast('Failed', true); }
+    };
+
+    // Keywords
+    window.addKeyword = async function() {
+        if (!currentDoc) return;
+        const kw = prompt('Enter keyword:');
+        if (!kw || !kw.trim()) return;
+        const kws = allKeywords[currentDoc.path] || [];
+        if (kws.includes(kw.trim())) return;
+        kws.push(kw.trim());
+        await saveKeywords(currentDoc.path, kws);
+    };
+
+    window.removeKeyword = async function(kw) {
+        if (!currentDoc) return;
+        const kws = (allKeywords[currentDoc.path] || []).filter(k => k !== kw);
+        await saveKeywords(currentDoc.path, kws);
+    };
+
+    async function saveKeywords(path, keywords) {
+        try {
+            await fetch('/api/ssot/keywords', {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ path, keywords })
+            });
+            allKeywords[path] = keywords;
+            renderEditor();
+        } catch(e) { showToast('Failed to save keywords', true); }
+    }
+
+    // Reload
+    async function reload() {
+        await Promise.all([loadDocs(), loadKeywords()]);
+        updateStats();
+        if (currentDoc) currentDoc = allDocs.find(d => d.path === currentDoc.path) || currentDoc;
+        renderTree();
+        renderLockButtons();
+        if (currentDoc) renderEditor();
+    }
+
+    // Toast
+    function showToast(msg, isError) {
+        let toast = document.getElementById('ssotToast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'ssotToast';
+            toast.style.cssText = 'position:fixed;bottom:24px;right:24px;padding:10px 20px;border-radius:8px;font-size:13px;z-index:9999;transition:opacity 0.3s;';
+            document.body.appendChild(toast);
+        }
+        toast.style.background = isError ? 'var(--error, #ef4444)' : 'var(--accent, #4ade80)';
+        toast.style.color = isError ? '#fff' : '#000';
+        toast.textContent = msg;
+        toast.style.opacity = '1';
+        setTimeout(() => { toast.style.opacity = '0'; }, 3000);
+    }
+
+    // Init
+    function createPasswordModal() {
+        if (document.getElementById('passwordModal')) return;
+        var m = document.createElement('div');
+        m.id = 'passwordModal';
+        m.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;';
+        var box = document.createElement('div');
+        box.style.cssText = 'background:#1a1a2e;border:1px solid #333;border-radius:8px;padding:24px;width:400px;max-width:90vw;';
+        var h = document.createElement('h3');
+        h.style.cssText = 'margin:0 0 16px;font-size:18px;';
+        h.innerHTML = '<span id="pwdAction">Unlock</span>';
+        var p = document.createElement('p');
+        p.style.cssText = 'color:#888;font-size:13px;margin-bottom:12px;';
+        p.innerHTML = 'Enter system password for <strong id="pwdTarget"></strong>';
+        var inp = document.createElement('input');
+        inp.type = 'password';
+        inp.id = 'pwdInput';
+        inp.placeholder = 'Mac login password';
+        inp.style.cssText = 'width:100%;padding:8px;background:#111;border:1px solid #333;color:#eee;border-radius:4px;font-size:14px;';
+        inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') submitPassword(); });
+        var btns = document.createElement('div');
+        btns.style.cssText = 'display:flex;gap:8px;margin-top:16px;justify-content:flex-end;';
+        var cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.style.cssText = 'padding:8px 16px;border-radius:4px;border:1px solid #333;cursor:pointer;font-size:13px;background:#111;color:#888;';
+        cancelBtn.onclick = function() { cancelPassword(); };
+        var okBtn = document.createElement('button');
+        okBtn.textContent = 'Unlock';
+        okBtn.style.cssText = 'padding:8px 16px;border-radius:4px;border:none;cursor:pointer;font-size:13px;background:#4ade80;color:#000;font-weight:600;';
+        okBtn.onclick = function() { submitPassword(); };
+        btns.appendChild(cancelBtn);
+        btns.appendChild(okBtn);
+        box.appendChild(h);
+        box.appendChild(p);
+        box.appendChild(inp);
+        box.appendChild(btns);
+        m.appendChild(box);
+        document.body.appendChild(m);
+    }
+
+    async function init() {
+        createPasswordModal();
+        await Promise.all([loadDocs(), loadKeywords()]);
+        updateStats();
+        renderTree();
+        renderLockButtons();
+    }
+    init();
+
+    // Global refresh hook
+    window.refreshData = window.refreshData || function(){};
+    const origRefresh = window.refreshData;
+    window.refreshData = function() { origRefresh(); reload(); };
+})();
+</script>
+{% endraw %}
+{% endblock %}

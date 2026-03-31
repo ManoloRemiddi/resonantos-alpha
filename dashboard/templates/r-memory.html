@@ -1,0 +1,905 @@
+{% extends "base.html" %}
+
+{% block title %}R-Memory - ResonantOS Dashboard{% endblock %}
+{% block page_title %}R-Memory{% endblock %}
+
+{% block extra_css %}
+<style>
+    .rmem-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+    .rmem-stat-card {
+        background: var(--bg-secondary, #1a1a2e);
+        border: 1px solid var(--border, #333);
+        border-radius: 8px;
+        padding: 16px;
+        text-align: center;
+    }
+    .rmem-stat-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--accent, #4ade80);
+    }
+    .rmem-stat-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--text-secondary, #888);
+        margin-top: 4px;
+    }
+
+    /* Tabs */
+    .rmem-tabs {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 20px;
+        border-bottom: 1px solid var(--border, #333);
+        padding-bottom: 0;
+    }
+    .rmem-tab {
+        padding: 10px 20px;
+        background: none;
+        border: none;
+        color: var(--text-secondary, #888);
+        cursor: pointer;
+        font-size: 14px;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+    }
+    .rmem-tab:hover { color: var(--text-primary, #eee); }
+    .rmem-tab.active {
+        color: var(--accent, #4ade80);
+        border-bottom-color: var(--accent, #4ade80);
+    }
+    .rmem-panel { display: none; }
+    .rmem-panel.active { display: block; }
+
+    /* Document tree */
+    .layer-group {
+        margin-bottom: 16px;
+    }
+    .layer-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: var(--bg-tertiary, #111);
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+    }
+    .layer-header:hover { background: var(--bg-hover, #222); }
+    .layer-badge {
+        margin-left: auto;
+        font-size: 12px;
+        color: var(--text-secondary, #888);
+    }
+    .layer-docs {
+        margin-left: 20px;
+        border-left: 1px solid var(--border, #333);
+    }
+    .doc-row {
+        display: flex;
+        align-items: center;
+        padding: 8px 16px;
+        cursor: pointer;
+        transition: background 0.15s;
+        font-size: 13px;
+        gap: 8px;
+    }
+    .doc-row:hover { background: var(--bg-hover, #1e1e3a); }
+    .doc-name {
+        flex: 1;
+        color: var(--accent, #4ade80);
+        text-decoration: none;
+    }
+    .doc-tokens {
+        font-size: 12px;
+        color: var(--text-secondary, #888);
+        min-width: 120px;
+        text-align: right;
+        white-space: nowrap;
+    }
+    .doc-tokens-compressed {
+        color: var(--accent, #4ade80);
+        font-weight: 600;
+    }
+    .doc-compressed {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent, #4ade80);
+    }
+    .lock-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 2px 6px;
+        opacity: 0.5;
+        transition: opacity 0.2s;
+    }
+    .lock-btn:hover { opacity: 1; }
+    .lock-btn.locked { opacity: 1; }
+    .layer-lock-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 13px;
+        padding: 2px 8px;
+        margin-left: 8px;
+        opacity: 0.5;
+        transition: opacity 0.2s;
+    }
+    .layer-lock-btn:hover { opacity: 1; }
+    .layer-lock-btn.locked { opacity: 1; }
+
+    /* Editor */
+    .editor-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        height: calc(100vh - 240px);
+        min-height: 400px;
+    }
+    .editor-pane, .preview-pane {
+        background: var(--bg-secondary, #1a1a2e);
+        border: 1px solid var(--border, #333);
+        border-radius: 8px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+    .pane-header {
+        padding: 8px 16px;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--text-secondary, #888);
+        border-bottom: 1px solid var(--border, #333);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .editor-textarea {
+        flex: 1;
+        width: 100%;
+        border: none;
+        background: transparent;
+        color: var(--text-primary, #eee);
+        font-family: 'Courier New', monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        padding: 16px;
+        resize: none;
+        outline: none;
+    }
+    .preview-content {
+        flex: 1;
+        padding: 16px;
+        overflow-y: auto;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+    .preview-content h1, .preview-content h2, .preview-content h3 { color: var(--text-primary, #eee); margin: 16px 0 8px; }
+    .preview-content h1 { font-size: 22px; }
+    .preview-content h2 { font-size: 18px; }
+    .preview-content table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+    .preview-content th, .preview-content td { border: 1px solid var(--border, #333); padding: 6px 10px; text-align: left; font-size: 13px; }
+    .preview-content th { background: var(--bg-tertiary, #111); }
+    .preview-content code { background: var(--bg-tertiary, #111); padding: 2px 6px; border-radius: 3px; font-size: 12px; }
+    .preview-content pre { background: var(--bg-tertiary, #111); padding: 12px; border-radius: 6px; overflow-x: auto; }
+    .preview-content ul, .preview-content ol { padding-left: 24px; }
+
+    .editor-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border, #333);
+    }
+    .editor-doc-title {
+        font-size: 16px;
+        font-weight: 600;
+        flex: 1;
+    }
+    .btn-save {
+        padding: 6px 16px;
+        background: var(--accent, #4ade80);
+        color: #000;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 13px;
+    }
+    .btn-save:hover { opacity: 0.9; }
+    .btn-save.saved { background: var(--text-secondary, #888); }
+    .btn-back {
+        padding: 6px 12px;
+        background: var(--bg-tertiary, #111);
+        color: var(--text-secondary, #888);
+        border: 1px solid var(--border, #333);
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 13px;
+        text-decoration: none;
+    }
+    .btn-back:hover { color: var(--text-primary, #eee); }
+    .token-count {
+        font-size: 12px;
+        color: var(--text-secondary, #888);
+    }
+    .editor-keywords {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-bottom: 1px solid var(--border, #333);
+        font-size: 13px;
+    }
+    .editor-keywords label {
+        color: var(--text-secondary, #888);
+        font-size: 12px;
+        white-space: nowrap;
+    }
+    .editor-keywords input {
+        flex: 1;
+        background: var(--bg-tertiary, #111);
+        border: 1px solid var(--border, #333);
+        color: var(--text-primary, #eee);
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 13px;
+    }
+    .editor-keywords input:focus { outline: none; border-color: var(--accent, #4ade80); }
+    .editor-keywords .kw-help {
+        color: var(--text-secondary, #666);
+        font-size: 11px;
+        white-space: nowrap;
+    }
+
+    /* Keywords */
+    .kw-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .kw-table th, .kw-table td {
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--border, #333);
+        text-align: left;
+        font-size: 13px;
+    }
+    .kw-table th {
+        color: var(--text-secondary, #888);
+        font-weight: 500;
+        text-transform: uppercase;
+        font-size: 11px;
+        letter-spacing: 1px;
+    }
+    .kw-input {
+        background: var(--bg-tertiary, #111);
+        border: 1px solid var(--border, #333);
+        color: var(--text-primary, #eee);
+        padding: 6px 10px;
+        border-radius: 4px;
+        font-size: 13px;
+        width: 100%;
+    }
+    .kw-input:focus { outline: none; border-color: var(--accent, #4ade80); }
+    .btn-kw-save {
+        margin-top: 16px;
+        padding: 8px 24px;
+        background: var(--accent, #4ade80);
+        color: #000;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+    /* New doc modal */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.7);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal-box {
+        background: var(--bg-secondary, #1a1a2e);
+        border: 1px solid var(--border, #333);
+        border-radius: 8px;
+        padding: 24px;
+        width: 400px;
+        max-width: 90vw;
+    }
+    .modal-box h3 { margin: 0 0 16px; font-size: 18px; }
+    .modal-box label { display: block; margin: 8px 0 4px; font-size: 13px; color: var(--text-secondary, #888); }
+    .modal-box input, .modal-box select {
+        width: 100%;
+        padding: 8px;
+        background: var(--bg-tertiary, #111);
+        border: 1px solid var(--border, #333);
+        color: var(--text-primary, #eee);
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    .modal-actions { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+    .modal-actions button {
+        padding: 8px 16px;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+        font-size: 13px;
+    }
+    .btn-create { background: var(--accent, #4ade80); color: #000; font-weight: 600; }
+    .btn-cancel { background: var(--bg-tertiary, #111); color: var(--text-secondary, #888); border: 1px solid var(--border, #333); }
+
+    .new-doc-btn {
+        padding: 8px 16px;
+        background: var(--accent, #4ade80);
+        color: #000;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 13px;
+        margin-bottom: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Stats -->
+<div class="rmem-stats" id="rmemStats">
+    <div class="rmem-stat-card">
+        <div class="rmem-stat-value" id="statDocs">-</div>
+        <div class="rmem-stat-label">Documents</div>
+    </div>
+    <div class="rmem-stat-card">
+        <div class="rmem-stat-value" id="statTokens">-</div>
+        <div class="rmem-stat-label">Total Tokens</div>
+    </div>
+    <div class="rmem-stat-card">
+        <div class="rmem-stat-value" id="statCompressed">-</div>
+        <div class="rmem-stat-label">Compressed</div>
+    </div>
+    <div class="rmem-stat-card">
+        <div class="rmem-stat-value" id="statLayers">5</div>
+        <div class="rmem-stat-label">Layers</div>
+    </div>
+</div>
+
+<!-- Tabs -->
+<div class="rmem-tabs">
+    <button class="rmem-tab active" onclick="switchRmemTab('documents')">Documents</button>
+    <button class="rmem-tab" onclick="switchRmemTab('settings')">Settings</button>
+    <button class="rmem-tab" onclick="switchRmemTab('help')">Help</button>
+</div>
+
+<!-- Documents Panel -->
+<div class="rmem-panel active" id="panel-documents">
+    <button class="new-doc-btn" onclick="showNewDocModal()">+ New Document</button>
+    <div id="docTree">Loading...</div>
+</div>
+
+<!-- Editor Panel (hidden by default, shown when editing) -->
+<div class="rmem-panel" id="panel-editor">
+    <div class="editor-toolbar">
+        <a href="#" class="btn-back" onclick="closeEditor(); return false;">← Back</a>
+        <span class="editor-doc-title" id="editorTitle"></span>
+        <span class="token-count" id="editorTokens"></span>
+        <button class="btn-save" id="btnSave" onclick="saveDocument()">Save</button>
+    </div>
+    <div class="editor-keywords">
+        <label>🏷️ Keywords</label>
+        <input type="text" id="editorKeywords" placeholder="e.g. memory, compression, fifo (comma-separated)">
+        <span class="kw-help">Triggers R-Awareness injection</span>
+    </div>
+    <div class="editor-container">
+        <div class="editor-pane">
+            <div class="pane-header">
+                <span>Editor</span>
+                <span id="charCount"></span>
+            </div>
+            <textarea class="editor-textarea" id="editorTextarea" oninput="onEditorInput()"></textarea>
+        </div>
+        <div class="preview-pane">
+            <div class="pane-header">
+                <span>Preview</span>
+            </div>
+            <div class="preview-content" id="previewContent"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Settings Panel -->
+<div class="rmem-panel" id="panel-settings">
+    <div style="background: var(--bg-secondary, #1a1a2e); border: 1px solid var(--border, #333); border-radius: 8px; padding: 20px;">
+        <h3 style="margin: 0 0 16px;">Configuration</h3>
+        <table style="width: 100%;">
+            <tr><td style="padding: 8px; color: var(--text-secondary, #888);">SSoT Root</td><td style="padding: 8px;">{{ ssot_root }}</td></tr>
+            <tr><td style="padding: 8px; color: var(--text-secondary, #888);">Plugin Path</td><td style="padding: 8px;">{{ plugin_path }}</td></tr>
+            <tr><td style="padding: 8px; color: var(--text-secondary, #888);">Plugin Status</td><td style="padding: 8px;">{{ 'Active' if plugin_exists else 'Not Found' }}</td></tr>
+        </table>
+    </div>
+</div>
+
+<!-- Help Panel -->
+<div class="rmem-panel" id="panel-help">
+    <div style="max-width: 800px;">
+        <div style="background: var(--bg-secondary, #1a1a2e); border: 1px solid var(--border, #333); border-radius: 8px; padding: 24px; margin-bottom: 20px;">
+            <h2 style="margin: 0 0 16px; font-size: 20px;">How R-Memory Works</h2>
+            <p style="color: var(--text-secondary, #aaa); line-height: 1.7; margin-bottom: 16px;">
+                R-Memory is a knowledge management system for AI agents. Instead of relying on RAG (Retrieval-Augmented Generation) which searches through chunks of text, R-Memory uses <strong>Single Source of Truth (SSoT)</strong> documents -- carefully crafted markdown files that get injected directly into your AI's context when relevant topics come up in conversation.
+            </p>
+            <p style="color: var(--text-secondary, #aaa); line-height: 1.7; margin-bottom: 16px;">
+                Think of it as giving your AI a structured knowledge base it can reference instantly, without searching. Each document has <strong>trigger keywords</strong> -- when those words appear in conversation, the document gets loaded into the AI's working memory.
+            </p>
+        </div>
+
+        <div style="background: var(--bg-secondary, #1a1a2e); border: 1px solid var(--border, #333); border-radius: 8px; padding: 24px; margin-bottom: 20px;">
+            <h3 style="margin: 0 0 12px; font-size: 16px;">📁 The Layer System</h3>
+            <p style="color: var(--text-secondary, #aaa); line-height: 1.7; margin-bottom: 12px;">
+                Documents are organized in 5 layers, from most permanent to most transient:
+            </p>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px;">
+                <tr style="border-bottom: 1px solid var(--border, #333);">
+                    <td style="padding: 8px; font-weight: 600; color: var(--accent, #4ade80);">L0 -- Foundation</td>
+                    <td style="padding: 8px; color: var(--text-secondary, #aaa);">Your vision, mission, philosophy, manifesto. The unchanging truths. These should rarely change and are typically locked.</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border, #333);">
+                    <td style="padding: 8px; font-weight: 600; color: var(--accent, #4ade80);">L1 -- Architecture</td>
+                    <td style="padding: 8px; color: var(--text-secondary, #aaa);">How your systems work. Technical specs, architecture docs, integration patterns. The structural backbone of your project.</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border, #333);">
+                    <td style="padding: 8px; font-weight: 600; color: var(--accent, #4ade80);">L2 -- Active Projects</td>
+                    <td style="padding: 8px; color: var(--text-secondary, #aaa);">What you're building right now. Project status, milestones, key decisions. Living documents that evolve daily.</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border, #333);">
+                    <td style="padding: 8px; font-weight: 600; color: var(--accent, #4ade80);">L3 -- Drafts</td>
+                    <td style="padding: 8px; color: var(--text-secondary, #aaa);">Ideas taking shape. Plans, proposals, research. Not yet committed, but worth developing and discussing.</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; font-weight: 600; color: var(--accent, #4ade80);">L4 -- Notes</td>
+                    <td style="padding: 8px; color: var(--text-secondary, #aaa);">Working notes, session logs, incident reports. Raw context that may get promoted to higher layers over time.</td>
+                </tr>
+            </table>
+            <p style="color: var(--text-secondary, #888); font-size: 13px; font-style: italic;">
+                Tip: Start with L0 -- write down your vision and philosophy. Then add L1 docs as you build your system architecture. L2-L4 will grow naturally as you work.
+            </p>
+        </div>
+
+        <div style="background: var(--bg-secondary, #1a1a2e); border: 1px solid var(--border, #333); border-radius: 8px; padding: 24px; margin-bottom: 20px;">
+            <h3 style="margin: 0 0 12px; font-size: 16px;">🏷️ Keywords & R-Awareness</h3>
+            <p style="color: var(--text-secondary, #aaa); line-height: 1.7; margin-bottom: 12px;">
+                Each document has <strong>trigger keywords</strong>. When you or someone mentions these words in conversation with the AI, the R-Awareness system automatically injects the relevant document into the AI's context.
+            </p>
+            <p style="color: var(--text-secondary, #aaa); line-height: 1.7; margin-bottom: 12px;">
+                For example, if your philosophy document has keywords <code style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 3px;">philosophy, augmentatism, mission</code>, then any conversation mentioning those words will have your philosophy document loaded automatically.
+            </p>
+            <p style="color: var(--text-secondary, #aaa); line-height: 1.7;">
+                Set keywords when editing a document -- they appear right below the title bar. Use comma-separated values. Be specific enough to avoid false triggers, broad enough to catch relevant conversations.
+            </p>
+        </div>
+
+        <div style="background: var(--bg-secondary, #1a1a2e); border: 1px solid var(--border, #333); border-radius: 8px; padding: 24px; margin-bottom: 20px;">
+            <h3 style="margin: 0 0 12px; font-size: 16px;">📝 Compression</h3>
+            <p style="color: var(--text-secondary, #aaa); line-height: 1.7; margin-bottom: 12px;">
+                Each document can have a compressed version (<code style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 3px;">.ai.md</code>) alongside the raw version. The compressed version is what actually gets injected into the AI's context -- saving 55-80% tokens while preserving 100% of the information.
+            </p>
+            <p style="color: var(--text-secondary, #aaa); line-height: 1.7; margin-bottom: 12px;">
+                Documents with a compressed version show a <span style="color: var(--accent);">green dot</span> (●) and display both token counts: <span style="color: var(--accent); font-weight: 600;">compressed</span> / raw.
+            </p>
+            <p style="color: var(--text-secondary, #aaa); line-height: 1.7;">
+                Compression is lossless -- it uses tables instead of prose, removes filler words, and uses terse notation. Your AI can create compressed versions by asking it to compress a document following the lossless compression rules.
+            </p>
+        </div>
+
+        <div style="background: var(--bg-secondary, #1a1a2e); border: 1px solid var(--border, #333); border-radius: 8px; padding: 24px; margin-bottom: 20px;">
+            <h3 style="margin: 0 0 12px; font-size: 16px;">🔒 Document Locking</h3>
+            <p style="color: var(--text-secondary, #aaa); line-height: 1.7; margin-bottom: 16px;">
+                Lock documents to prevent your AI from accidentally modifying them. This is especially important for L0 (Foundation) and L1 (Architecture) documents that define your core identity and system design.
+            </p>
+            
+            <h4 style="margin: 0 0 8px; font-size: 14px; color: var(--text-primary);">macOS</h4>
+            <p style="color: var(--text-secondary, #aaa); line-height: 1.7; margin-bottom: 12px;">
+                Uses <code style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 3px;">chflags uchg</code> (OS-level immutable flag). Locking is instant, unlocking requires your Mac user password. This is the strongest protection available -- even the AI running as your user cannot bypass it without the password.
+            </p>
+
+            <h4 style="margin: 0 0 8px; font-size: 14px; color: var(--text-primary);">Linux</h4>
+            <p style="color: var(--text-secondary, #aaa); line-height: 1.7; margin-bottom: 8px;">
+                Use <code style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 3px;">chattr +i</code> (immutable attribute). Requires root. Ask your AI to help implement this:
+            </p>
+            <pre style="background: var(--bg-tertiary); padding: 12px; border-radius: 6px; font-size: 12px; margin-bottom: 12px; overflow-x: auto;"><code># Lock a file
+sudo chattr +i /path/to/document.md
+
+# Unlock a file
+sudo chattr -i /path/to/document.md
+
+# Check if locked
+lsattr /path/to/document.md</code></pre>
+
+            <h4 style="margin: 0 0 8px; font-size: 14px; color: var(--text-primary);">Windows</h4>
+            <p style="color: var(--text-secondary, #aaa); line-height: 1.7; margin-bottom: 8px;">
+                Use NTFS ACLs or read-only attributes. Ask your AI to help implement this:
+            </p>
+            <pre style="background: var(--bg-tertiary); padding: 12px; border-radius: 6px; font-size: 12px; margin-bottom: 12px; overflow-x: auto;"><code># Lock (read-only)
+attrib +R "C:\path\to\document.md"
+
+# Unlock
+attrib -R "C:\path\to\document.md"
+
+# For stronger protection, use icacls:
+icacls "C:\path\to\document.md" /deny Everyone:(W,D)</code></pre>
+
+            <p style="color: var(--text-secondary, #888); font-size: 13px; font-style: italic;">
+                Tip: Ask your AI to build a custom lock/unlock script for your platform. Share this help page with it -- the AI can read the architecture doc (L1/SSOT-L1-DASHBOARD.md) and adapt the implementation.
+            </p>
+        </div>
+
+        <div style="background: var(--bg-secondary, #1a1a2e); border: 1px solid var(--border, #333); border-radius: 8px; padding: 24px;">
+            <h3 style="margin: 0 0 12px; font-size: 16px;">🤖 Getting Help From Your AI</h3>
+            <p style="color: var(--text-secondary, #aaa); line-height: 1.7; margin-bottom: 12px;">
+                This dashboard has an architecture document at <code style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 3px;">L1/SSOT-L1-DASHBOARD.md</code> that describes how everything works. Your AI can read this document and help you with:
+            </p>
+            <ul style="color: var(--text-secondary, #aaa); line-height: 2; padding-left: 20px;">
+                <li>Implementing file locking for your platform (Linux, Windows)</li>
+                <li>Creating new pages or features in the dashboard</li>
+                <li>Setting up compression for your documents</li>
+                <li>Configuring R-Awareness keywords for optimal injection</li>
+                <li>Extending the API with new endpoints</li>
+                <li>Connecting the dashboard to Git for version control</li>
+            </ul>
+            <p style="color: var(--text-secondary, #aaa); line-height: 1.7; margin-top: 12px;">
+                Just tell your AI: <em>"Read the dashboard architecture doc and help me [what you need]"</em>. The L1 doc has the full API reference, file structure, and design principles.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- New Document Modal -->
+<div class="modal-overlay" id="newDocModal">
+    <div class="modal-box">
+        <h3>New SSoT Document</h3>
+        <label>Layer</label>
+        <select id="newDocLayer">
+            <option value="L0">L0 - Foundation</option>
+            <option value="L1">L1 - Architecture</option>
+            <option value="L2">L2 - Active Projects</option>
+            <option value="L3">L3 - Drafts</option>
+            <option value="L4" selected>L4 - Notes</option>
+        </select>
+        <label>Document Name</label>
+        <input type="text" id="newDocName" placeholder="e.g. MY-NEW-DOCUMENT">
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="hideNewDocModal()">Cancel</button>
+            <button class="btn-create" onclick="createDocument()">Create</button>
+        </div>
+    </div>
+</div>
+
+<!-- Password Modal -->
+<div class="modal-overlay" id="passwordModal">
+    <div class="modal-box">
+        <h3>🔐 <span id="pwdAction">Unlock</span></h3>
+        <p style="color: var(--text-secondary, #888); font-size: 13px; margin-bottom: 12px;">
+            Enter master password to unlock <strong id="pwdTarget"></strong>
+        </p>
+        <input type="password" id="pwdInput" placeholder="Master password" 
+               onkeydown="if(event.key==='Enter') submitPassword()">
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="cancelPassword()">Cancel</button>
+            <button class="btn-create" onclick="submitPassword()">Unlock</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+const API_BASE = '/api/r-memory';
+let currentDocPath = null;
+let allKeywords = {};
+
+// Lock state (from filesystem via API)
+let docLockStates = {};  // path -> bool
+let layerLockStates = {}; // layer -> bool (true if ALL docs in layer locked)
+
+function getLockState(path) {
+    return docLockStates[path] || false;
+}
+function getLayerLockState(layer) {
+    return layerLockStates[layer] || false;
+}
+
+async function toggleLock(path) {
+    const isLocked = getLockState(path);
+    if (isLocked) {
+        // Need password to unlock
+        const password = await promptPassword('Unlock document', path.split('/').pop());
+        if (!password) return;
+        const res = await fetch(API_BASE + '/unlock/' + encodeURIComponent(path), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password })
+        });
+        const data = await res.json();
+        if (!data.unlocked) {
+            alert('Unlock failed. Wrong password?');
+            return;
+        }
+    } else {
+        // Lock is free
+        await fetch(API_BASE + '/lock/' + encodeURIComponent(path), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+    loadDocTree();
+}
+
+async function toggleLayerLock(layer) {
+    const isLocked = getLayerLockState(layer);
+    if (isLocked) {
+        const password = await promptPassword('Unlock layer', layer);
+        if (!password) return;
+        const res = await fetch(API_BASE + '/unlock-layer/' + layer, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password })
+        });
+        const data = await res.json();
+        if (!data.unlocked && data.unlocked !== 0) {
+            alert('Unlock failed. Wrong password?');
+            return;
+        }
+    } else {
+        await fetch(API_BASE + '/lock-layer/' + layer, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+    loadDocTree();
+}
+
+function promptPassword(action, target) {
+    return new Promise(resolve => {
+        const overlay = document.getElementById('passwordModal');
+        document.getElementById('pwdAction').textContent = action;
+        document.getElementById('pwdTarget').textContent = target;
+        document.getElementById('pwdInput').value = '';
+        overlay.classList.add('show');
+        document.getElementById('pwdInput').focus();
+        
+        window._pwdResolve = resolve;
+    });
+}
+function submitPassword() {
+    const pwd = document.getElementById('pwdInput').value;
+    document.getElementById('passwordModal').classList.remove('show');
+    if (window._pwdResolve) window._pwdResolve(pwd);
+}
+function cancelPassword() {
+    document.getElementById('passwordModal').classList.remove('show');
+    if (window._pwdResolve) window._pwdResolve(null);
+}
+
+// Stats
+async function loadStats() {
+    const res = await fetch(API_BASE + '/stats');
+    const data = await res.json();
+    document.getElementById('statDocs').textContent = data.total_docs;
+    document.getElementById('statTokens').textContent = data.total_tokens.toLocaleString();
+    document.getElementById('statCompressed').textContent = data.compressed;
+}
+
+// Document tree
+async function loadDocTree() {
+    const res = await fetch(API_BASE + '/documents');
+    const docs = await res.json();
+    
+    const byLayer = {};
+    docLockStates = {};
+    docs.forEach(d => {
+        if (!byLayer[d.layer]) byLayer[d.layer] = [];
+        byLayer[d.layer].push(d);
+        docLockStates[d.path] = d.locked || false;
+    });
+    // Layer is locked if ALL docs in it are locked
+    layerLockStates = {};
+    for (const layer of ['L0','L1','L2','L3','L4']) {
+        const layerDocs = byLayer[layer] || [];
+        layerLockStates[layer] = layerDocs.length > 0 && layerDocs.every(d => d.locked);
+    }
+    
+    const layerNames = { L0: 'Foundation', L1: 'Architecture', L2: 'Active Projects', L3: 'Drafts', L4: 'Notes' };
+    const layerIcons = { L0: '🌐', L1: '⚙️', L2: '🚀', L3: '📝', L4: '📁' };
+    const layerDescriptions = {
+        L0: 'Your vision, mission, philosophy, manifesto, overall life or business plan. The unchanging truths that define who you are and what you stand for.',
+        L1: 'Your system architecture. How ResonantOS and OpenClaw work together. Technical specs, integration patterns, memory systems. The structural backbone.',
+        L2: 'What you are actively building right now. Project status, milestones, decisions. Living documents that evolve daily.',
+        L3: 'Ideas taking shape. Plans, proposals, research. Not yet committed, but worth developing.',
+        L4: 'Working notes, session logs, incident reports. Raw context that may get promoted to higher layers over time.'
+    };
+    
+    let html = '';
+    for (const layer of ['L0','L1','L2','L3','L4']) {
+        const docs = byLayer[layer] || [];
+        html += `<div class="layer-group">
+            <div class="layer-header" onclick="this.parentElement.querySelector('.layer-docs').style.display = this.parentElement.querySelector('.layer-docs').style.display === 'none' ? 'block' : 'none'">
+                <span>${layerIcons[layer] || '📄'}</span>
+                <span>${layer}</span>
+                <span style="color: var(--text-secondary); font-weight: 400; font-size: 13px;">- ${layerNames[layer] || ''}</span>
+                <button class="layer-lock-btn ${getLayerLockState(layer) ? 'locked' : ''}" onclick="event.stopPropagation(); toggleLayerLock('${layer}')" title="Lock/unlock entire layer">${getLayerLockState(layer) ? '🔒' : '🔓'}</button>
+                <span class="layer-badge">${docs.length} docs</span>
+            </div>
+            <div style="padding: 6px 16px 2px 28px; font-size: 12px; color: var(--text-secondary, #666); font-style: italic; line-height: 1.5;">${layerDescriptions[layer] || ''}</div>
+            <div class="layer-docs">`;
+        
+        docs.forEach(d => {
+            const lockState = getLockState(d.path);
+            const lockIcon = lockState ? '🔒' : '🔓';
+            const lockClass = lockState ? 'locked' : '';
+            let tokenDisplay = '';
+            if (d.has_compressed && d.compression_ratio !== null) {
+                const compressedTok = Math.round(d.tokens * (1 - d.compression_ratio / 100));
+                tokenDisplay = `<span class="doc-tokens"><span class="doc-tokens-compressed">${compressedTok}</span> / ${d.tokens} tok</span>`;
+            } else {
+                tokenDisplay = `<span class="doc-tokens">${d.tokens} tok</span>`;
+            }
+            html += `<div class="doc-row">
+                <button class="lock-btn ${lockClass}" onclick="event.stopPropagation(); toggleLock('${d.path}')" title="${lockState ? 'Locked (AI cannot edit)' : 'Unlocked (AI can edit)'}">${lockIcon}</button>
+                ${d.has_compressed ? '<span class="doc-compressed" title="Compressed version available"></span>' : '<span style="width:8px;display:inline-block"></span>'}
+                <span class="doc-name" onclick="openEditor('${d.path}')">${d.filename}</span>
+                ${tokenDisplay}
+            </div>`;
+        });
+        
+        html += '</div></div>';
+    }
+    
+    document.getElementById('docTree').innerHTML = html;
+}
+
+// Editor
+async function openEditor(docPath) {
+    currentDocPath = docPath;
+    const res = await fetch(API_BASE + '/documents/' + encodeURIComponent(docPath));
+    const data = await res.json();
+    
+    document.getElementById('editorTitle').textContent = docPath.split('/').pop();
+    document.getElementById('editorTextarea').value = data.content;
+    document.getElementById('editorTokens').textContent = data.tokens + ' tokens';
+    
+    // Load keywords for this doc
+    if (Object.keys(allKeywords).length === 0) {
+        const kwRes = await fetch(API_BASE + '/keywords');
+        allKeywords = await kwRes.json();
+    }
+    const docId = docPath.split('/').pop().replace('.md', '');
+    const docKws = allKeywords[docId] || [];
+    document.getElementById('editorKeywords').value = docKws.join(', ');
+    
+    updatePreview();
+    updateCharCount();
+    
+    document.getElementById('panel-documents').classList.remove('active');
+    document.getElementById('panel-editor').classList.add('active');
+    
+    document.querySelectorAll('.rmem-tab').forEach(t => t.classList.remove('active'));
+}
+
+function closeEditor() {
+    document.getElementById('panel-editor').classList.remove('active');
+    document.getElementById('panel-documents').classList.add('active');
+    document.querySelectorAll('.rmem-tab')[0].classList.add('active');
+    currentDocPath = null;
+}
+
+function onEditorInput() {
+    updatePreview();
+    updateCharCount();
+    document.getElementById('btnSave').classList.remove('saved');
+    document.getElementById('btnSave').textContent = 'Save';
+}
+
+function updatePreview() {
+    const text = document.getElementById('editorTextarea').value;
+    if (typeof marked !== 'undefined') {
+        document.getElementById('previewContent').innerHTML = marked.parse(text);
+    }
+}
+
+function updateCharCount() {
+    const text = document.getElementById('editorTextarea').value;
+    const chars = text.length;
+    const tokens = Math.max(1, Math.round(chars / 4));
+    document.getElementById('charCount').textContent = chars + ' chars';
+    document.getElementById('editorTokens').textContent = tokens + ' tokens';
+}
+
+async function saveDocument() {
+    if (!currentDocPath) return;
+    const content = document.getElementById('editorTextarea').value;
+    
+    // Save document content
+    const res = await fetch(API_BASE + '/documents/' + encodeURIComponent(currentDocPath), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content })
+    });
+    
+    // Save keywords for this doc
+    const kwInput = document.getElementById('editorKeywords').value;
+    const kws = kwInput.split(',').map(k => k.trim()).filter(k => k);
+    const docId = currentDocPath.split('/').pop().replace('.md', '');
+    allKeywords[docId] = kws;
+    await fetch(API_BASE + '/keywords', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(allKeywords)
+    });
+    
+    if (res.ok) {
+        const btn = document.getElementById('btnSave');
+        btn.classList.add('saved');
+        btn.textContent = 'Saved ✓';
+        loadStats();
+    }
+}
+
+// Ctrl+S to save
+document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        if (currentDocPath) saveDocument();
+    }
+});
+
+// Tabs
+function switchRmemTab(tab) {
+    document.querySelectorAll('.rmem-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.rmem-tab').forEach(t => t.classList.remove('active'));
+    
+    document.getElementById('panel-' + tab).classList.add('active');
+    event.target.classList.add('active');
+    
+    // tab switched
+}
+
+// New document modal
+function showNewDocModal() { document.getElementById('newDocModal').classList.add('show'); }
+function hideNewDocModal() { document.getElementById('newDocModal').classList.remove('show'); }
+
+async function createDocument() {
+    const layer = document.getElementById('newDocLayer').value;
+    const name = document.getElementById('newDocName').value.trim();
+    if (!name) { alert('Enter a name'); return; }
+    
+    const res = await fetch(API_BASE + '/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ layer, name })
+    });
+    
+    if (res.ok) {
+        hideNewDocModal();
+        document.getElementById('newDocName').value = '';
+        loadDocTree();
+        loadStats();
+    }
+}
+
+// Init
+loadStats();
+loadDocTree();
+</script>
+{% endblock %}

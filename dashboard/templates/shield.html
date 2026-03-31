@@ -1,0 +1,733 @@
+{% extends "base.html" %}
+
+{% block title %}Shield - ResonantOS Dashboard{% endblock %}
+{% block page_title %}Symbiotic Shield{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Overview Cards */
+    .shield-overview {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+        margin-bottom: 32px;
+    }
+    .overview-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 20px;
+        text-align: center;
+    }
+    .overview-card .value {
+        font-size: 32px;
+        font-weight: 700;
+        color: var(--accent);
+    }
+    .overview-card .value.warning { color: var(--warning); }
+    .overview-card .value.error { color: var(--error); }
+    .overview-card .label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--text-secondary);
+        margin-top: 4px;
+    }
+
+    /* Section Headers */
+    .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+    }
+    .section-header h2 {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    /* File Guard Groups */
+    .guard-groups {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 32px;
+    }
+    .guard-group {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        transition: border-color 0.2s;
+    }
+    .guard-group:hover {
+        border-color: var(--border-light);
+    }
+    .guard-group-header {
+        display: flex;
+        align-items: center;
+        padding: 14px 18px;
+        cursor: pointer;
+        user-select: none;
+        gap: 12px;
+    }
+    .guard-group-header:hover {
+        background: var(--bg-hover);
+    }
+    .guard-chevron {
+        color: var(--text-muted);
+        transition: transform 0.2s;
+        flex-shrink: 0;
+    }
+    .guard-group.expanded .guard-chevron {
+        transform: rotate(90deg);
+    }
+    .guard-group-name {
+        font-weight: 600;
+        font-size: 14px;
+        flex: 1;
+    }
+    .guard-group-meta {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 12px;
+        color: var(--text-secondary);
+    }
+    .guard-toggle-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 14px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        cursor: pointer;
+        border: 1px solid var(--border);
+        transition: all 0.2s;
+    }
+    .guard-toggle-btn.locked {
+        background: rgba(251, 191, 36, 0.15);
+        color: var(--warning);
+        border-color: rgba(251, 191, 36, 0.3);
+    }
+    .guard-toggle-btn.locked:hover {
+        background: rgba(74, 222, 128, 0.15);
+        color: var(--accent);
+        border-color: rgba(74, 222, 128, 0.3);
+    }
+    .guard-toggle-btn.unlocked {
+        background: rgba(107, 114, 128, 0.1);
+        color: var(--text-muted);
+        border-color: var(--border);
+    }
+    .guard-toggle-btn.unlocked:hover {
+        background: rgba(251, 191, 36, 0.15);
+        color: var(--warning);
+        border-color: rgba(251, 191, 36, 0.3);
+    }
+    .guard-toggle-btn.partial {
+        background: rgba(96, 165, 250, 0.15);
+        color: var(--info);
+        border-color: rgba(96, 165, 250, 0.3);
+    }
+    .guard-toggle-btn.partial:hover {
+        background: rgba(74, 222, 128, 0.15);
+        color: var(--accent);
+        border-color: rgba(74, 222, 128, 0.3);
+    }
+
+    /* File List */
+    .guard-files {
+        display: none;
+        border-top: 1px solid var(--border);
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    .guard-group.expanded .guard-files {
+        display: block;
+    }
+    .guard-file {
+        display: flex;
+        align-items: center;
+        padding: 8px 18px 8px 44px;
+        font-size: 12px;
+        font-family: 'SF Mono', 'Fira Code', monospace;
+        color: var(--text-secondary);
+        border-bottom: 1px solid var(--bg-tertiary);
+        gap: 8px;
+    }
+    .guard-file:last-child {
+        border-bottom: none;
+    }
+    .guard-file .file-icon {
+        flex-shrink: 0;
+        width: 14px;
+        text-align: center;
+    }
+    .guard-file .file-icon.locked { color: var(--warning); }
+    .guard-file .file-icon.unlocked { color: var(--text-muted); }
+    .guard-file .file-path {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .guard-file .file-lock-btn {
+        flex-shrink: 0;
+        background: none;
+        border: 1px solid var(--bg-tertiary);
+        border-radius: 4px;
+        padding: 2px 8px;
+        font-size: 11px;
+        cursor: pointer;
+        color: var(--text-muted);
+        transition: all 0.15s;
+    }
+    .guard-file .file-lock-btn:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+    }
+    .guard-file .file-lock-btn.is-locked {
+        color: var(--warning);
+        border-color: var(--warning);
+    }
+    .guard-file .file-lock-btn.is-locked:hover {
+        color: var(--error);
+        border-color: var(--error);
+    }
+    .guard-file .file-size {
+        color: var(--text-muted);
+        font-size: 11px;
+        flex-shrink: 0;
+    }
+
+    /* Password Modal */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-overlay.visible {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    .shield-modal.danger {
+        border-color: var(--error, #e74c3c);
+    }
+    .shield-modal.danger h3 {
+        color: var(--error, #e74c3c);
+    }
+    .shield-modal {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 28px;
+        width: 380px;
+        max-width: 90vw;
+        box-shadow: var(--shadow-lg);
+        align-self: center;
+    }
+    .shield-modal h3 {
+        font-size: 16px;
+        margin-bottom: 8px;
+    }
+    .shield-modal p {
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin-bottom: 16px;
+    }
+    .shield-modal input[type="password"] {
+        width: 100%;
+        padding: 10px 14px;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-primary);
+        font-size: 14px;
+        outline: none;
+        margin-bottom: 16px;
+    }
+    .shield-modal input[type="password"]:focus {
+        border-color: var(--accent);
+    }
+    .shield-modal-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+    }
+    .shield-modal-actions button {
+        padding: 8px 18px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 13px;
+        transition: all 0.2s;
+    }
+    .shield-modal-actions button.primary {
+        background: var(--accent);
+        color: var(--bg-primary);
+        border-color: var(--accent);
+        font-weight: 600;
+    }
+    .shield-modal-actions button:hover {
+        opacity: 0.85;
+    }
+    .shield-modal .error-msg {
+        color: var(--error);
+        font-size: 12px;
+        margin-bottom: 12px;
+        display: none;
+    }
+
+    /* Status Banner */
+    .shield-banner {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 20px;
+        border-radius: var(--radius);
+        margin-bottom: 24px;
+        font-size: 13px;
+    }
+    .shield-banner.active {
+        background: rgba(74, 222, 128, 0.1);
+        border: 1px solid rgba(74, 222, 128, 0.25);
+        color: var(--success);
+    }
+    .shield-banner.inactive {
+        background: rgba(248, 113, 113, 0.1);
+        border: 1px solid rgba(248, 113, 113, 0.25);
+        color: var(--error);
+    }
+    .shield-banner svg { flex-shrink: 0; }
+
+    /* Toast */
+    .toast {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        z-index: 2000;
+        opacity: 0;
+        transform: translateY(10px);
+        transition: all 0.3s;
+        pointer-events: none;
+    }
+    .toast.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    .toast.success {
+        background: var(--success);
+        color: var(--bg-primary);
+    }
+    .toast.error {
+        background: var(--error);
+        color: #fff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Status Banner -->
+<div class="shield-banner" id="shieldBanner">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    <span id="bannerText">Loading shield status...</span>
+</div>
+
+<!-- Overview Cards -->
+<div class="shield-overview" id="overviewCards">
+    <div class="overview-card">
+        <div class="value" id="totalGroups">-</div>
+        <div class="label">Protected Groups</div>
+    </div>
+    <div class="overview-card">
+        <div class="value" id="totalFiles">-</div>
+        <div class="label">Total Files</div>
+    </div>
+    <div class="overview-card">
+        <div class="value" id="lockedFiles">-</div>
+        <div class="label">Locked</div>
+    </div>
+    <div class="overview-card">
+        <div class="value" id="unlockedFiles">-</div>
+        <div class="label">Unlocked</div>
+    </div>
+</div>
+
+<!-- File Guard -->
+<div class="section-header">
+    <h2><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> File Guard</h2>
+</div>
+<p style="color: var(--text-muted); margin: 0 0 16px 0; font-size: 0.9em; line-height: 1.5;">
+    File Guard protects critical system files using macOS immutability flags. Locked files cannot be modified, renamed, or deleted — even by root. Unlock requires your system password.
+</p>
+<div class="guard-groups" id="guardGroups">
+    <div style="color: var(--text-muted); padding: 20px; text-align: center;">Loading file guard status...</div>
+</div>
+
+<!-- Memory Doorman -->
+<div class="section-header" style="margin-top: 32px;">
+    <h2><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Memory Doorman</h2>
+</div>
+<p style="color: var(--text-muted); margin: 0 0 16px 0; font-size: 0.9em; line-height: 1.5;">
+    Filesystem-level sanitizer. Watches memory directories and automatically strips injection vectors (HTML, tool XML, base64, prompt injection) from any .md file written. <strong>10 sanitizer categories.</strong>
+</p>
+<div id="doormanStatus" style="background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px;">
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+        <span id="doormanIndicator" style="width: 10px; height: 10px; border-radius: 50%; background: var(--text-muted);"></span>
+        <span id="doormanLabel" style="font-weight: 600;">Checking...</span>
+        <span id="doormanPid" style="color: var(--text-muted); font-size: 0.85em;"></span>
+    </div>
+    <div id="doormanStats" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px;">
+        <div style="text-align: center;"><div style="font-size: 24px; font-weight: 700; color: var(--accent);" id="doormanCategories">10</div><div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary);">Categories</div></div>
+        <div style="text-align: center;"><div style="font-size: 24px; font-weight: 700; color: var(--accent);" id="doormanPaths">2</div><div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary);">Watched Paths</div></div>
+        <div style="text-align: center;"><div style="font-size: 24px; font-weight: 700; color: var(--accent);" id="doormanCleaned">-</div><div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary);">Files Sanitized</div></div>
+    </div>
+    <div id="doormanLog" style="background: var(--bg-primary); border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-family: var(--font-mono, monospace); font-size: 0.8em; color: var(--text-secondary); max-height: 200px; overflow-y: auto; white-space: pre-wrap;">Loading log...</div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const Shield = {
+    _pendingAction: null,
+
+    async load() {
+        await Promise.all([this.loadBanner(), this.loadGuard(), this.loadDoorman()]);
+    },
+
+    async loadBanner() {
+        try {
+            const r = await fetch('/api/shield/status');
+            const d = await r.json();
+            const banner = document.getElementById('shieldBanner');
+            const text = document.getElementById('bannerText');
+            banner.classList.remove('active', 'inactive');
+            if (d.active) {
+                banner.classList.add('active');
+                text.textContent = `Shield active — File Guard monitoring ${d.file_guard?.summary?.total_files || 0} files across ${d.file_guard?.summary?.total_groups || 0} groups`;
+            } else {
+                banner.classList.add('inactive');
+                text.textContent = 'Shield available but daemon not running';
+            }
+        } catch(e) {
+            document.getElementById('shieldBanner').classList.add('inactive');
+            document.getElementById('bannerText').textContent = 'Could not reach Shield API';
+        }
+    },
+
+    async loadGuard() {
+        try {
+            const r = await fetch('/api/shield/guard/summary');
+            const groups = await r.json();
+            const keys = Object.keys(groups);
+
+            let totalFiles = 0, totalLocked = 0;
+            keys.forEach(k => { totalFiles += groups[k].total; totalLocked += groups[k].locked_count; });
+
+            document.getElementById('totalGroups').textContent = keys.length;
+            document.getElementById('totalFiles').textContent = totalFiles;
+            const lockedEl = document.getElementById('lockedFiles');
+            lockedEl.textContent = totalLocked;
+            lockedEl.className = 'value' + (totalLocked > 0 ? ' warning' : '');
+            const unlockedEl = document.getElementById('unlockedFiles');
+            unlockedEl.textContent = totalFiles - totalLocked;
+            unlockedEl.className = 'value' + (totalFiles - totalLocked > 0 ? '' : '');
+
+            const container = document.getElementById('guardGroups');
+            container.innerHTML = '';
+            keys.forEach(k => {
+                const g = groups[k];
+                const statusClass = g.status === 'locked' ? 'locked' : g.status === 'partial' ? 'partial' : 'unlocked';
+                const isLocked = g.status === 'locked';
+                const div = document.createElement('div');
+                const expandedState = JSON.parse(localStorage.getItem('shield_expanded') || '{}');
+                div.className = 'guard-group' + (expandedState[k] ? ' expanded' : '');
+                div.dataset.groupKey = k;
+                div.innerHTML = `
+                    <div class="guard-group-header" onclick="Shield.toggle(this)">
+                        <svg class="guard-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                        <span class="guard-group-name">${g.label}</span>
+                        <div class="guard-group-meta">
+                            <span>${g.total} file${g.total !== 1 ? 's' : ''}</span>
+                            <button class="guard-toggle-btn ${statusClass}" onclick="event.stopPropagation(); Shield.action('${k}', '${isLocked ? 'unlock' : 'lock'}')">${g.locked_count === g.total ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Locked' : g.locked_count > 0 ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> ' + g.locked_count + '/' + g.total + ' Locked' : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 5-5 5 5 0 0 1 5 5"/></svg> Unlocked'}</button>
+                        </div>
+                    </div>
+                    <div class="guard-files" data-loaded="false">
+                        <div style="color:var(--text-muted);padding:12px;text-align:center;font-size:0.85em;">Click to load files...</div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        } catch(e) {
+            document.getElementById('guardGroups').innerHTML = '<div style="color:var(--error);padding:20px;text-align:center;">Failed to load file guard status</div>';
+        }
+    },
+
+    async loadDoorman() {
+        try {
+            const r = await fetch('/api/shield/doorman/status');
+            const d = await r.json();
+            const indicator = document.getElementById('doormanIndicator');
+            const label = document.getElementById('doormanLabel');
+            const pid = document.getElementById('doormanPid');
+            if (d.running) {
+                indicator.style.background = '#22c55e';
+                label.textContent = 'Active';
+                if (d.pid) pid.textContent = 'PID ' + d.pid;
+            } else {
+                indicator.style.background = 'var(--error)';
+                label.textContent = 'Stopped';
+            }
+            document.getElementById('doormanCleaned').textContent = d.total_sanitized || 0;
+            const logEl = document.getElementById('doormanLog');
+            if (d.recent_log && d.recent_log.length > 0) {
+                logEl.textContent = d.recent_log.join('\n');
+            } else {
+                logEl.textContent = 'No log entries yet.';
+            }
+        } catch(e) {
+            document.getElementById('doormanLabel').textContent = 'Error loading status';
+        }
+    },
+
+    async toggle(header) {
+        const group = header.parentElement;
+        group.classList.toggle('expanded');
+        const key = group.dataset.groupKey;
+        if (key) {
+            const state = JSON.parse(localStorage.getItem('shield_expanded') || '{}');
+            state[key] = group.classList.contains('expanded');
+            localStorage.setItem('shield_expanded', JSON.stringify(state));
+        }
+        // Lazy-load files on first expand
+        const filesDiv = group.querySelector('.guard-files');
+        if (filesDiv && filesDiv.dataset.loaded === 'false' && group.classList.contains('expanded') && key) {
+            filesDiv.innerHTML = '<div style="color:var(--text-muted);padding:12px;text-align:center;">Loading files...</div>';
+            try {
+                const r = await fetch('/api/shield/guard/group/' + encodeURIComponent(key));
+                const g = await r.json();
+                filesDiv.innerHTML = (g.files || []).map(f => `
+                    <div class="guard-file">
+                        <span class="file-icon ${f.locked ? 'locked' : 'unlocked'}">${f.locked ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>'}</span>
+                        <span class="file-path" title="${f.path}">${f.short || f.path}</span>
+                        <span class="file-size">${f.size ? Shield.fmtSize(f.size) : ''}</span>
+                        <button class="file-lock-btn ${f.locked ? 'is-locked' : ''}" onclick="event.stopPropagation(); Shield.fileAction('${f.path.replace(/'/g, "\\'")}', '${f.locked ? 'unlock' : 'lock'}')">${f.locked ? 'Unlock' : 'Lock'}</button>
+                    </div>
+                `).join('');
+                filesDiv.dataset.loaded = 'true';
+            } catch(e) {
+                filesDiv.innerHTML = '<div style="color:var(--error);padding:12px;">Failed to load files</div>';
+            }
+        }
+    },
+
+    _dangerousGroups: {
+        'agent_config': 'Locking agent config will disable external messaging (Telegram, Signal, etc.). You will lose the ability to communicate through chat platforms until unlocked.'
+    },
+
+    async fileAction(filePath, type) {
+        if (type === 'lock') {
+            try {
+                const r = await fetch('/api/shield/guard/lock', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ file: filePath })
+                });
+                const d = await r.json();
+                if (d.error) { this.toast(d.error, 'error'); return; }
+                this.toast(`Locked: ${filePath.split('/').pop()}`, 'success');
+                this.loadGuard();
+            } catch(e) { this.toast('Failed to lock file', 'error'); }
+        } else {
+            // Unlock requires password
+            this._pendingAction = { file: filePath, type: 'file-unlock' };
+            document.getElementById('modalTitle').textContent = `Unlock: ${filePath.split('/').pop()}`;
+            document.getElementById('modalDesc').textContent = 'Enter your system password to unlock this file.';
+            document.getElementById('modalPassword').value = '';
+            document.getElementById('modalError').style.display = 'none';
+            document.getElementById('passwordModal').classList.add('visible');
+            setTimeout(() => document.getElementById('modalPassword').focus(), 100);
+        }
+    },
+
+    action(groupId, type) {
+        if (type === 'lock') {
+            const warning = this._dangerousGroups[groupId];
+            if (warning) {
+                this._pendingAction = { group: groupId, type: 'dangerous-lock' };
+                document.querySelector('.shield-modal').classList.add('danger');
+                document.getElementById('modalTitle').textContent = `Lock: ${groupId}`;
+                document.getElementById('modalDesc').innerHTML = 'This will disable external messaging (Telegram, etc.). Enter password to confirm.';
+                document.getElementById('modalPassword').value = '';
+                document.getElementById('modalError').style.display = 'none';
+                document.getElementById('passwordModal').classList.add('visible');
+                setTimeout(() => document.getElementById('modalPassword').focus(), 100);
+            } else {
+                this._doLock(groupId);
+            }
+        } else {
+            this._pendingAction = { group: groupId, type: 'unlock' };
+            document.querySelector('.shield-modal').classList.remove('danger');
+            document.getElementById('modalTitle').textContent = `Unlock: ${groupId}`;
+            document.getElementById('modalDesc').textContent = 'Enter your system password to remove file protection.';
+            document.getElementById('modalPassword').value = '';
+            document.getElementById('modalError').style.display = 'none';
+            document.getElementById('passwordModal').classList.add('visible');
+            setTimeout(() => document.getElementById('modalPassword').focus(), 100);
+        }
+    },
+
+    async _doLock(groupId) {
+        try {
+            const r = await fetch('/api/shield/guard/lock', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ group: groupId })
+            });
+            const d = await r.json();
+            if (d.error) throw new Error(d.error);
+            this.toast(`${groupId} locked (${d.locked || 0} files)`, 'success');
+            this.load();
+        } catch(e) {
+            this.toast(e.message, 'error');
+        }
+    },
+
+    closeModal() {
+        document.getElementById('passwordModal').classList.remove('visible');
+        this._pendingAction = null;
+    },
+
+    async submitModal() {
+        const pw = document.getElementById('modalPassword').value;
+        if (!pw) {
+            document.getElementById('modalError').textContent = 'Password required';
+            document.getElementById('modalError').style.display = 'block';
+            return;
+        }
+        const action = this._pendingAction;
+        if (!action) return;
+        try {
+            if (action.type === 'dangerous-lock') {
+                // Validate password first via unlock endpoint (dry validation), then lock
+                const v = await fetch('/api/shield/guard/unlock', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ group: action.group, password: pw, validate_only: true })
+                });
+                const vd = await v.json();
+                if (vd.error && !vd.error.includes('already unlocked')) {
+                    document.getElementById('modalError').textContent = vd.error;
+                    document.getElementById('modalError').style.display = 'block';
+                    return;
+                }
+                this.closeModal();
+                await this._doLock(action.group);
+                return;
+            }
+            if (action.type === 'file-unlock') {
+                const r = await fetch('/api/shield/guard/unlock', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ file: action.file, password: pw })
+                });
+                const d = await r.json();
+                if (d.error) {
+                    document.getElementById('modalError').textContent = d.error;
+                    document.getElementById('modalError').style.display = 'block';
+                    return;
+                }
+                this.closeModal();
+                this.toast(`Unlocked: ${action.file.split('/').pop()}`, 'success');
+                this.loadGuard();
+                return;
+            }
+            const r = await fetch('/api/shield/guard/unlock', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ group: action.group, password: pw })
+            });
+            const d = await r.json();
+            if (d.error) {
+                document.getElementById('modalError').textContent = d.error;
+                document.getElementById('modalError').style.display = 'block';
+                return;
+            }
+            this.closeModal();
+            this.toast(`${action.group} unlocked (${d.unlocked || 0} files)`, 'success');
+            this.load();
+        } catch(e) {
+            document.getElementById('modalError').textContent = e.message;
+            document.getElementById('modalError').style.display = 'block';
+        }
+    },
+
+    toast(msg, type) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = 'toast ' + type + ' visible';
+        setTimeout(() => t.classList.remove('visible'), 3000);
+    },
+
+    fmtSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+};
+
+// Inject modal + toast into document.body (outside content-area overflow container)
+(function() {
+    const modalHTML = `
+    <div class="modal-overlay" id="passwordModal">
+        <div class="shield-modal">
+            <h3 id="modalTitle">Unlock Group</h3>
+            <p id="modalDesc">Enter your system password to unlock protected files.</p>
+            <div class="error-msg" id="modalError"></div>
+            <input type="password" id="modalPassword" placeholder="System password" autocomplete="off">
+            <div class="shield-modal-actions">
+                <button onclick="Shield.closeModal()">Cancel</button>
+                <button class="primary" onclick="Shield.submitModal()">Confirm</button>
+            </div>
+        </div>
+    </div>
+    <div class="toast" id="toast"></div>`;
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = modalHTML;
+    while (wrapper.firstChild) document.body.appendChild(wrapper.firstChild);
+
+    document.getElementById('modalPassword').addEventListener('keydown', e => {
+        if (e.key === 'Enter') Shield.submitModal();
+        if (e.key === 'Escape') Shield.closeModal();
+    });
+})();
+
+document.addEventListener('DOMContentLoaded', () => Shield.load());
+
+// Global refresh hook
+if (typeof window.refreshData === 'undefined') {
+    window.refreshData = () => Shield.load();
+} else {
+    const _orig = window.refreshData;
+    window.refreshData = () => { _orig(); Shield.load(); };
+}
+</script>
+{% endblock %}

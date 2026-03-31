@@ -1,0 +1,13 @@
+{
+  "enabled": {
+    "security_rules.mg": true,
+    "agent_rules.mg": true,
+    "preparation_rules.mg": true,
+    "crypto_rules.mg": true,
+    "research_rules.mg": true
+  },
+  "locked": [
+    "crypto_rules.mg"
+  ],
+  "updated_at": "2026-02-03T23:53:43.185897"
+}

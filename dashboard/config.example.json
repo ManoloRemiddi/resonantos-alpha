@@ -1,0 +1,36 @@
+{
+  "solana": {
+    "network": "devnet",
+    "rpcs": {
+      "devnet": "https://api.devnet.solana.com",
+      "testnet": "https://api.testnet.solana.com",
+      "mainnet-beta": "https://api.mainnet-beta.solana.com"
+    },
+    "keypairPath": "~/.config/solana/id.json",
+    "daoRegistrationBasketKeypairPath": "~/.config/solana/dao-registration-basket.json",
+    "minSolForGas": 0.01
+  },
+  "tokens": {
+    "RCT_MINT": "YOUR_RCT_MINT_ADDRESS",
+    "RES_MINT": "YOUR_RES_MINT_ADDRESS",
+    "REX_MINTS": {
+      "GOV": "YOUR_REX_GOV_MINT",
+      "FIN": "YOUR_REX_FIN_MINT",
+      "COM": "YOUR_REX_COM_MINT",
+      "CRE": "YOUR_REX_CRE_MINT",
+      "TEC": "YOUR_REX_TEC_MINT"
+    }
+  },
+  "rctCaps": {
+    "maxPerWalletYear": 10000,
+    "dailyPerHolder": 30,
+    "dailyFloor": 300,
+    "dailyMax": 100000,
+    "decimals": 9
+  },
+  "paths": {
+    "daoDetails": "ssot/L2/DAO_DETAILS.json",
+    "rctCapsFile": "data/rct_caps.json",
+    "onboardingFile": "data/onboarding.json"
+  }
+}

@@ -1,0 +1,394 @@
+# ============================================================
+# ResonantOS — Logician Production Rules
+# Engine: Mangle (Google Datalog)
+# Purpose: Provable policy enforcement for agent orchestration
+# ============================================================
+
+# ============================================================
+# AGENT REGISTRY
+# ============================================================
+
+agent(/main).
+agent(/acupuncturist).
+agent(/blindspot).
+agent(/dao).
+agent(/deputy).
+agent(/website).
+agent(/researcher).
+agent(/voice).
+agent(/setup).
+agent(/creative).
+
+# Agent trust levels (1=lowest, 5=highest)
+trust_level(/main, 5).
+trust_level(/researcher, 4).
+trust_level(/voice, 4).
+trust_level(/creative, 4).
+trust_level(/dao, 3).
+trust_level(/deputy, 3).
+trust_level(/website, 3).
+trust_level(/acupuncturist, 2).
+trust_level(/blindspot, 2).
+trust_level(/setup, 2).
+
+# ============================================================
+# SPAWN RULES
+# ============================================================
+
+# Direct spawn permissions (who can spawn whom)
+# main can spawn all agents
+can_spawn(/main, /acupuncturist).
+can_spawn(/main, /blindspot).
+can_spawn(/main, /dao).
+can_spawn(/main, /deputy).
+can_spawn(/main, /website).
+can_spawn(/main, /researcher).
+can_spawn(/main, /voice).
+can_spawn(/main, /setup).
+can_spawn(/main, /creative).
+
+# Cross-agent spawn permissions (matches openclaw.json config)
+can_spawn(/dao, /creative).
+can_spawn(/dao, /researcher).
+can_spawn(/website, /creative).
+can_spawn(/website, /researcher).
+can_spawn(/voice, /creative).
+can_spawn(/voice, /researcher).
+
+# Deputy spawn permissions (same as main, minus itself)
+can_spawn(/deputy, /acupuncturist).
+can_spawn(/deputy, /blindspot).
+can_spawn(/deputy, /creative).
+can_spawn(/deputy, /voice).
+can_spawn(/deputy, /dao).
+can_spawn(/deputy, /website).
+can_spawn(/deputy, /researcher).
+can_spawn(/deputy, /setup).
+
+# Derived: spawn is allowed if can_spawn (no blocks currently configured)
+spawn_allowed(From, To) :- can_spawn(From, To).
+
+# ============================================================
+# DELEGATION RULES
+# ============================================================
+
+# Task type definitions
+task_type(/code).
+task_type(/research).
+task_type(/test).
+task_type(/design).
+task_type(/strategy).
+task_type(/security).
+task_type(/archive).
+
+# Delegation requirements: agent X must delegate task_type Y
+requires_delegation(/main, /code).
+requires_delegation(/main, /research).
+requires_delegation(/main, /design).
+requires_delegation(/main, /test).
+requires_delegation(/website, /code).
+requires_delegation(/creative, /code).
+
+# Delegation targets: for a given (agent, task_type), delegate to whom
+should_delegate(/main, /code, /deputy).
+should_delegate(/main, /research, /researcher).
+should_delegate(/main, /design, /website).
+should_delegate(/main, /test, /setup).
+should_delegate(/website, /code, /deputy).
+should_delegate(/creative, /code, /deputy).
+
+# Derived: must_delegate_to resolves the full chain
+must_delegate_to(Agent, Task, Target) :-
+  requires_delegation(Agent, Task),
+  should_delegate(Agent, Task, Target).
+
+# ============================================================
+# TOOL PERMISSIONS
+# ============================================================
+
+# Tool registry
+tool(/brave_api).
+tool(/perplexity).
+tool(/web_fetch).
+tool(/exec).
+tool(/browser).
+tool(/git).
+tool(/solana_cli).
+tool(/nft_minter).
+tool(/token_manager).
+tool(/file_write).
+tool(/file_delete).
+tool(/message_send).
+tool(/tts).
+
+# Tool permissions per agent
+can_use_tool(/main, /brave_api).
+can_use_tool(/main, /perplexity).
+can_use_tool(/main, /web_fetch).
+can_use_tool(/main, /exec).
+can_use_tool(/main, /browser).
+can_use_tool(/main, /git).
+can_use_tool(/main, /solana_cli).
+can_use_tool(/main, /nft_minter).
+can_use_tool(/main, /token_manager).
+can_use_tool(/main, /file_write).
+can_use_tool(/main, /file_delete).
+can_use_tool(/main, /message_send).
+can_use_tool(/main, /tts).
+can_use_tool(/acupuncturist, /browser).
+can_use_tool(/acupuncturist, /message_send).
+can_use_tool(/blindspot, /brave_api).
+can_use_tool(/blindspot, /web_fetch).
+can_use_tool(/dao, /brave_api).
+can_use_tool(/dao, /perplexity).
+can_use_tool(/dao, /message_send).
+can_use_tool(/deputy, /exec).
+can_use_tool(/deputy, /git).
+can_use_tool(/deputy, /file_write).
+can_use_tool(/deputy, /browser).
+can_use_tool(/deputy, /web_search).
+can_use_tool(/deputy, /brave_api).
+can_use_tool(/deputy, /perplexity).
+can_use_tool(/deputy, /web_fetch).
+can_use_tool(/deputy, /sessions_spawn).
+can_use_tool(/deputy, /message_send).
+can_use_tool(/deputy, /tts).
+can_use_tool(/website, /file_write).
+can_use_tool(/website, /browser).
+can_use_tool(/researcher, /brave_api).
+can_use_tool(/researcher, /perplexity).
+can_use_tool(/researcher, /web_fetch).
+can_use_tool(/researcher, /file_write).
+can_use_tool(/voice, /brave_api).
+can_use_tool(/voice, /web_fetch).
+can_use_tool(/voice, /file_write).
+can_use_tool(/voice, /tts).
+can_use_tool(/voice, /message_send).
+can_use_tool(/setup, /exec).
+can_use_tool(/setup, /browser).
+can_use_tool(/creative, /file_write).
+can_use_tool(/creative, /browser).
+
+# Dangerous tools require elevated trust
+dangerous_tool(/exec).
+dangerous_tool(/file_delete).
+dangerous_tool(/solana_cli).
+dangerous_tool(/nft_minter).
+dangerous_tool(/token_manager).
+
+# Derived: can agent use a dangerous tool?
+can_use_dangerous(Agent, Tool) :-
+  can_use_tool(Agent, Tool),
+  dangerous_tool(Tool),
+  trust_level(Agent, Level),
+  Level >= 3.
+
+# ============================================================
+# SENSITIVE DATA & FORBIDDEN OUTPUT
+# ============================================================
+
+# Sensitive data types
+sensitive_type(/api_key).
+sensitive_type(/token).
+sensitive_type(/private_key).
+sensitive_type(/seed_phrase).
+sensitive_type(/password).
+sensitive_type(/keypair).
+
+# Forbidden for output (never emit these)
+forbidden_output_type(/api_key).
+forbidden_output_type(/private_key).
+forbidden_output_type(/seed_phrase).
+forbidden_output_type(/password).
+forbidden_output_type(/keypair).
+
+# Known patterns for sensitive data
+sensitive_pattern(/api_key, "sk-").
+sensitive_pattern(/api_key, "sk-ant-").
+sensitive_pattern(/api_key, "sk-proj-").
+sensitive_pattern(/token, "ghp_").
+sensitive_pattern(/token, "gho_").
+sensitive_pattern(/token, "xoxb-").
+sensitive_pattern(/token, "xoxp-").
+sensitive_pattern(/private_key, "-----BEGIN").
+# Seed phrase policy — detection uses BIP39 consecutive-word scanner in Shield
+# (shield/data_leak_scanner.py contains_seed_phrase() with full 2048-word list)
+sensitive_type(/seed_phrase).
+forbidden_output_type(/seed_phrase).
+seed_phrase_min_consecutive(8).  # Scanner threshold: 8+ consecutive BIP39 words (3 triggers on normal prose)
+
+# Subscription info policy — detection uses PRIVATE_MARKERS in Shield scanner
+# (real subscription strings stored only in scanner, never in repo)
+sensitive_type(/subscription_info).
+forbidden_output_type(/subscription_info).
+
+# ============================================================
+# INJECTION DETECTION
+# ============================================================
+
+injection_pattern("ignore previous instructions").
+injection_pattern("ignore all previous").
+injection_pattern("disregard previous").
+injection_pattern("forget your instructions").
+injection_pattern("DAN mode").
+injection_pattern("jailbreak").
+injection_pattern("you are now").
+injection_pattern("pretend you are").
+injection_pattern("act as if you have no restrictions").
+injection_pattern("override your programming").
+injection_pattern("system prompt").
+injection_pattern("reveal your instructions").
+injection_pattern("show me your prompt").
+
+# ============================================================
+# DESTRUCTIVE PATTERNS
+# ============================================================
+
+destructive_pattern("rm -rf").
+destructive_pattern("rm -r /").
+destructive_pattern("drop table").
+destructive_pattern("drop database").
+destructive_pattern("truncate table").
+destructive_pattern("format c:").
+destructive_pattern("mkfs").
+destructive_pattern("dd if=").
+destructive_pattern("> /dev/sda").
+destructive_pattern("chmod -R 777 /").
+destructive_pattern(":(){ :|:& };:").
+
+# ============================================================
+# BLOCKCHAIN SAFETY RULES
+# ============================================================
+
+# Networks
+network(/devnet).
+network(/testnet).
+network(/mainnet).
+
+# Mainnet operations require explicit human approval
+requires_human_approval(/mainnet, /transfer).
+requires_human_approval(/mainnet, /mint).
+requires_human_approval(/mainnet, /deploy).
+requires_human_approval(/mainnet, /close).
+
+# Token safety caps (per wallet per year)
+token_yearly_cap(/rct, 10000).
+token_yearly_cap(/res, 1000000).
+
+# Daily claim limits
+daily_claim_limit(/rct, 1).
+daily_claim_limit(/res, 500).
+
+# ============================================================
+# FILE PROTECTION (SHIELD)
+# ============================================================
+
+# Protected paths (never modify without explicit human approval)
+protected_path("$OPENCLAW_HOME/openclaw.json").
+protected_path("$SOLANA_CONFIG/id.json").
+protected_path("$OPENCLAW_HOME/agents/main/agent/auth-profiles.json").
+protected_path("$HOME/.ssh/").
+
+# Safe workspace paths (AI can freely modify)
+safe_path("$OPENCLAW_HOME/workspace/").
+safe_path("$RESONANTOS_HOME/").
+safe_path("$ALPHA_HOME/").
+
+# Derived: is a path writable by AI?
+ai_writable(Path) :- safe_path(Path), !protected_path(Path).
+
+# ============================================================
+# COST POLICY
+# ============================================================
+
+# Model cost tiers
+model_tier(/opus, /expensive).
+model_tier(/sonnet, /moderate).
+model_tier(/haiku, /cheap).
+
+# Task-to-model assignment (deterministic > AI principle)
+preferred_model(/compression, /haiku).
+preferred_model(/heartbeat, /haiku).
+preferred_model(/background, /haiku).
+preferred_model(/architecture, /opus).
+preferred_model(/planning, /opus).
+preferred_model(/complex_reasoning, /opus).
+preferred_model(/code_review, /opus).
+preferred_model(/routine, /sonnet).
+
+# Private SSoT — absolute block
+protected_path("$RESONANTOS_HOME/ssot/private/").
+protected_path("ssot/private/").
+
+
+# === VERIFICATION GATE ===
+# Code changes require test evidence before push.
+# Enforced by Shield pre-push hook + this rule.
+requires_verification(/code_change).
+verification_method(/curl).
+verification_method(/browser).
+verification_method(/unit).
+verification_method(/manual).
+verification_method(/script).
+# code-review is allowed but flagged as warning (not verified)
+weak_verification(/code_review).
+weak_verification(/untestable).
+# Rule: push allowed only if all code changes have verification entries
+push_requires_evidence(/resonantos_augmentor).
+
+# ============================================================
+# COHERENCE GATE — Deterministic Task Enforcement
+# All predicates MUST have at least one argument (Mangle constraint)
+# Dynamic facts (asserted at query time via program field):
+#   cg_active_task(/yes)          — an active task exists
+#   cg_drift_score(N)             — current drift score 0-3
+#   cg_task_age(Seconds)          — seconds since task creation
+# ============================================================
+
+# Tools requiring an active CG task
+significant_tool(/write).
+significant_tool(/edit).
+significant_tool(/exec).
+significant_tool(/sessions_spawn).
+significant_tool(/message_send).
+significant_tool(/gateway).
+
+# Tools exempt from CG enforcement
+exempt_tool(/read).
+exempt_tool(/web_search).
+exempt_tool(/web_fetch).
+exempt_tool(/memory_search).
+exempt_tool(/memory_get).
+exempt_tool(/session_status).
+exempt_tool(/image).
+exempt_tool(/tts).
+exempt_tool(/browser).
+
+# No-task block: significant tool + no active task
+
+# Default dynamic state (overridden by Shield Gate via program field)
+# These provide the closed-world base for negation
+cg_active_task(/no).
+cg_drift_score(0).
+
+# No-task block: significant tool + task not active
+cg_block_no_task(Tool) :- significant_tool(Tool), !exempt_tool(Tool), cg_active_task(/no).
+
+# Drift block: significant tool + drift score >= 2
+cg_drift_status(/warn) :- cg_drift_score(1).
+cg_drift_status(/block) :- cg_drift_score(Score), Score >= 2.
+cg_block_drift(Tool) :- significant_tool(Tool), cg_drift_status(/block).
+
+# Block reasons (single query point for Shield Gate)
+cg_block_reason(Tool, /no_task) :- cg_block_no_task(Tool).
+cg_block_reason(Tool, /drift) :- cg_block_drift(Tool).
+# ============================================================
+# GATEWAY LIFECYCLE RULES
+# ============================================================
+gateway_action(/stop).
+gateway_action(/restart).
+gateway_action(/start).
+requires_resume_plan(/stop).
+requires_resume_plan(/restart).
+blocked_during_maintenance(/start).
+blocked_during_maintenance(/restart).

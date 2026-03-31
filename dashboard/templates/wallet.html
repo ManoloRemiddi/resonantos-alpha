@@ -1,0 +1,2486 @@
+{% extends "base.html" %}
+{% block title %}Symbiotic Wallet — ResonantOS{% endblock %}
+{% block content %}
+<style>
+    /* CSS Variables for theming */
+    :root {
+        --network-devnet: #10B981;
+        --network-testnet: #F59E0B;
+        --network-mainnet: #EF4444;
+        --phantom-purple: #AB9FF2;
+        --solana-purple: #9945FF;
+        --success-green: #14F195;
+        --rct-mint: #14F195;
+        --res-mint: #60A5FA;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Network Selector Banner */
+    .network-banner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 20px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin-bottom: 24px;
+    }
+    
+    .network-selector {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    
+    .network-btn {
+        padding: 6px 12px;
+        border: 1px solid var(--border);
+        background: var(--bg-primary);
+        color: var(--text);
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    
+    .network-btn.active.devnet {
+        background: var(--network-devnet);
+        border-color: var(--network-devnet);
+        color: white;
+    }
+    
+    .network-btn.active.testnet {
+        background: var(--network-testnet);
+        border-color: var(--network-testnet);
+        color: white;
+    }
+    
+    .network-btn.active.mainnet {
+        background: var(--network-mainnet);
+        border-color: var(--network-mainnet);
+        color: white;
+    }
+    
+    .phantom-connect-btn {
+        background: linear-gradient(135deg, var(--phantom-purple), var(--solana-purple));
+        border: none;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-weight: 700;
+        cursor: pointer;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: opacity 0.2s;
+    }
+    
+    .phantom-connect-btn:hover {
+        opacity: 0.9;
+    }
+    
+    .phantom-connect-btn.connected {
+        background: var(--success);
+    }
+
+    /* Tab System */
+    .wallet-tabs {
+        display: flex;
+        gap: 2px;
+        margin-bottom: 24px;
+        background: var(--bg-secondary);
+        border-radius: 8px;
+        padding: 4px;
+    }
+    
+    .tab-btn {
+        flex: 1;
+        padding: 12px 16px;
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    
+    .tab-btn.active {
+        background: var(--bg-primary);
+        color: var(--text);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Tab Content */
+    .tab-content {
+        display: none;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+
+    /* Symbiotic Wallet Tab */
+    .wallet-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+    }
+    
+    .wallet-section {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+    }
+    
+    .wallet-section.full-width {
+        grid-column: 1 / -1;
+    }
+
+    /* NFT Showcase - horizontal strip, scroll on overflow */
+    .wallet-section, .nft-showcase, .reputation-section, .daily-claim-card {
+        margin-bottom: 40px;
+    }
+    .wallet-split { margin-top: 40px; }
+    .nft-showcase {
+        position: relative;
+        overflow: hidden;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .nft-carousel {
+        display: flex;
+        gap: 16px;
+        overflow-x: auto;
+        padding: 12px 4px;
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .nft-carousel::-webkit-scrollbar { height: 4px; }
+    .nft-carousel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    
+    .nft-item {
+        flex: 0 0 140px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 12px;
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: default;
+    }
+    
+    .nft-item:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    
+    .nft-image {
+        width: 100px;
+        height: 100px;
+        border-radius: 8px;
+        object-fit: cover;
+    }
+    
+    .nft-placeholder {
+        width: 100px;
+        height: 100px;
+        border-radius: 8px;
+        background: var(--bg-tertiary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 36px;
+        border: 2px dashed var(--border);
+    }
+    
+    .nft-name {
+        font-size: 11px;
+        font-weight: 600;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 120px;
+    }
+    
+    .nft-soulbound-badge {
+        font-size: 9px;
+        color: var(--rct-mint);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Transaction list (compact) */
+    .tx-list { list-style: none; padding: 0; margin: 0; }
+    .tx-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+    .tx-item:last-child { border-bottom: none; }
+    .tx-icon { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+    .tx-icon.receive { background: rgba(20,241,149,0.15); color: var(--rct-mint); }
+    .tx-icon.send { background: rgba(239,68,68,0.15); color: #ef4444; }
+    .tx-details { flex: 1; }
+    .tx-sig { font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
+    .tx-time { font-size: 10px; color: var(--text-muted); }
+
+    /* Wallet address row */
+    .wallet-addr-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--bg-primary);
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        margin-bottom: 12px;
+    }
+    .wallet-addr-row code {
+        font-size: 12px;
+        font-family: var(--mono);
+        color: var(--text-muted);
+        flex: 1;
+        word-break: break-all;
+    }
+    .copy-btn-sm {
+        flex-shrink: 0;
+        padding: 4px 10px;
+        background: rgba(171,159,242,0.15);
+        border: 1px solid rgba(171,159,242,0.3);
+        border-radius: 4px;
+        color: var(--phantom-purple);
+        cursor: pointer;
+        font-size: 11px;
+    }
+
+    /* Onboarding Wizard */
+    .onboarding-wizard {
+        margin-bottom: 24px;
+    }
+    
+    .onboarding-steps {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        margin-bottom: 0;
+    }
+    
+    .onboarding-step {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+        border-left: 3px solid var(--bg-tertiary);
+        position: relative;
+        transition: all 0.3s;
+    }
+    
+    .onboarding-step .step-number {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--bg-tertiary);
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+    
+    .onboarding-step .step-content {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .onboarding-step .step-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-muted);
+    }
+    
+    .onboarding-step .step-desc {
+        font-size: 11px;
+        color: var(--text-muted);
+        opacity: 0.7;
+        margin-top: 2px;
+    }
+    
+    .onboarding-step .step-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-shrink: 0;
+    }
+    
+    .onboarding-step .step-read-link {
+        font-size: 11px;
+        color: var(--phantom-purple);
+        text-decoration: none;
+        cursor: pointer;
+        opacity: 0.8;
+    }
+    
+    .onboarding-step .step-read-link:hover {
+        opacity: 1;
+        text-decoration: underline;
+    }
+    
+    .onboarding-step.completed {
+        border-left-color: var(--success);
+    }
+    
+    .onboarding-step.completed .step-number {
+        background: var(--success);
+        color: white;
+    }
+    
+    .onboarding-step.completed .step-title {
+        color: var(--success);
+    }
+    
+    .onboarding-step.active {
+        border-left-color: var(--phantom-purple);
+        background: rgba(171, 159, 242, 0.05);
+    }
+    
+    .onboarding-step.active .step-number {
+        background: var(--phantom-purple);
+        color: white;
+    }
+    
+    .onboarding-step.active .step-title {
+        color: var(--text);
+    }
+    
+    .onboarding-step.locked {
+        opacity: 0.4;
+    }
+    
+    .onboarding-btn {
+        background: var(--success);
+        border: none;
+        color: white;
+        padding: 6px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 11px;
+        white-space: nowrap;
+    }
+    
+    .onboarding-btn:disabled {
+        background: var(--text-muted);
+        cursor: not-allowed;
+    }
+    
+    .onboarding-btn.small {
+        padding: 4px 10px;
+        font-size: 10px;
+    }
+    
+    .onboarding-complete-banner {
+        text-align: center;
+        padding: 16px;
+        border: 1px solid var(--success);
+        border-radius: 8px;
+        background: rgba(20, 241, 149, 0.05);
+        color: var(--success);
+        font-weight: 600;
+        font-size: 13px;
+    }
+
+    /* Reputation Section */
+    .reputation-section {
+        text-align: center;
+        margin-bottom: 24px;
+    }
+    
+    .rct-balance {
+        font-size: 24px;
+        font-weight: 800;
+        color: var(--rct-mint);
+        margin-bottom: 8px;
+    }
+    
+    .rex-categories {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+        margin-top: 16px;
+    }
+    
+    .rex-category {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        background: var(--bg-primary);
+        border-radius: 6px;
+        border: 1px solid var(--border);
+    }
+    
+    .rex-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+    }
+    
+    .rex-progress {
+        flex: 1;
+        margin: 0 12px;
+        height: 4px;
+        background: var(--bg-tertiary);
+        border-radius: 2px;
+        overflow: hidden;
+    }
+    
+    .rex-fill {
+        height: 100%;
+        background: var(--success);
+        transition: width 0.5s ease;
+    }
+    
+    .rex-level {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--success);
+    }
+
+    /* Daily Claim Card */
+    .daily-claim-card {
+        text-align: center;
+        padding: 20px;
+        background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        margin-bottom: 24px;
+    }
+    
+    .claim-btn {
+        background: linear-gradient(135deg, var(--rct-mint), var(--res-mint));
+        border: none;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 14px;
+        transition: opacity 0.2s;
+        margin-top: 8px;
+    }
+    
+    .claim-btn:hover {
+        opacity: 0.9;
+    }
+    
+    .claim-btn:disabled {
+        background: var(--text-muted);
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+    
+    .claim-cooldown {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-top: 8px;
+    }
+
+    .community-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+    .community-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+    }
+    .community-card h4 {
+        margin: 0 0 8px;
+        font-size: 13px;
+        color: var(--text-primary);
+    }
+    .community-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .community-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 12px;
+        padding: 8px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+    }
+    .community-item a {
+        color: var(--text-primary);
+        text-decoration: none;
+    }
+    .community-item a:hover {
+        text-decoration: underline;
+    }
+    .community-pill {
+        color: var(--text-muted);
+        font-size: 11px;
+        white-space: nowrap;
+    }
+    .community-empty {
+        font-size: 12px;
+        color: var(--text-muted);
+        padding: 10px;
+        border: 1px dashed var(--border);
+        border-radius: 6px;
+        text-align: center;
+    }
+
+    /* Wallet Split */
+    .ai-wallet, .human-wallet {
+        min-height: 300px;
+    }
+    
+    .wallet-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+    
+    .wallet-icon {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--success);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+    }
+    
+    .balance-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+    
+    .balance-card {
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        text-align: center;
+    }
+    
+    .balance-symbol {
+        font-size: 10px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        margin-bottom: 4px;
+    }
+    
+    .balance-amount {
+        font-size: 16px;
+        font-weight: 700;
+    }
+    
+    .balance-amount.sol { color: var(--solana-purple); }
+    .balance-amount.rct { color: var(--rct-mint); }
+    .balance-amount.res { color: var(--res-mint); }
+
+    /* Leaderboard Tab */
+    .leaderboard-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+    }
+    
+    .leaderboard-section {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+    }
+    
+    .leaderboard-section.overall {
+        grid-column: 1 / -1;
+    }
+    
+    .leaderboard-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .leaderboard-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border);
+    }
+    
+    .leaderboard-item:last-child {
+        border-bottom: none;
+    }
+    
+    .rank-badge {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: var(--success);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 700;
+    }
+    
+    .rank-badge.gold { background: #FFD700; color: #000; }
+    .rank-badge.silver { background: #C0C0C0; color: #000; }
+    .rank-badge.bronze { background: #CD7F32; color: #000; }
+    
+    .leaderboard-address {
+        font-family: var(--mono);
+        font-size: 12px;
+        flex: 1;
+    }
+    
+    .leaderboard-balance {
+        font-weight: 700;
+        color: var(--success);
+    }
+
+    /* DAO Tab */
+    .dao-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+    }
+    
+    .dao-section {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+    }
+    
+    .dao-section.proposals {
+        grid-column: 1 / -1;
+    }
+    
+    .dao-proposals {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .dao-proposal {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 0;
+        border-bottom: 1px solid var(--border);
+    }
+    
+    .dao-proposal:last-child {
+        border-bottom: none;
+    }
+    
+    .proposal-status {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+    
+    .proposal-status.active { background: var(--success); }
+    .proposal-status.pending { background: var(--network-testnet); }
+    .proposal-status.closed { background: var(--text-muted); }
+    
+    .proposal-content {
+        flex: 1;
+    }
+    
+    .proposal-title {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+    
+    .proposal-meta {
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+    
+    .vote-btn {
+        background: var(--success);
+        border: none;
+        color: white;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    
+    .vote-btn:disabled {
+        background: var(--text-muted);
+        cursor: not-allowed;
+    }
+
+    /* Modals — uses .active class (matches dashboard.css) */
+    
+    .modal-content {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px;
+        max-width: 500px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        animation: slideIn 0.3s ease;
+    }
+    
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+    
+    .modal-title {
+        font-size: 18px;
+        font-weight: 700;
+    }
+    
+    .modal-close {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        font-size: 20px;
+        cursor: pointer;
+    }
+
+    /* Toast Notifications */
+    .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 600;
+        z-index: 2000;
+        animation: slideInRight 0.3s ease;
+    }
+    
+    .toast.success { background: var(--success); }
+    .toast.error { background: var(--network-mainnet); }
+    .toast.warning { background: var(--network-testnet); }
+    .toast.info { background: var(--res-mint); }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .wallet-content,
+        .leaderboard-content,
+        .dao-content {
+            grid-template-columns: 1fr;
+        }
+        
+        .network-banner {
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .balance-grid {
+            grid-template-columns: 1fr;
+        }
+        .community-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Animations */
+    @keyframes progress {
+        0%, 100% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes slideIn {
+        from { transform: translateY(-20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    
+    @keyframes slideInRight {
+        from { transform: translateX(100%); }
+        to { transform: translateX(0); }
+    }
+</style>
+
+<!-- Network Selector Banner -->
+<div class="network-banner">
+    <div class="network-selector">
+        <span style="font-size: 12px; color: var(--text-muted); margin-right: 8px;">Network:</span>
+        <button class="network-btn active devnet" data-network="devnet">Devnet</button>
+        <button class="network-btn testnet" data-network="testnet">Testnet</button>
+        <button class="network-btn mainnet" data-network="mainnet">Mainnet</button>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <span id="walletAddress" style="font-family: var(--mono); font-size: 12px; color: var(--text-muted);">Not connected</span>
+        <button class="phantom-connect-btn" id="phantomConnect">
+            <span>👻</span>
+            <span id="phantomConnectText">Connect Phantom</span>
+        </button>
+    </div>
+</div>
+
+<!-- Tab System -->
+<div class="wallet-tabs">
+    <button class="tab-btn active" data-tab="wallet"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M16 12h.01"/></svg> Symbiotic Wallet</button>
+    <button class="tab-btn" data-tab="leaderboard"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 010-5C7 4 7 7 7 7"/><path d="M18 9h1.5a2.5 2.5 0 000-5C17 4 17 7 17 7"/><path d="M4 22h16"/><path d="M10 22V10a2 2 0 00-2-2H8a2 2 0 00-2 2v12"/><path d="M18 22V10a2 2 0 00-2-2h0a2 2 0 00-2 2v12"/></svg> Leaderboard</button>
+    <button class="tab-btn" data-tab="dao"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-4h6v4"/></svg> DAO</button>
+</div>
+
+<!-- Symbiotic Wallet Tab -->
+<div class="tab-content active" id="wallet-tab">
+    <!-- NFT Showcase — all visible, scrolls on overflow -->
+    <div class="wallet-section full-width">
+        <h3 style="margin: 0 0 12px; font-size: 16px; display:flex; align-items:center; gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> NFT Collection <button onclick="loadSymbioticNfts()" title="Refresh NFT Collection" style="background:none;border:1px solid rgba(255,255,255,0.15);border-radius:6px;cursor:pointer;padding:2px 6px;color:inherit;font-size:13px;display:inline-flex;align-items:center;opacity:0.6;transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">&#x21bb;</button></h3>
+        <div class="nft-showcase">
+            <div class="nft-carousel" id="nftCarousel">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <div class="wallet-content">
+        <!-- AI Wallet -->
+        <div class="wallet-section ai-wallet">
+            <div class="wallet-header">
+                <div class="wallet-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M12 2v6"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg></div>
+                <h3 style="margin: 0; font-size: 16px;">AI Wallet</h3>
+            </div>
+            <div class="wallet-addr-row">
+                <code id="aiAddrShort">Loading...</code>
+                <button class="copy-btn-sm" onclick="copyText(document.getElementById('aiFullAddress').value)">📋 Copy</button>
+                <input type="hidden" id="aiFullAddress" value="">
+            </div>
+            <div class="balance-grid" id="aiWalletBalances">
+                <div class="balance-card">
+                    <div class="balance-symbol">SOL</div>
+                    <div class="balance-amount sol" id="aiSolBalance">—</div>
+                </div>
+                <div class="balance-card">
+                    <div class="balance-symbol">$RCT</div>
+                    <div class="balance-amount rct" id="aiRctBalance">—</div>
+                </div>
+            </div>
+            <h4 style="margin: 12px 0 8px; font-size: 13px; color: var(--text-muted);">Recent Transactions</h4>
+            <ul class="tx-list" id="aiTxList">
+                <li class="tx-item"><span style="color:var(--text-muted);font-size:12px;">Loading...</span></li>
+            </ul>
+        </div>
+
+        <!-- Symbiotic Wallet -->
+        <div class="wallet-section human-wallet">
+            <div class="wallet-header">
+                <div class="wallet-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+                <h3 style="margin: 0; font-size: 16px;">Symbiotic Wallet</h3>
+            </div>
+            <div class="wallet-addr-row" id="symbioticAddrRow" style="display:none;">
+                <code id="symbioticAddrShort">Loading...</code>
+                <button class="copy-btn-sm" onclick="copyText(document.getElementById('symbioticFullAddress').value)">📋 Copy</button>
+                <input type="hidden" id="symbioticFullAddress" value="">
+            </div>
+
+            <!-- Onboarding (inside symbiotic wallet) -->
+            <div class="onboarding-wizard" id="onboardingWizard">
+                <div class="onboarding-steps" id="onboardingSteps">
+                    <!-- Populated by renderOnboarding() -->
+                </div>
+            </div>
+
+            <div class="balance-grid" id="humanWalletBalances">
+                <div class="balance-card">
+                    <div class="balance-symbol">SOL</div>
+                    <div class="balance-amount sol">—</div>
+                </div>
+                <div class="balance-card">
+                    <div class="balance-symbol">$RCT</div>
+                    <div class="balance-amount rct">—</div>
+                </div>
+                <div class="balance-card">
+                    <div class="balance-symbol">$RES</div>
+                    <div class="balance-amount res">—</div>
+                </div>
+            </div>
+
+            <!-- Send Tokens -->
+            <div class="send-tokens-section" id="sendTokensSection" style="display:none; margin-top:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.08);">
+                <h4 style="margin:0 0 8px; font-size:13px; color:var(--text-muted);">Send Tokens</h4>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <input type="text" id="sendRecipient" placeholder="Recipient wallet address" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:6px; padding:8px 10px; color:inherit; font-size:13px; font-family:monospace;">
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="number" id="sendAmount" placeholder="Amount" min="0" step="0.01" style="flex:3; min-width:0; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:6px; padding:8px 10px; color:inherit; font-size:13px;">
+                        <select id="sendToken" style="flex:1; min-width:70px; max-width:90px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:6px; padding:8px 10px; color:inherit; font-size:13px;">
+                            <option value="SOL">SOL</option>
+                            <option value="RES">$RES</option>
+                        </select>
+                    </div>
+                    <button onclick="sendTokens()" class="btn-primary" style="padding:8px 16px; border-radius:6px; font-size:13px; cursor:pointer;">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reputation Section -->
+    <div class="wallet-section full-width">
+        <h3 style="margin: 0 0 16px; font-size: 16px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Reputation System</h3>
+        <div class="reputation-section">
+            <div class="rct-balance" id="rctBalance">— $RCT</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Community Tokens</div>
+            
+            <div class="rex-categories" id="rexCategories">
+                <div class="rex-category">
+                    <span class="rex-label">Governance</span>
+                    <div class="rex-progress"><div class="rex-fill" style="width: 0%"></div></div>
+                    <span class="rex-level">L0</span>
+                </div>
+                <div class="rex-category">
+                    <span class="rex-label">Financial</span>
+                    <div class="rex-progress"><div class="rex-fill" style="width: 0%"></div></div>
+                    <span class="rex-level">L0</span>
+                </div>
+                <div class="rex-category">
+                    <span class="rex-label">Community</span>
+                    <div class="rex-progress"><div class="rex-fill" style="width: 0%"></div></div>
+                    <span class="rex-level">L0</span>
+                </div>
+                <div class="rex-category">
+                    <span class="rex-label">Creative</span>
+                    <div class="rex-progress"><div class="rex-fill" style="width: 0%"></div></div>
+                    <span class="rex-level">L0</span>
+                </div>
+                <div class="rex-category">
+                    <span class="rex-label">Technical</span>
+                    <div class="rex-progress"><div class="rex-fill" style="width: 0%"></div></div>
+                    <span class="rex-level">L0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Claim Card -->
+    <div class="wallet-section full-width daily-claim-card">
+        <h3 style="margin: 0 0 12px; font-size: 16px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Daily Claim
+        </h3>
+        <p style="font-size:13px; color:var(--text-muted); margin:0 0 12px;">Claim <strong>1 $RCT</strong> + <strong>500 $RES</strong> every 24 hours. Tokens go to your Symbiotic Wallet.</p>
+        <button id="dailyClaimBtn" class="claim-btn" onclick="dailyClaim()">Claim Rewards</button>
+        <div id="claimCooldown" style="display:none; margin-top:8px; font-size:12px; color:var(--text-muted);">
+            Next claim in: <span id="cooldownTimer">--:--:--</span>
+        </div>
+    </div>
+
+    <div class="wallet-section full-width">
+        <h3 style="margin: 0 0 12px; font-size: 16px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+            My Tribes & My Bounties
+        </h3>
+        <div class="community-grid">
+            <div class="community-card">
+                <h4>My Tribes</h4>
+                <ul id="myTribesList" class="community-list">
+                    <li class="community-empty">Connect wallet to load tribe membership.</li>
+                </ul>
+            </div>
+            <div class="community-card">
+                <h4>My Bounties</h4>
+                <ul id="myBountiesList" class="community-list">
+                    <li class="community-empty">Connect wallet to load claimed bounties.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leaderboard Tab -->
+<div class="tab-content" id="leaderboard-tab">
+    <div class="leaderboard-content">
+        <div class="leaderboard-section overall">
+            <h3 style="margin: 0 0 16px; font-size: 16px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><path d="M6 9H4.5a2.5 2.5 0 010-5C7 4 7 7 7 7"/><path d="M18 9h1.5a2.5 2.5 0 000-5C17 4 17 7 17 7"/><path d="M4 22h16"/><path d="M10 14v8"/><path d="M14 14v8"/><path d="M8 6h8l-2 8H10L8 6z"/></svg> Overall Rankings ($RCT)</h3>
+            <ul class="leaderboard-list" id="overallLeaderboard">
+                <li class="leaderboard-item">
+                    <div class="rank-badge">—</div>
+                    <span class="leaderboard-address">Loading...</span>
+                    <span class="leaderboard-balance">—</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="leaderboard-section">
+            <h4 style="margin: 0 0 16px; font-size: 14px;">Governance Leaders</h4>
+            <ul class="leaderboard-list" id="govLeaderboard">
+                <li class="leaderboard-item">
+                    <div class="rank-badge">—</div>
+                    <span class="leaderboard-address">Loading...</span>
+                    <span class="leaderboard-balance">—</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="leaderboard-section">
+            <h4 style="margin: 0 0 16px; font-size: 14px;">Technical Leaders</h4>
+            <ul class="leaderboard-list" id="tecLeaderboard">
+                <li class="leaderboard-item">
+                    <div class="rank-badge">—</div>
+                    <span class="leaderboard-address">Loading...</span>
+                    <span class="leaderboard-balance">—</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="leaderboard-section">
+            <h4 style="margin: 0 0 16px; font-size: 14px;">Creative Leaders</h4>
+            <ul class="leaderboard-list" id="creLeaderboard">
+                <li class="leaderboard-item">
+                    <div class="rank-badge">—</div>
+                    <span class="leaderboard-address">Loading...</span>
+                    <span class="leaderboard-balance">—</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="leaderboard-section">
+            <h4 style="margin: 0 0 16px; font-size: 14px;">Community Leaders</h4>
+            <ul class="leaderboard-list" id="comLeaderboard">
+                <li class="leaderboard-item">
+                    <div class="rank-badge">—</div>
+                    <span class="leaderboard-address">Loading...</span>
+                    <span class="leaderboard-balance">—</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="leaderboard-section">
+            <h4 style="margin: 0 0 16px; font-size: 14px;">Financial Leaders</h4>
+            <ul class="leaderboard-list" id="finLeaderboard">
+                <li class="leaderboard-item">
+                    <div class="rank-badge">—</div>
+                    <span class="leaderboard-address">Loading...</span>
+                    <span class="leaderboard-balance">—</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- DAO Tab -->
+<div class="tab-content" id="dao-tab">
+    <div class="dao-content">
+        <div class="dao-section">
+            <h3 style="margin: 0 0 16px; font-size: 16px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-4h6v4"/></svg> DAO Treasury</h3>
+            <div id="daoTreasury">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <span style="font-size: 12px; color: var(--text-muted);">DAO Wallet</span>
+                    <span style="font-family: var(--mono); font-size: 12px;">77vN...MHYaC</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <span style="font-size: 12px; color: var(--text-muted);">Registration Basket</span>
+                    <span style="font-family: var(--mono); font-size: 12px;">Ga18...d66x9</span>
+                </div>
+                <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
+                    <div style="text-align: center;">
+                        <div style="font-size: 18px; font-weight: 700; color: var(--success);">— SOL</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Total Treasury</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dao-section">
+            <h3 style="margin: 0 0 16px; font-size: 16px;">📊 Token Holdings</h3>
+            <div id="daoHoldings">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div style="text-align: center; padding: 12px; background: var(--bg-primary); border-radius: 6px;">
+                        <div style="font-size: 14px; font-weight: 700; color: var(--rct-mint);">— $RCT</div>
+                        <div style="font-size: 10px; color: var(--text-muted);">Community</div>
+                    </div>
+                    <div style="text-align: center; padding: 12px; background: var(--bg-primary); border-radius: 6px;">
+                        <div style="font-size: 14px; font-weight: 700; color: var(--res-mint);">— $RES</div>
+                        <div style="font-size: 10px; color: var(--text-muted);">Utility</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dao-section proposals">
+            <h3 style="margin: 0 0 16px; font-size: 16px;">📋 Recent Proposals</h3>
+            <ul class="dao-proposals" id="daoProposals">
+                <li class="dao-proposal">
+                    <div class="proposal-status active"></div>
+                    <div class="proposal-content">
+                        <div class="proposal-title">RIP-003: Establish $RCT token distribution schedule</div>
+                        <div class="proposal-meta">Ends in 3 days • 12 votes</div>
+                    </div>
+                    <button class="vote-btn">Vote</button>
+                </li>
+                <li class="dao-proposal">
+                    <div class="proposal-status active"></div>
+                    <div class="proposal-content">
+                        <div class="proposal-title">RIP-004: Chatbot addon pricing tier review</div>
+                        <div class="proposal-meta">Ends in 5 days • 7 votes</div>
+                    </div>
+                    <button class="vote-btn">Vote</button>
+                </li>
+                <li class="dao-proposal">
+                    <div class="proposal-status pending"></div>
+                    <div class="proposal-content">
+                        <div class="proposal-title">RIP-005: Pioneer batch soulbound NFT distribution</div>
+                        <div class="proposal-meta">Starts Feb 20 • Draft</div>
+                    </div>
+                    <button class="vote-btn" disabled>Pending</button>
+                </li>
+                <li class="dao-proposal">
+                    <div class="proposal-status closed"></div>
+                    <div class="proposal-content">
+                        <div class="proposal-title">RIP-002: Approve AI Artisan identity standard</div>
+                        <div class="proposal-meta">Closed • Passed ✓ • 18 votes</div>
+                    </div>
+                    <span style="font-size: 11px; color: var(--success);">✓ Passed</span>
+                </li>
+                <li class="dao-proposal">
+                    <div class="proposal-status closed"></div>
+                    <div class="proposal-content">
+                        <div class="proposal-title">RIP-001: DAO constitution ratification</div>
+                        <div class="proposal-meta">Closed • Passed ✓ • 24 votes</div>
+                    </div>
+                    <span style="font-size: 11px; color: var(--success);">✓ Passed</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Mainnet Warning Modal -->
+<div class="modal" id="mainnetWarningModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">⚠️ Mainnet Warning</h3>
+            <button class="modal-close" onclick="closeModal('mainnetWarningModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>You're about to switch to Solana Mainnet. This involves real SOL and tokens.</p>
+            <p><strong>Alpha Warning:</strong> Some features may not work as expected. Use at your own risk.</p>
+            <div style="display: flex; gap: 12px; margin-top: 16px;">
+                <button onclick="confirmMainnet()" style="flex: 1; background: var(--network-mainnet); color: white; border: none; padding: 8px; border-radius: 6px;">I Understand</button>
+                <button onclick="closeModal('mainnetWarningModal')" style="flex: 1; background: var(--bg-tertiary); color: var(--text); border: none; padding: 8px; border-radius: 6px;">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Document Preview Modal -->
+<div class="modal" id="documentModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title" id="documentModalTitle">Document</h3>
+            <button class="modal-close" onclick="closeModal('documentModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="documentModalBody" style="max-height: 400px; overflow-y: auto; font-size: 14px; line-height: 1.5;"></div>
+            <div style="display: flex; gap: 12px; margin-top: 16px;">
+                <button id="documentSignBtn" onclick="signDocument()" style="flex: 1; background: var(--success); color: white; border: none; padding: 8px; border-radius: 6px;">Co-Sign Document</button>
+                <button onclick="closeModal('documentModal')" style="flex: 1; background: var(--bg-tertiary); color: var(--text); border: none; padding: 8px; border-radius: 6px;">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Utility: copy text to clipboard
+function copyText(text) {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+        // Brief visual feedback — find the copy button and flash it
+        const btn = document.querySelector('.copy-btn-sm');
+        if (btn) {
+            const orig = btn.textContent;
+            btn.textContent = '✅ Copied';
+            setTimeout(() => { btn.textContent = orig; }, 1500);
+        }
+    }).catch(() => {
+        // Fallback for non-HTTPS contexts
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+    });
+}
+
+// Send tokens from Symbiotic PDA (requires backend endpoint)
+async function sendTokens() {
+    const recipient = document.getElementById('sendRecipient').value.trim();
+    const amount = parseFloat(document.getElementById('sendAmount').value);
+    const token = document.getElementById('sendToken').value;
+    if (!recipient || !amount || amount <= 0) {
+        showToast('Please enter a valid recipient and amount', 'error');
+        return;
+    }
+    if (!connectedAddress) {
+        showToast('Connect your Phantom wallet first', 'error');
+        return;
+    }
+    const provider = getPhantomProvider();
+    if (!provider) {
+        showToast('Phantom wallet not found', 'error');
+        return;
+    }
+    try {
+        if (token === 'SOL') {
+            // SOL: direct system transfer from Phantom (no program involved)
+            await sendSolDirect(provider, recipient, amount);
+        } else {
+            // SPL tokens: transfer_out via symbiotic program (from PDA)
+            await sendSplToken(provider, recipient, amount, token);
+        }
+        document.getElementById('sendRecipient').value = '';
+        document.getElementById('sendAmount').value = '';
+        loadUserWallet();
+    } catch (e) {
+        console.error('Send error:', e);
+        if (e.message && e.message.includes('User rejected')) {
+            showToast('Transaction rejected by user', 'error');
+        } else {
+            showToast(e.message || 'Transfer failed — try again', 'error');
+        }
+    }
+}
+
+async function sendSolDirect(provider, recipient, amount) {
+    showToast('Building SOL transfer...', 'info');
+    const resp = await fetch('/api/wallet/build-sol-transfer', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            network: currentNetwork,
+            sender: connectedAddress,
+            recipient: recipient,
+            amount: amount
+        })
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+        showToast(data.error || 'Failed to build SOL transfer', 'error');
+        return;
+    }
+    const sig = await signAndSend(provider, data.transaction, false);
+    await confirmTransaction(sig, amount, 'SOL', recipient);
+}
+
+async function sendSplToken(provider, recipient, amount, token) {
+    showToast('Building transaction...', 'info');
+    const resp = await fetch('/api/wallet/build-transfer-tx', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            network: currentNetwork,
+            sender: connectedAddress,
+            recipient: recipient,
+            amount: amount,
+            token: token
+        })
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+        showToast(data.error || 'Failed to build transaction', 'error');
+        return;
+    }
+    const sig = await signAndSend(provider, data.transaction, true);
+    await confirmTransaction(sig, amount, '$' + token, recipient);
+}
+
+async function signAndSend(provider, txBase64, skipPreflight) {
+    showPhantomOverlay();
+    showToast('Approve in Phantom...', 'info');
+    const txBytes = Uint8Array.from(atob(txBase64), c => c.charCodeAt(0));
+
+    // Phantom signAndSendTransaction accepts a VersionedTransaction-like object
+    // that has a serialize() method returning Uint8Array.
+    // We use the Phantom provider.request API with base58-encoded transaction.
+    // Since we have base64, convert to bytes then to base58 for Phantom.
+
+    // Helper: bytes → base58
+    function toBase58(bytes) {
+        const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+        let result = '';
+        let digits = [0];
+        for (let i = 0; i < bytes.length; i++) {
+            let carry = bytes[i];
+            for (let j = 0; j < digits.length; j++) {
+                carry += digits[j] << 8;
+                digits[j] = carry % 58;
+                carry = (carry / 58) | 0;
+            }
+            while (carry > 0) {
+                digits.push(carry % 58);
+                carry = (carry / 58) | 0;
+            }
+        }
+        for (let i = 0; bytes[i] === 0 && i < bytes.length - 1; i++) result += ALPHABET[0];
+        for (let i = digits.length - 1; i >= 0; i--) result += ALPHABET[digits[i]];
+        return result;
+    }
+
+    try {
+        const resp = await provider.request({
+            method: 'signAndSendTransaction',
+            params: {
+                transaction: toBase58(txBytes),
+                options: { skipPreflight: skipPreflight, preflightCommitment: 'confirmed' }
+            }
+        });
+        return resp.signature;
+    } finally {
+        hidePhantomOverlay();
+    }
+}
+
+async function confirmTransaction(signature, amount, symbol, recipient) {
+    showToast('Confirming...', 'info');
+    const rpcUrl = currentNetwork === 'testnet' ? 'https://api.testnet.solana.com' : 'https://api.devnet.solana.com';
+    for (let i = 0; i < 30; i++) {
+        const statusResp = await fetch(rpcUrl, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                jsonrpc: '2.0', id: 1, method: 'getSignatureStatuses',
+                params: [[signature]]
+            })
+        });
+        const statusData = await statusResp.json();
+        const status = statusData.result?.value?.[0];
+        if (status?.confirmationStatus) {
+            if (status.err) {
+                showToast('Transaction failed on-chain — check explorer', 'error');
+                return;
+            }
+            break;
+        }
+        await new Promise(r => setTimeout(r, 1000));
+    }
+    showToast(`Sent ${amount} ${symbol} to ${recipient.slice(0,6)}... ✓`, 'success');
+}
+
+// Configuration
+const SOLANA_NETWORKS = {
+    devnet: { name: 'Devnet', rpc: 'https://api.devnet.solana.com' },
+    testnet: { name: 'Testnet', rpc: 'https://api.testnet.solana.com' },
+    'mainnet-beta': { name: 'Mainnet', rpc: 'https://api.mainnet-beta.solana.com' }
+};
+
+const TOKEN_MINTS = {
+    RCT: '2z2GEVqhTVUc6Pb3pzmVTTyBh2BeMHqSw1Xrej8KVUKG',
+    RES: 'DiZuWvmQ6DEwsfz7jyFqXCsMfnJiMVahCj3J5MxkdV5N'
+};
+
+const DAO_WALLET = '77vNjBbKxtGyMnzRbhF1cmQzVdrNq5petrsJWkcMHYaC';
+const BASKET_WALLET = 'Ga18B4nWnQsCqJjQRqQQK74fnmz67rCjRaCw1Gzd66x9';
+
+const REX_CATEGORIES = ['GOV', 'FIN', 'COM', 'CRE', 'TEC'];
+
+// State
+let currentNetwork = 'devnet';
+let currentTab = 'wallet';
+let phantomProvider = null;
+let connectedAddress = null;
+let nftCarouselIndex = 0;
+let nftCarouselTimer = null;
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    initializeWallet();
+});
+
+function initializeWallet() {
+    // Show onboarding steps immediately (all locked until wallet connects)
+    renderOnboarding({});
+    
+    // Phantom connect
+    document.getElementById('phantomConnect').addEventListener('click', connectPhantom);
+    
+    detectPhantom();
+    loadAiWallet();
+    
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchView(btn.dataset.tab));
+    });
+    
+    // Network switching
+    document.querySelectorAll('.network-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchNetwork(btn.dataset.network));
+    });
+    
+}
+
+function switchView(view) {
+    currentTab = view;
+    
+    // Update tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === view);
+    });
+    
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.toggle('active', content.id === `${view}-tab`);
+    });
+    
+    // Load data for active tab
+    if (view === 'leaderboard') {
+        loadLeaderboard();
+    } else if (view === 'dao') {
+        loadDaoPanel();
+    }
+}
+
+function switchNetwork(network) {
+    if (network === 'mainnet' && currentNetwork !== 'mainnet') {
+        showModal('mainnetWarningModal');
+        return;
+    }
+    
+    currentNetwork = network;
+    
+    // Update network buttons
+    document.querySelectorAll('.network-btn').forEach(btn => {
+        btn.classList.remove('active', 'devnet', 'testnet', 'mainnet');
+        if (btn.dataset.network === network) {
+            btn.classList.add('active', network);
+        }
+    });
+    
+    // Reload wallet data
+    if (connectedAddress) {
+        loadUserWallet();
+    }
+    loadAiWallet();
+}
+
+function confirmMainnet() {
+    closeModal('mainnetWarningModal');
+    currentNetwork = 'mainnet';
+    
+    // Update UI
+    document.querySelectorAll('.network-btn').forEach(btn => {
+        btn.classList.remove('active', 'devnet', 'testnet', 'mainnet');
+        if (btn.dataset.network === 'mainnet') {
+            btn.classList.add('active', 'mainnet');
+        }
+    });
+    
+    showToast('Switched to Mainnet - Use with caution!', 'warning');
+}
+
+// Phantom Wallet Integration
+function getPhantomProvider() {
+    if (window.phantom?.solana?.isPhantom) {
+        return window.phantom.solana;
+    }
+    
+    if (window.solana?.isPhantom) {
+        return window.solana;
+    }
+    
+    return null;
+}
+
+let _phantomConnecting = false; // guard against double-click / re-entrant calls
+
+function detectPhantom() {
+    try {
+        const provider = getPhantomProvider();
+        if (!provider) {
+            setTimeout(detectPhantom, 500);
+            return;
+        }
+        
+        phantomProvider = provider;
+        
+        // Listen for Phantom events so UI stays in sync if user
+        // disconnects or switches account from within the extension.
+        provider.on('disconnect', () => {
+            connectedAddress = null;
+            updatePhantomUI(false);
+            renderOnboarding({});
+        });
+        provider.on('accountChanged', (pubKey) => {
+            if (pubKey) {
+                connectedAddress = pubKey.toString();
+                updatePhantomUI(true);
+                loadUserWallet();
+                loadOnboardingStatus();
+            } else {
+                // Phantom removed trust - treat as disconnect
+                connectedAddress = null;
+                updatePhantomUI(false);
+                renderOnboarding({});
+            }
+        });
+        
+        // Eager reconnect for previously-approved sites (matches protocol-store flow).
+        // Using { onlyIfTrusted: true } avoids showing a popup - it resolves silently
+        // if the user already approved this origin, or rejects without UI otherwise.
+        provider.connect({ onlyIfTrusted: true })
+            .then((resp) => {
+                connectedAddress = resp.publicKey.toString();
+                updatePhantomUI(true);
+                loadUserWallet();
+                loadOnboardingStatus();
+            })
+            .catch(() => {
+                // Not auto-connected - user will need to click Connect Phantom.
+                // phantomProvider is still valid for manual connect().
+            });
+    } catch (error) {
+        console.error('Failed to detect Phantom provider:', error);
+        setTimeout(detectPhantom, 500);
+    }
+}
+
+async function connectPhantom() {
+    // Always grab a fresh provider reference (extension may have reloaded).
+    const provider = getPhantomProvider();
+    if (!provider) {
+        window.open('https://phantom.app/', '_blank');
+        return;
+    }
+    phantomProvider = provider;
+    
+    // Prevent double-click / re-entrant calls that can wedge Phantom popup queue.
+    if (_phantomConnecting) return;
+    _phantomConnecting = true;
+    
+    try {
+        const response = await provider.connect();
+        connectedAddress = response.publicKey.toString();
+        updatePhantomUI(true);
+        loadUserWallet();
+        loadOnboardingStatus();
+        showToast('Phantom wallet connected!', 'success');
+    } catch (error) {
+        console.error('Failed to connect Phantom:', error);
+        showToast('Failed to connect Phantom wallet', 'error');
+    } finally {
+        _phantomConnecting = false;
+    }
+}
+
+function updatePhantomUI(connected) {
+    const btn = document.getElementById('phantomConnect');
+    const addressEl = document.getElementById('walletAddress');
+    const text = document.getElementById('phantomConnectText');
+    
+    if (connected && connectedAddress) {
+        btn.classList.add('connected');
+        text.textContent = 'Connected';
+        addressEl.textContent = connectedAddress.slice(0, 8) + '...' + connectedAddress.slice(-4);
+    } else {
+        btn.classList.remove('connected');
+        text.textContent = 'Connect Phantom';
+        addressEl.textContent = 'Not connected';
+    }
+    if (!connected) loadMyTribesAndBounties();
+}
+
+function showPhantomOverlay() {
+    let overlay = document.getElementById('phantomOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'phantomOverlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = `<div style="background:var(--bg-secondary, #1a1b2e);border:2px solid var(--phantom-purple, #AB9FF2);border-radius:16px;padding:32px 40px;text-align:center;max-width:400px;">
+            <div style="font-size:48px;margin-bottom:16px;">👻</div>
+            <h3 style="margin:0 0 8px;color:var(--phantom-purple, #AB9FF2);">Phantom Approval Required</h3>
+            <p style="color:var(--text-muted, #999);margin:0 0 16px;font-size:14px;">Check for the Phantom popup window. It may have opened behind your browser.</p>
+            <div style="display:flex;gap:8px;justify-content:center;">
+                <span class="spinner" style="width:20px;height:20px;border:2px solid var(--phantom-purple, #AB9FF2);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;display:inline-block;"></span>
+                <span style="color:var(--text-muted, #999);font-size:13px;">Waiting for signature...</span>
+            </div>
+        </div>`;
+        document.body.appendChild(overlay);
+    }
+    overlay.style.display = 'flex';
+}
+
+function hidePhantomOverlay() {
+    const overlay = document.getElementById('phantomOverlay');
+    if (overlay) overlay.style.display = 'none';
+}
+
+async function requestPhantomApproval(message) {
+    if (!phantomProvider || !connectedAddress) {
+        throw new Error('Phantom wallet not connected');
+    }
+    
+    showPhantomOverlay();
+    try {
+        const encodedMessage = new TextEncoder().encode(message);
+        const signedMessage = await phantomProvider.signMessage(encodedMessage, 'utf8');
+        return btoa(String.fromCharCode.apply(null, signedMessage.signature));
+    } catch (error) {
+        throw new Error('User rejected signature request');
+    } finally {
+        hidePhantomOverlay();
+    }
+}
+
+// Wallet Data Loading
+async function loadAiWallet() {
+    try {
+        const response = await fetch(`/api/wallet?network=${currentNetwork}`);
+        const data = await response.json();
+        
+        if (response.ok && !data.error) {
+            const bal = data.balances || {};
+            // Address (short + full for copy)
+            const addr = data.fullAddress || data.address || '';
+            document.getElementById('aiFullAddress').value = addr;
+            document.getElementById('aiAddrShort').textContent = addr ? addr.substring(0,6) + '...' + addr.slice(-4) : '—';
+
+            // SOL balance
+            const solEl = document.getElementById('aiSolBalance');
+            if (solEl && bal.SOL) solEl.textContent = parseFloat(bal.SOL.balance || 0).toFixed(3);
+
+            // RCT balance
+            const rctEl = document.getElementById('aiRctBalance');
+            if (rctEl && bal['$RCT']) rctEl.textContent = Number(bal['$RCT'].balance).toLocaleString();
+
+            // Recent transactions (last 3) — fetch signatures from RPC
+            const txList = document.getElementById('aiTxList');
+            try {
+                const txResp = await fetch(SOLANA_NETWORKS[currentNetwork].rpc, {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({jsonrpc:'2.0',id:1,method:'getSignaturesForAddress',params:[addr,{limit:3}]})
+                });
+                const txData = await txResp.json();
+                const sigs = txData.result || [];
+                if (sigs.length > 0 && txList) {
+                    txList.innerHTML = sigs.map(tx => {
+                        const sig = tx.signature.substring(0,12) + '...';
+                        const err = tx.err ? '❌' : '✅';
+                        const time = tx.blockTime ? new Date(tx.blockTime * 1000).toLocaleString() : '';
+                        return `<li class="tx-item">
+                            <span>${err}</span>
+                            <div class="tx-details"><span class="tx-sig">${sig}</span><div class="tx-time">${time}</div></div>
+                        </li>`;
+                    }).join('');
+                } else if (txList) {
+                    txList.innerHTML = '<li class="tx-item"><span style="color:var(--text-muted);font-size:12px;">No transactions yet</span></li>';
+                }
+            } catch(e) { console.error('tx fetch:', e); }
+
+            // Load NFTs from Symbiotic PDA
+            loadSymbioticNfts();
+        }
+    } catch (error) {
+        console.error('Error loading AI wallet:', error);
+    }
+}
+
+// Load NFTs from Symbiotic PDA only
+let _pdaNfts = [];
+let _nftLoadPending = null;
+async function loadSymbioticNfts() {
+    if (!connectedAddress) return;
+    if (_nftLoadPending) return _nftLoadPending;
+    _nftLoadPending = _doLoadSymbioticNfts();
+    try { await _nftLoadPending; } finally { _nftLoadPending = null; }
+}
+async function _doLoadSymbioticNfts() {
+    let allNfts = [];
+    try {
+        // 1. Query Symbiotic PDA (primary — all onboarding NFTs go here)
+        const pairResp = await fetch(`/api/symbiotic/pair-info?humanPubkey=${connectedAddress}&network=${currentNetwork}`);
+        const pairData = await pairResp.json();
+        if (pairResp.ok && pairData.exists && pairData.pda) {
+            const pdaResp = await fetch(`/api/wallet/owned-nfts?network=${currentNetwork}&address=${pairData.pda}`);
+            const pdaData = await pdaResp.json();
+            if (pdaResp.ok && pdaData.nfts) {
+                allNfts.push(...pdaData.nfts);
+            }
+        }
+        // 2. Also query user wallet (legacy mints before PDA routing)
+        // Deduplicate by NFT NAME (type), not mint address.
+        // PDA versions take priority over user-wallet duplicates.
+        const userResp = await fetch(`/api/wallet/owned-nfts?network=${currentNetwork}&address=${connectedAddress}`);
+        const userData = await userResp.json();
+        if (userResp.ok && userData.nfts) {
+            const existingNames = new Set(allNfts.map(n => n.name));
+            for (const nft of userData.nfts) {
+                if (!existingNames.has(nft.name)) allNfts.push(nft);
+            }
+        }
+    } catch (e) {
+        console.error('Error loading NFTs:', e);
+    }
+    _pdaNfts = allNfts;
+    renderNftCarousel(_pdaNfts);
+}
+
+async function loadUserWallet() {
+    if (!connectedAddress) return;
+    
+    try {
+        // Get Symbiotic PDA address — all balances live on PDA, not human wallet
+        const pairResp = await fetch(`/api/symbiotic/pair-info?humanPubkey=${connectedAddress}&network=${currentNetwork}`);
+        const pairData = await pairResp.json();
+        const pdaAddress = pairData.exists ? (pairData.pda || null) : null;
+        
+        if (pdaAddress) {
+            // Display PDA address with truncation
+            const shortAddr = pdaAddress.slice(0, 6) + '...' + pdaAddress.slice(-4);
+            document.getElementById('symbioticAddrShort').textContent = shortAddr;
+            document.getElementById('symbioticFullAddress').value = pdaAddress;
+            document.getElementById('symbioticAddrRow').style.display = '';
+            document.getElementById('sendTokensSection').style.display = '';
+            window._symbioticPda = pdaAddress;
+
+            const response = await fetch(`/api/wallet/user?network=${currentNetwork}&address=${pdaAddress}`);
+            const data = await response.json();
+            
+            if (response.ok) {
+                updateWalletBalances('humanWalletBalances', data.balances);
+                updateRctBalance(data.balances);
+            }
+        } else {
+            console.warn('No Symbiotic PDA found — balances unavailable');
+            document.getElementById('symbioticAddrRow').style.display = 'none';
+            document.getElementById('sendTokensSection').style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Error loading wallet balances:', error);
+    }
+    
+    // Load NFTs from Symbiotic PDA (not user personal wallet)
+    loadSymbioticNfts();
+    loadMyTribesAndBounties();
+}
+
+function updateWalletBalances(containerId, balances) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    const balanceCards = container.querySelectorAll('.balance-card');
+    balanceCards.forEach(card => {
+        const symbol = card.querySelector('.balance-symbol').textContent;
+        const amountEl = card.querySelector('.balance-amount');
+        
+        let balance = '—';
+        if (balances[symbol] !== undefined) {
+            balance = parseFloat(balances[symbol].balance).toFixed(symbol === 'SOL' ? 3 : 0);
+        }
+        
+        amountEl.textContent = balance;
+    });
+}
+
+function updateRctBalance(balances) {
+    const rctBalanceEl = document.getElementById('rctBalance');
+    if (rctBalanceEl && balances['$RCT']) {
+        const amount = parseFloat(balances['$RCT'].balance);
+        rctBalanceEl.textContent = `${amount.toLocaleString()} $RCT`;
+    }
+}
+
+async function loadOnboardingStatus() {
+    if (!connectedAddress) return;
+    
+    try {
+        const response = await fetch(
+            `/api/wallet/onboarding-status?address=${encodeURIComponent(connectedAddress)}&network=${encodeURIComponent(currentNetwork)}`
+        );
+        const data = await response.json();
+        
+        // Recover intermediate steps from highest on-chain step.
+        if (data.alphaNftMinted) {
+            data.identityNftMinted = true;
+            data.manifestoSigned = true;
+            data.licenseSigned = true;
+            data.alphaAgreed = true;
+            data.symbioticPairCreated = true;
+        } else if (data.identityNftMinted) {
+            data.manifestoSigned = true;
+            data.licenseSigned = true;
+            data.alphaAgreed = true;
+            data.symbioticPairCreated = true;
+        } else if (data.manifestoSigned) {
+            data.licenseSigned = true;
+            data.alphaAgreed = true;
+            data.symbioticPairCreated = true;
+        } else if (data.licenseSigned) {
+            data.alphaAgreed = true;
+            data.symbioticPairCreated = true;
+        }
+        
+        if (response.ok) {
+            renderOnboarding(data);
+        }
+    } catch (error) {
+        console.error('Error loading onboarding status:', error);
+    }
+}
+
+async function loadMyTribesAndBounties() {
+    const tribesEl = document.getElementById('myTribesList');
+    const bountiesEl = document.getElementById('myBountiesList');
+    if (!tribesEl || !bountiesEl) return;
+
+    if (!connectedAddress) {
+        tribesEl.innerHTML = '<li class="community-empty">Connect wallet to load tribe membership.</li>';
+        bountiesEl.innerHTML = '<li class="community-empty">Connect wallet to load claimed bounties.</li>';
+        return;
+    }
+
+    try {
+        const [tribesResp, bountiesResp] = await Promise.all([
+            fetch(`/api/wallet/my-tribes?address=${encodeURIComponent(connectedAddress)}`),
+            fetch(`/api/wallet/my-bounties?address=${encodeURIComponent(connectedAddress)}`)
+        ]);
+
+        const tribesData = await tribesResp.json();
+        const bountiesData = await bountiesResp.json();
+
+        const tribes = tribesResp.ok ? (tribesData.tribes || []) : [];
+        const myBounties = bountiesResp.ok ? (bountiesData.bounties || []) : [];
+
+        if (!tribes.length) {
+            tribesEl.innerHTML = '<li class="community-empty">No tribe memberships yet.</li>';
+        } else {
+            tribesEl.innerHTML = tribes.map((tribe) => `
+                <li class="community-item">
+                    <a href="/tribes#${tribe.id}">${tribe.name || tribe.id}</a>
+                    <span class="community-pill">${tribe.role || 'member'} · ${tribe.activeBountyCount || 0} active</span>
+                </li>
+            `).join('');
+        }
+
+        if (!myBounties.length) {
+            bountiesEl.innerHTML = '<li class="community-empty">No claimed bounties yet.</li>';
+        } else {
+            bountiesEl.innerHTML = myBounties.map((bounty) => `
+                <li class="community-item">
+                    <a href="/bounties#${bounty.id}">${bounty.title || bounty.id}</a>
+                    <span class="community-pill">${bounty.status || 'open'}</span>
+                </li>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading tribe/bounty memberships:', error);
+        tribesEl.innerHTML = '<li class="community-empty">Failed to load tribes.</li>';
+        bountiesEl.innerHTML = '<li class="community-empty">Failed to load bounties.</li>';
+    }
+}
+
+function renderOnboarding(status) {
+    const statusKeys = ['symbioticPairCreated', 'alphaAgreed', 'licenseSigned', 'manifestoSigned', 'identityNftMinted', 'alphaNftMinted'];
+    const steps = [
+        {title: 'Create Symbiotic Wallet', desc: 'Bind your wallet with the AI on-chain', action: 'createSymbioticWallet', readLink: null},
+        {title: 'Alpha Testing Agreement', desc: 'Accept the terms for the Alpha phase', action: 'agreeAlpha', readLink: "showAlphaAgreement()"},
+        {title: 'Sign Symbiotic License', desc: 'Co-sign the Resonant Commons License', action: 'signLicense', readLink: "showDocument('license')"},
+        {title: 'Sign Manifesto', desc: 'Co-sign the Augmentatism Manifesto', action: 'signManifesto', readLink: "showDocument('manifesto')"},
+        {title: 'Mint Identity NFT', desc: 'Create your unique AI Artisan identity (+5 $RCT, +500 $RES)', action: 'mintIdentityNft', readLink: null},
+        {title: 'Claim Alpha Badge', desc: 'Get your Pioneer status NFT (+50 $RCT, +1,000 $RES)', action: 'mintAlphaNft', readLink: null}
+    ];
+    
+    let currentStep = 0;
+    for (let i = 0; i < statusKeys.length; i++) {
+        if (status[statusKeys[i]]) currentStep = i + 1;
+        else break;
+    }
+    
+    const container = document.getElementById('onboardingSteps');
+    
+    if (currentStep >= 6) {
+        container.innerHTML = '<div class="onboarding-complete-banner">Onboarding Complete — Welcome to the AI Artisan community</div>';
+        return;
+    }
+    
+    container.innerHTML = steps.map((step, i) => {
+        const completed = i < currentStep;
+        const active = i === currentStep;
+        const locked = i > currentStep;
+        const cls = completed ? 'completed' : active ? 'active' : 'locked';
+        
+        let actionsHtml = '';
+        if (step.readLink) {
+            actionsHtml += `<a class="step-read-link" onclick="${step.readLink}">Read</a>`;
+        }
+        if (active) {
+            actionsHtml += `<button class="onboarding-btn small" onclick="${step.action}()">${completed ? '✓' : 'Start'}</button>`;
+        } else if (completed) {
+            actionsHtml += '<span style="color:var(--success); font-size:14px;">✓</span>';
+        }
+        
+        return `<div class="onboarding-step ${cls}">
+            <div class="step-number">${completed ? '✓' : i + 1}</div>
+            <div class="step-content">
+                <div class="step-title">${step.title}</div>
+                <div class="step-desc">${step.desc}</div>
+            </div>
+            <div class="step-actions">${actionsHtml}</div>
+        </div>`;
+    }).join('');
+}
+
+async function createSymbioticWallet() {
+    if (!connectedAddress) {
+        showToast('Connect your wallet first', 'error');
+        return;
+    }
+    try {
+        showToast('Building symbiotic wallet transaction...', 'info');
+        
+        const resp = await fetch('/api/symbiotic/build-init-tx', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ humanPubkey: connectedAddress, network: currentNetwork })
+        });
+        const data = await resp.json();
+        if (data.error) { showToast(data.error, 'error'); return; }
+        
+        showPhantomOverlay();
+        showToast('Approve transaction in Phantom...', 'info');
+        
+        const provider = getPhantomProvider();
+        if (!provider) { hidePhantomOverlay(); showToast('Phantom not found', 'error'); return; }
+        
+        // Decode transaction, sign with Phantom, send
+        const txBytes = Uint8Array.from(atob(data.transaction), c => c.charCodeAt(0));
+        const { signature } = await provider.signAndSendTransaction(
+            { serialize: () => txBytes },
+            { skipPreflight: true }
+        );
+        
+        // Wait for on-chain confirmation before declaring success
+        showToast('Transaction sent — waiting for confirmation...', 'info');
+        const rpcUrl = currentNetwork === 'mainnet-beta'
+            ? 'https://api.mainnet-beta.solana.com'
+            : 'https://api.devnet.solana.com';
+        let confirmed = false;
+        for (let i = 0; i < 30; i++) {
+            await new Promise(r => setTimeout(r, 1500));
+            try {
+                const statusResp = await fetch(rpcUrl, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        jsonrpc: '2.0', id: 1,
+                        method: 'getSignatureStatuses',
+                        params: [[signature], {searchTransactionHistory: true}]
+                    })
+                });
+                const statusData = await statusResp.json();
+                const val = statusData?.result?.value?.[0];
+                if (val && val.confirmationStatus && val.err === null) {
+                    confirmed = true;
+                    break;
+                }
+                if (val && val.err) {
+                    showToast('Transaction failed on-chain: ' + JSON.stringify(val.err), 'error');
+                    hidePhantomOverlay();
+                    return;
+                }
+            } catch (e) { /* retry */ }
+        }
+        if (!confirmed) {
+            showToast('Transaction not confirmed after 45s — check Solana Explorer with signature: ' + signature, 'warning');
+            hidePhantomOverlay();
+            return;
+        }
+        
+        // Verify PDA actually exists on-chain
+        const verifyResp = await fetch(`/api/symbiotic/pair-info?humanPubkey=${connectedAddress}&network=${currentNetwork}`);
+        const verifyData = await verifyResp.json();
+        if (!verifyData.exists) {
+            showToast('Transaction confirmed but PDA not detected — try refreshing in a few seconds', 'warning');
+            hidePhantomOverlay();
+            return;
+        }
+        
+        hidePhantomOverlay();
+        showToast(`Symbiotic wallet created! PDA: ${data.pda.slice(0,8)}...`, 'success');
+        loadOnboardingStatus();
+        loadUserWallet();
+    } catch (error) {
+        hidePhantomOverlay();
+        if (error.message?.includes('User rejected')) {
+            showToast('Transaction cancelled', 'warning');
+        } else {
+            console.error('Symbiotic wallet error:', error);
+            showToast('Error creating symbiotic wallet: ' + error.message, 'error');
+        }
+    }
+}
+
+// Alpha Agreement
+const ALPHA_AGREEMENT = `<h3>ResonantOS Alpha Testing Agreement</h3>
+<p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Version 1.0 — February 2026</p>
+<p>By signing this agreement, you acknowledge and accept the following terms for participating in the ResonantOS Alpha:</p>
+<ol style="padding-left:20px; line-height:1.8;">
+<li><strong>Experimental Software.</strong> This is an early alpha release. Expect bugs, breaking changes, and downtime.</li>
+<li><strong>DevNet Only.</strong> All tokens, NFTs, and transactions use Solana DevNet. They carry no monetary value.</li>
+<li><strong>No Guarantees.</strong> DevNet assets may be reset or lost at any time. Nothing earned during Alpha is guaranteed to carry over to mainnet.</li>
+<li><strong>Responsible Use.</strong> You agree not to exploit bugs or vulnerabilities. Report issues to the team.</li>
+<li><strong>Feedback.</strong> Your feedback and on-chain activity may be used to improve ResonantOS.</li>
+<li><strong>Voluntary Exit.</strong> You may stop participating at any time. The DAO may revoke access if terms are violated.</li>
+</ol>
+<p style="margin-top:16px; font-size:13px; color:var(--text-muted);">Signing this agreement creates a record in your onboarding profile. No NFT is minted for this step.</p>`;
+
+function showAlphaAgreement() {
+    document.getElementById('documentModalTitle').textContent = 'Alpha Testing Agreement';
+    document.getElementById('documentModalBody').innerHTML = ALPHA_AGREEMENT;
+    document.getElementById('documentSignBtn').style.display = 'none';
+    showModal('documentModal');
+}
+
+async function agreeAlpha() {
+    if (!connectedAddress) { showToast('Connect your wallet first', 'error'); return; }
+    try {
+        // Show agreement first
+        document.getElementById('documentModalTitle').textContent = 'Alpha Testing Agreement';
+        document.getElementById('documentModalBody').innerHTML = ALPHA_AGREEMENT;
+        const signBtn = document.getElementById('documentSignBtn');
+        signBtn.style.display = 'inline-flex';
+        signBtn.textContent = 'I Agree';
+        signBtn.onclick = async () => {
+            try {
+                showToast('Approve in Phantom wallet...', 'info');
+                const sig = await requestPhantomApproval('I agree to the ResonantOS Alpha Testing Agreement v1.0');
+                const resp = await fetch('/api/wallet/agree-alpha', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ address: connectedAddress, signature: sig })
+                });
+                const data = await resp.json();
+                if (data.error) { showToast(data.error, 'error'); return; }
+                closeModal('documentModal');
+                showToast('Alpha Agreement signed!', 'success');
+                loadOnboardingStatus();
+            } catch (err) {
+                if (err.message?.includes('User rejected')) showToast('Signing cancelled', 'warning');
+                else showToast('Error: ' + err.message, 'error');
+            }
+        };
+        showModal('documentModal');
+    } catch (error) {
+        console.error('Error with alpha agreement:', error);
+        showToast('Error opening agreement', 'error');
+    }
+}
+
+// Onboarding Actions
+async function signLicense() {
+    if (!connectedAddress) {
+        showToast('Please connect your wallet first', 'error');
+        return;
+    }
+    
+    try {
+        // Show document first
+        showDocument('license');
+    } catch (error) {
+        console.error('Error signing license:', error);
+        showToast('Error signing license', 'error');
+    }
+}
+
+async function signManifesto() {
+    if (!connectedAddress) {
+        showToast('Please connect your wallet first', 'error');
+        return;
+    }
+    
+    try {
+        // Show document first
+        showDocument('manifesto');
+    } catch (error) {
+        console.error('Error signing manifesto:', error);
+        showToast('Error signing manifesto', 'error');
+    }
+}
+
+async function showDocument(type) {
+    try {
+        const response = await fetch(`/api/wallet/document?type=${type}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            document.getElementById('documentModalTitle').textContent = data.title;
+            document.getElementById('documentModalBody').innerHTML = data.content;
+            const signBtn = document.getElementById('documentSignBtn');
+            if (signBtn) signBtn.onclick = () => signDocumentWithHash(type, data.hash);
+            showModal('documentModal');
+        } else {
+            const errData = await response.json().catch(() => ({}));
+            showToast(errData.error || 'Error loading document', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading document:', error);
+        showToast('Error loading document', 'error');
+    }
+}
+
+async function signDocumentWithHash(type, hash) {
+    try {
+        const signature = await requestPhantomApproval(hash);
+        
+        const response = await fetch(`/api/wallet/sign-${type}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                network: currentNetwork,
+                address: connectedAddress,
+                signature: signature
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            closeModal('documentModal');
+            showToast(`${type} signed successfully!`, 'success');
+            loadOnboardingStatus();
+        } else {
+            showToast(data.error || `Error signing ${type}`, 'error');
+        }
+    } catch (error) {
+        console.error(`Error signing ${type}:`, error);
+        showToast('User cancelled signature', 'error');
+    }
+}
+
+async function mintIdentityNft() {
+    if (!connectedAddress) {
+        showToast('Please connect your wallet first', 'error');
+        return;
+    }
+    
+    try {
+        const signature = await requestPhantomApproval('Mint Identity NFT');
+        
+        const response = await fetch('/api/wallet/mint-nft', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                network: currentNetwork,
+                recipient: connectedAddress,
+                type: 'identity',
+                signature: signature
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showToast('Identity NFT minted successfully!', 'success');
+            loadOnboardingStatus();
+            loadUserWallet();
+        } else {
+            showToast(data.error || 'Error minting Identity NFT', 'error');
+        }
+    } catch (error) {
+        console.error('Error minting Identity NFT:', error);
+        showToast('User cancelled transaction', 'error');
+    }
+}
+
+async function mintAlphaNft() {
+    if (!connectedAddress) {
+        showToast('Please connect your wallet first', 'error');
+        return;
+    }
+    
+    try {
+        const signature = await requestPhantomApproval('Mint Alpha Tester NFT');
+        
+        const response = await fetch('/api/wallet/mint-nft', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                network: currentNetwork,
+                recipient: connectedAddress,
+                type: 'alpha_tester',
+                signature: signature
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showToast('Alpha Tester NFT minted successfully!', 'success');
+            loadOnboardingStatus();
+            loadUserWallet();
+        } else {
+            showToast(data.error || 'Error minting Alpha NFT', 'error');
+        }
+    } catch (error) {
+        console.error('Error minting Alpha NFT:', error);
+        showToast('User cancelled transaction', 'error');
+    }
+}
+
+async function dailyClaim() {
+    if (!connectedAddress) {
+        showToast('Please connect your wallet first', 'error');
+        return;
+    }
+    
+    try {
+        const signature = await requestPhantomApproval('Daily Claim');
+        
+        const response = await fetch('/api/wallet/daily-claim', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                network: currentNetwork,
+                recipient: connectedAddress,
+                signature: signature
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showToast(`Claimed ${data.rctAmount} $RCT + ${data.resAmount} $RES!`, 'success');
+            loadUserWallet();
+            
+            // Update cooldown
+            const nextClaim = new Date(data.nextClaimAvailable);
+            updateClaimCooldown(nextClaim);
+        } else {
+            if (response.status === 429) {
+                showToast(`Cooldown active: ${data.hoursRemaining?.toFixed(1)} hours remaining`, 'warning');
+                updateClaimCooldown(new Date(Date.now() + data.hoursRemaining * 3600000));
+            } else {
+                showToast(data.error || 'Error claiming rewards', 'error');
+            }
+        }
+    } catch (error) {
+        console.error('Error claiming rewards:', error);
+        showToast('User cancelled transaction', 'error');
+    }
+}
+
+function updateClaimCooldown(nextClaimTime) {
+    const btn = document.getElementById('dailyClaimBtn');
+    const cooldown = document.getElementById('claimCooldown');
+    
+    btn.disabled = true;
+    cooldown.style.display = 'block';
+    
+    const updateTimer = () => {
+        const now = new Date();
+        const remaining = nextClaimTime - now;
+        
+        if (remaining <= 0) {
+            btn.disabled = false;
+            cooldown.style.display = 'none';
+            return;
+        }
+        
+        const hours = Math.floor(remaining / 3600000);
+        const minutes = Math.floor((remaining % 3600000) / 60000);
+        cooldown.textContent = `Next claim in ${hours}h ${minutes}m`;
+        
+        setTimeout(updateTimer, 60000);
+    };
+    
+    updateTimer();
+}
+
+// NFT Carousel — show all visible, scroll on overflow
+function renderNftCarousel(nfts) {
+    const carousel = document.getElementById('nftCarousel');
+    if (!carousel) return;
+    
+    if (!nfts || nfts.length === 0) {
+        carousel.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">No NFTs yet — complete onboarding to mint your first</div>';
+        return;
+    }
+    
+    carousel.innerHTML = nfts.map(nft => {
+        const imgSrc = nft.img ? nft.img : '';
+        const iconFallback = nft.icon || '🎭';
+        const imgHtml = imgSrc
+            ? `<img class="nft-image" src="${imgSrc}" alt="${nft.name}" onerror="this.outerHTML='<div class=\\'nft-placeholder\\'>${iconFallback}</div>'">`
+            : `<div class="nft-placeholder">${iconFallback}</div>`;
+        return `<div class="nft-item">
+            ${imgHtml}
+            <div class="nft-name">${nft.name || 'NFT'}</div>
+            ${nft.soulbound ? '<div class="nft-soulbound-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#14F195" stroke-width="2.5" style="vertical-align:-1px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> Soulbound</div>' : ''}
+        </div>`;
+    }).join('');
+}
+
+// Reputation
+async function loadReputation() {
+    if (!connectedAddress) return;
+    
+    try {
+        // Query reputation from Symbiotic PDA, not human wallet
+        const pairResp = await fetch(`/api/symbiotic/pair-info?humanPubkey=${connectedAddress}&network=${currentNetwork}`);
+        const pairData = await pairResp.json();
+        const pdaAddress = pairData.pda || connectedAddress;
+        
+        const response = await fetch(`/api/wallet/reputation?network=${currentNetwork}&address=${pdaAddress}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            updateReputationUI(data);
+        }
+    } catch (error) {
+        console.error('Error loading reputation:', error);
+    }
+}
+
+function updateReputationUI(reputation) {
+    const categories = document.querySelectorAll('.rex-category');
+    
+    categories.forEach((category, index) => {
+        const categoryKey = REX_CATEGORIES[index];
+        const categoryData = reputation.categories[categoryKey];
+        
+        if (categoryData) {
+            const fill = category.querySelector('.rex-fill');
+            const level = category.querySelector('.rex-level');
+            
+            const progress = Math.min(100, (categoryData.level / 9) * 100);
+            fill.style.width = `${progress}%`;
+            level.textContent = `L${categoryData.level}`;
+        }
+    });
+}
+
+// Leaderboard
+async function loadLeaderboard() {
+    try {
+        const response = await fetch(`/api/wallet/leaderboard?network=${currentNetwork}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            updateLeaderboardUI(data);
+        }
+    } catch (error) {
+        console.error('Error loading leaderboard:', error);
+    }
+}
+
+function updateLeaderboardUI(leaderboard) {
+    // Overall leaderboard
+    const overallList = document.getElementById('overallLeaderboard');
+    overallList.innerHTML = '';
+    
+    leaderboard.overall.forEach(item => {
+        const li = document.createElement('li');
+        li.className = 'leaderboard-item';
+        
+        const rankClass = item.rank === 1 ? 'gold' : item.rank === 2 ? 'silver' : item.rank === 3 ? 'bronze' : '';
+        
+        li.innerHTML = `
+            <div class="rank-badge ${rankClass}">${item.rank}</div>
+            <span class="leaderboard-address">${item.address.substring(0, 8)}...${item.address.substring(-4)}</span>
+            <span class="leaderboard-balance">${item.balance.toLocaleString()} $RCT</span>
+        `;
+        
+        overallList.appendChild(li);
+    });
+    
+    // Category leaderboards
+    REX_CATEGORIES.forEach(category => {
+        const listId = `${category.toLowerCase()}Leaderboard`;
+        const list = document.getElementById(listId);
+        
+        if (list && leaderboard.categories[category]) {
+            list.innerHTML = '';
+            
+            leaderboard.categories[category].rankings.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'leaderboard-item';
+                
+                const rankClass = item.rank === 1 ? 'gold' : item.rank === 2 ? 'silver' : item.rank === 3 ? 'bronze' : '';
+                
+                li.innerHTML = `
+                    <div class="rank-badge ${rankClass}">${item.rank}</div>
+                    <span class="leaderboard-address">${item.address.substring(0, 8)}...${item.address.substring(-4)}</span>
+                    <span class="leaderboard-balance">${item.balance.toFixed(0)}</span>
+                `;
+                
+                list.appendChild(li);
+            });
+        }
+    });
+}
+
+// DAO Panel
+function loadDaoPanel() {
+    // Treasury and holdings would be loaded from API
+    // For now, showing static data from template
+}
+
+// Utility Functions
+function showModal(modalId) {
+    document.getElementById(modalId).classList.add('active');
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('active');
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
+function signDocument() {
+    // This will be called from the modal
+}
+</script>
+{% endblock %}

@@ -1,0 +1,9 @@
+{
+  "_comment": "Maps NFT mint addresses to their type for display. Updated manually or by mint endpoints.",
+  "J77vwNbwva2ibmCb5cyKrPk9BRBrfiuqsNMBi1z8CQVY": "manifesto",
+  "CiDQqQHcePZ6oR3p7rfGvd1jrwaabcuAThTp4W41kYw2": "identity",
+  "7Zi9vxfD6sRBytHLm446DhUu3AB5aj211ESWx4GWP8ty": "alpha",
+  "3YMLKV9YNZraB9MBAzFS8LEWuZn7xPpEBPfuqwheZc8Y": "identity",
+  "AjERSj3ywFM1BbDdHb74ugo5mrS6oL5vB3hXvYGok5aG": "identity",
+  "CJuQFYjGGoq3wAKw7uo6dFj28d5Zi4hPgwf5uUPgGebW": "alpha"
+}

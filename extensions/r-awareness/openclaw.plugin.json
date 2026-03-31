@@ -1,0 +1,35 @@
+{
+  "id": "r-awareness",
+  "name": "R-Awareness",
+  "description": "SSoT document injector for ResonantOS — curated always-on context",
+  "version": "3.0.0",
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "enabled": { "type": "boolean" },
+      "ssotRoot": { "type": "string" },
+      "alwaysOnDocs": { "type": "array", "items": { "type": "string" } },
+      "tokenBudget": { "type": "number", "minimum": 1000 },
+      "refreshEveryNTurns": { "type": "integer", "minimum": 1 },
+      "commandPrefix": { "type": "string" }
+    }
+  },
+  "uiHints": {
+    "ssotRoot": {
+      "label": "SSoT Root",
+      "help": "Absolute path to the SSoT directory"
+    },
+    "alwaysOnDocs": {
+      "label": "Always-On Documents",
+      "help": "Relative paths (from ssotRoot) of docs injected every turn"
+    },
+    "tokenBudget": {
+      "label": "Token Budget",
+      "help": "Max estimated tokens of injected content per turn"
+    },
+    "refreshEveryNTurns": {
+      "label": "Refresh Interval",
+      "help": "Re-read files from disk every N turns (default: 10)"
+    }
+  }
+}

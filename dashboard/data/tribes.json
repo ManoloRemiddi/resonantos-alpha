@@ -1,0 +1,176 @@
+[
+  {
+    "id": "TRIBE-001",
+    "name": "Build A2A Protocol Prototype Tribe",
+    "description": "Working group for build a2a protocol prototype.",
+    "category": "research",
+    "members": [
+      {
+        "wallet": "TestWallet123",
+        "role": "coordinator",
+        "joinedAt": "2026-02-21T20:39:36Z"
+      },
+      {
+        "wallet": "TestWallet456",
+        "role": "member",
+        "joinedAt": "2026-02-21T20:39:36Z"
+      },
+      {
+        "wallet": "ReviewerWallet1",
+        "role": "member",
+        "joinedAt": "2026-02-21T20:39:36Z"
+      }
+    ],
+    "coordinator": "TestWallet123",
+    "activeBounties": [],
+    "completedBounties": [
+      "BOUNTY-002"
+    ],
+    "createdAt": "2026-02-21T20:00:00Z",
+    "avatar": null,
+    "tags": [
+      "python",
+      "protocol-design",
+      "distributed-systems",
+      "ai-agents"
+    ]
+  },
+  {
+    "id": "TRIBE-002",
+    "name": "Community Collective",
+    "description": "Default tribe for community bounties.",
+    "category": "community",
+    "members": [],
+    "coordinator": null,
+    "activeBounties": [
+      "BOUNTY-001",
+      "BOUNTY-006",
+      "BOUNTY-009",
+      "BOUNTY-011"
+    ],
+    "completedBounties": [],
+    "createdAt": "2026-02-22T00:00:00Z",
+    "avatar": null,
+    "tags": [
+      "documentation",
+      "openclaw",
+      "developer-experience",
+      "governance",
+      "tokenomics",
+      "game-theory"
+    ]
+  },
+  {
+    "id": "TRIBE-003",
+    "name": "Economy Collective",
+    "description": "Default tribe for economy bounties.",
+    "category": "economy",
+    "members": [],
+    "coordinator": null,
+    "activeBounties": [
+      "BOUNTY-003",
+      "BOUNTY-015"
+    ],
+    "completedBounties": [],
+    "createdAt": "2026-02-22T00:00:00Z",
+    "avatar": null,
+    "tags": [
+      "solana",
+      "anchor",
+      "smart-contracts",
+      "token-economy",
+      "rust",
+      "flask"
+    ]
+  },
+  {
+    "id": "TRIBE-004",
+    "name": "Core Collective",
+    "description": "Default tribe for core bounties.",
+    "category": "core",
+    "members": [],
+    "coordinator": null,
+    "activeBounties": [
+      "BOUNTY-004",
+      "BOUNTY-005",
+      "BOUNTY-007"
+    ],
+    "completedBounties": [],
+    "createdAt": "2026-02-22T00:00:00Z",
+    "avatar": null,
+    "tags": [
+      "javascript",
+      "html-css",
+      "flask",
+      "ui-design",
+      "python",
+      "solana"
+    ]
+  },
+  {
+    "id": "TRIBE-005",
+    "name": "Research Collective",
+    "description": "Default tribe for research bounties.",
+    "category": "research",
+    "members": [],
+    "coordinator": null,
+    "activeBounties": [
+      "BOUNTY-008",
+      "BOUNTY-013"
+    ],
+    "completedBounties": [],
+    "createdAt": "2026-02-22T00:00:00Z",
+    "avatar": null,
+    "tags": [
+      "solana",
+      "protocol-design",
+      "python",
+      "payments",
+      "security",
+      "systems-thinking"
+    ]
+  },
+  {
+    "id": "TRIBE-006",
+    "name": "Technical Collective",
+    "description": "Default tribe for technical bounties.",
+    "category": "technical",
+    "members": [],
+    "coordinator": null,
+    "activeBounties": [
+      "BOUNTY-010",
+      "BOUNTY-014"
+    ],
+    "completedBounties": [],
+    "createdAt": "2026-02-22T00:00:00Z",
+    "avatar": null,
+    "tags": [
+      "security",
+      "python",
+      "game-theory",
+      "data-analysis",
+      "pytest",
+      "flask"
+    ]
+  },
+  {
+    "id": "TRIBE-007",
+    "name": "Creative Collective",
+    "description": "Default tribe for creative bounties.",
+    "category": "creative",
+    "members": [],
+    "coordinator": null,
+    "activeBounties": [
+      "BOUNTY-012"
+    ],
+    "completedBounties": [],
+    "createdAt": "2026-02-22T00:00:00Z",
+    "avatar": null,
+    "tags": [
+      "storytelling",
+      "scriptwriting",
+      "ai-concepts",
+      "content-writing"
+    ]
+  }
+]

@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+
+{% block title %}Ideas & Opportunities - ResonantOS Dashboard{% endblock %}
+{% block page_title %}💡 Ideas & Opportunities{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h2 class="card-title">Innovation Backlog</h2>
+            <p class="card-subtitle">High-priority ideas, medium-term opportunities, and future possibilities</p>
+        </div>
+        <div class="card-actions">
+            <input type="text" id="ideasSearch" placeholder="Search ideas..." class="search-input">
+            <select id="priorityFilter" onchange="filterIdeas()">
+                <option value="">All Priorities</option>
+                <option value="HIGH">🚀 High Priority</option>
+                <option value="MEDIUM">💡 Medium Priority</option>
+                <option value="FUTURE">🔮 Future Ideas</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="card-content">
+        <div id="ideasLoadingSpinner" class="loading-spinner" style="display: none;">
+            <div class="spinner"></div>
+            <p>Loading ideas...</p>
+        </div>
+        
+        <div id="ideasContainer" style="display: none;">
+            <!-- Section: High Priority -->
+            <div class="ideas-section">
+                <div class="section-header">
+                    <h3 class="section-title">🚀 HIGH PRIORITY (Do Soon)</h3>
+                    <span class="section-count" id="highPriorityCount">0</span>
+                </div>
+                <div class="ideas-list" id="highPriorityIdeas"></div>
+            </div>
+            
+            <!-- Section: Medium Priority -->
+            <div class="ideas-section">
+                <div class="section-header">
+                    <h3 class="section-title">💡 MEDIUM PRIORITY (Next 1-3 Months)</h3>
+                    <span class="section-count" id="mediumPriorityCount">0</span>
+                </div>
+                <div class="ideas-list" id="mediumPriorityIdeas"></div>
+            </div>
+            
+            <!-- Section: Future Ideas -->
+            <div class="ideas-section">
+                <div class="section-header">
+                    <h3 class="section-title">🔮 FUTURE IDEAS (Someday/Maybe)</h3>
+                    <span class="section-count" id="futureCount">0</span>
+                </div>
+                <div class="ideas-list" id="futureIdeas"></div>
+            </div>
+        </div>
+        
+        <div id="ideasEmpty" style="display: none;" class="empty-state">
+            <p>📚 No matching ideas found</p>
+        </div>
+    </div>
+    
+    <div class="card-footer">
+        <p class="text-muted">Last updated: <span id="lastUpdated">--</span></p>
+        <a href="https://raw.githubusercontent.com/augmentor/clawd/main/IDEAS.md" target="_blank" class="button-link">View Full IDEAS.md</a>
+    </div>
+</div>
+
+<style>
+    .ideas-section {
+        margin-bottom: 32px;
+    }
+    
+    .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 0;
+        border-bottom: 2px solid var(--border);
+        margin-bottom: 16px;
+    }
+    
+    .section-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin: 0;
+        color: var(--text-primary);
+    }
+    
+    .section-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 28px;
+        height: 28px;
+        background: var(--bg-secondary);
+        border-radius: 14px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+    
+    .ideas-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .idea-card {
+        padding: 16px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-left: 4px solid var(--primary);
+        border-radius: var(--radius);
+        transition: all 0.2s;
+    }
+    
+    .idea-card:hover {
+        background: var(--bg-hover);
+        border-left-color: var(--accent);
+        transform: translateX(4px);
+    }
+    
+    .idea-card.completed {
+        opacity: 0.6;
+        border-left-color: var(--success);
+        background: rgba(76, 175, 80, 0.05);
+    }
+    
+    .idea-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 8px;
+    }
+    
+    .idea-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+        word-break: break-word;
+        flex: 1;
+    }
+    
+    .idea-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        background: rgba(255, 193, 7, 0.1);
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--warning);
+        white-space: nowrap;
+        text-transform: uppercase;
+    }
+    
+    .idea-status.completed {
+        background: rgba(76, 175, 80, 0.1);
+        color: var(--success);
+    }
+    
+    .idea-status.evaluating {
+        background: rgba(33, 150, 243, 0.1);
+        color: var(--primary);
+    }
+    
+    .idea-status.approved {
+        background: rgba(156, 39, 176, 0.1);
+        color: #9c27b0;
+    }
+    
+    .idea-description {
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin: 0 0 12px 0;
+        line-height: 1.5;
+    }
+    
+    .idea-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+    
+    .meta-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    
+    .opportunity-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 6px;
+        background: rgba(76, 175, 80, 0.15);
+        border-radius: 3px;
+        color: var(--success);
+        font-weight: 500;
+    }
+    
+    .timeline-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 6px;
+        background: rgba(33, 150, 243, 0.15);
+        border-radius: 3px;
+        color: var(--primary);
+    }
+    
+    .revenue-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 6px;
+        background: rgba(244, 67, 54, 0.15);
+        border-radius: 3px;
+        color: var(--error);
+        font-weight: 500;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 48px 24px;
+        color: var(--text-secondary);
+        font-size: 14px;
+    }
+    
+    .search-input {
+        padding: 8px 12px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        color: var(--text-primary);
+        font-size: 14px;
+    }
+    
+    .search-input::placeholder {
+        color: var(--text-muted);
+    }
+    
+    .search-input:focus {
+        outline: none;
+        border-color: var(--primary);
+        background: var(--bg-tertiary);
+    }
+</style>
+
+<script>
+    let allIdeas = [];
+    
+    async function loadIdeas() {
+        const spinner = document.getElementById('ideasLoadingSpinner');
+        const container = document.getElementById('ideasContainer');
+        spinner.style.display = 'flex';
+        
+        try {
+            const response = await fetch('/api/ideas');
+            const data = await response.json();
+            
+            if (data.success) {
+                allIdeas = data.ideas;
+                renderIdeas();
+                document.getElementById('lastUpdated').textContent = new Date(data.lastUpdated).toLocaleString();
+            }
+        } catch (err) {
+            console.error('Failed to load IDEAS:', err);
+            container.style.display = 'none';
+            spinner.style.display = 'none';
+            document.getElementById('ideasEmpty').style.display = 'block';
+        }
+    }
+    
+    function renderIdeas() {
+        const container = document.getElementById('ideasContainer');
+        const empty = document.getElementById('ideasEmpty');
+        const spinner = document.getElementById('ideasLoadingSpinner');
+        
+        spinner.style.display = 'none';
+        
+        // Group ideas by priority
+        const grouped = groupIdeasByPriority(allIdeas);
+        
+        // Check if there are any ideas
+        const totalIdeas = Object.values(grouped).reduce((sum, ideas) => sum + ideas.length, 0);
+        
+        if (totalIdeas === 0) {
+            container.style.display = 'none';
+            empty.style.display = 'block';
+            return;
+        }
+        
+        container.style.display = 'block';
+        empty.style.display = 'none';
+        
+        // Render each section
+        renderIdeaSection('HIGH', grouped.high, document.getElementById('highPriorityIdeas'), document.getElementById('highPriorityCount'));
+        renderIdeaSection('MEDIUM', grouped.medium, document.getElementById('mediumPriorityIdeas'), document.getElementById('mediumPriorityCount'));
+        renderIdeaSection('FUTURE', grouped.future, document.getElementById('futureIdeas'), document.getElementById('futureCount'));
+    }
+    
+    function groupIdeasByPriority(ideas) {
+        return {
+            high: ideas.filter(i => i.priority === 'HIGH'),
+            medium: ideas.filter(i => i.priority === 'MEDIUM'),
+            future: ideas.filter(i => i.priority === 'FUTURE')
+        };
+    }
+    
+    function renderIdeaSection(priority, ideas, containerEl, countEl) {
+        countEl.textContent = ideas.length;
+        
+        if (ideas.length === 0) {
+            containerEl.innerHTML = '<div style="color: var(--text-muted); padding: 16px; text-align: center; font-size: 12px;">No ideas in this section</div>';
+            return;
+        }
+        
+        containerEl.innerHTML = ideas.map(idea => `
+            <div class="idea-card ${idea.status === 'Done' ? 'completed' : ''}">
+                <div class="idea-header">
+                    <h3 class="idea-title">${escapeHtml(idea.title)}</h3>
+                    ${idea.status ? `<span class="idea-status ${idea.status.toLowerCase()}">${escapeHtml(idea.status)}</span>` : ''}
+                </div>
+                ${idea.description ? `<p class="idea-description">${escapeHtml(idea.description)}</p>` : ''}
+                <div class="idea-meta">
+                    ${idea.opportunity ? `<span class="opportunity-badge">💰 ${escapeHtml(idea.opportunity)}</span>` : ''}
+                    ${idea.timeline ? `<span class="timeline-badge">📅 ${escapeHtml(idea.timeline)}</span>` : ''}
+                    ${idea.revenue ? `<span class="revenue-badge">💸 ${escapeHtml(idea.revenue)}</span>` : ''}
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    function filterIdeas() {
+        const searchTerm = document.getElementById('ideasSearch').value.toLowerCase();
+        const priorityFilter = document.getElementById('priorityFilter').value;
+        
+        allIdeas = allIdeas.map(idea => ({
+            ...idea,
+            hidden: !matchesFilters(idea, searchTerm, priorityFilter)
+        }));
+        
+        renderIdeas();
+    }
+    
+    function matchesFilters(idea, search, priority) {
+        if (search && !idea.title.toLowerCase().includes(search) && !idea.description?.toLowerCase().includes(search)) return false;
+        if (priority && idea.priority !== priority) return false;
+        return true;
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Load on page load
+    document.addEventListener('DOMContentLoaded', loadIdeas);
+    
+    // Refresh every 60 seconds
+    setInterval(loadIdeas, 60000);
+</script>
+{% endblock %}

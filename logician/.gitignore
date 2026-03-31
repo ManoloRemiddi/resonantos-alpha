@@ -1,0 +1,36 @@
+# Stray nested repo residue (canonical copy lives at logician/mangle-service/)
+poc/mangle-service/
+
+# Mangle service binaries
+poc/mangle-service/mangle-server
+poc/mangle-service/client/client
+poc/mangle-service/server/server
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

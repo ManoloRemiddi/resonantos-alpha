@@ -1,0 +1,2 @@
+# Personal-data deny patterns for Shield pre-push scan
+# Intentionally minimal for orphan baseline branch; extend as needed.

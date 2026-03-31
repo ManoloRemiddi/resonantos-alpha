@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-02-24T13:45:08.218030+00:00",
+  "days": {
+    "2026-02-23": {
+      "date": "2026-02-23",
+      "input": 21597,
+      "output": 41824,
+      "cacheRead": 13339348,
+      "cacheWrite": 687600,
+      "totalTokens": 14090369,
+      "missingCostEntries": 0,
+      "totalCost": 12.01964595,
+      "inputCost": 0.038496749999999705,
+      "outputCost": 1.0286600000000004,
+      "cacheReadCost": 6.6549892,
+      "cacheWriteCost": 4.2975
+    },
+    "2026-02-24": {
+      "date": "2026-02-24",
+      "input": 372,
+      "output": 107169,
+      "cacheRead": 23283482,
+      "cacheWrite": 2972899,
+      "totalTokens": 26363922,
+      "missingCostEntries": 0,
+      "totalCost": 32.90344475000001,
+      "inputCost": 0.0018600000000000044,
+      "outputCost": 2.679225000000002,
+      "cacheReadCost": 11.641741000000001,
+      "cacheWriteCost": 18.58061875
+    }
+  }
+}
