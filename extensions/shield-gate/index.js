@@ -18,7 +18,7 @@ const path = require("path");
 // --- Configuration ---
 const HOME = process.env.HOME || "$HOME";
 const LOGICIAN_SOCK = process.env.LOGICIAN_SOCK || "/tmp/mangle.sock";
-const PROTO_PATH = path.join(process.env.HOME, "resonantos-alpha/logician/poc/mangle-service/proto/mangle.proto");
+const PROTO_PATH = path.join(process.env.HOME, "resonantos-alpha/logician/mangle-service/proto/mangle.proto");
 const LOG_FILE = path.join(process.env.HOME, "resonantos-alpha/shield/logs/shield-gate.log");
 const ERROR_EXPLAIN_INSTRUCTION = "\n\n⚠️ MANDATORY: Explain this block to the user briefly. What was blocked and what you are doing instead. Never leave a block message unexplained.";
 

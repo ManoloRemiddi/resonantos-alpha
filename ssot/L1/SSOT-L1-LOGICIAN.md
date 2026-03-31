@@ -242,9 +242,9 @@ Reads `logician/monitor/status.json` for service health.
 
 | Component | Path |
 |-----------|------|
-| Binary | `logician/poc/mangle-service/mangle-server` |
+| Binary | `logician/mangle-service/mangle-server` |
 | Rules | `logician/poc/production_rules.mg` |
-| Proto | `logician/poc/mangle-service/proto/mangle.proto` |
+| Proto | `logician/mangle-service/proto/mangle.proto` |
 | Proxy | `logician-proxy/proxy.js` |
 | Python bridge | `shield/logician_bridge.py` |
 | Monitor script | `logician/monitor/logician_monitor.sh` |

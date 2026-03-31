@@ -22,8 +22,8 @@ Claude (Oracle) ←→ Semantic Bridge ←→ Mangle (Logician)
 ### 1. Start the Mangle Server
 
 ```bash
-cd poc/mangle-service
-./mangle-server --source=../demo_rules.mg
+cd mangle-service
+./mangle-server --source=../poc/demo_rules.mg
 ```
 
 ### 2. Run the Python Demo
@@ -35,7 +35,7 @@ python3 poc/logician_client.py
 ### 3. Query Directly (grpcurl)
 
 ```bash
-cd poc/mangle-service
+cd mangle-service
 ~/go/bin/grpcurl -plaintext -import-path ./proto -proto mangle.proto \
   -d '{"query": "can_spawn(/strategist, X)", "program": ""}' \
   localhost:8080 mangle.Mangle.Query
@@ -84,10 +84,10 @@ contradiction(Fact1, Fact2) :-
 logician/
 ├── PROJECT.md              # Project overview and roadmap
 ├── README.md               # This file
-└── poc/                    # Proof of concept
+├── mangle-service/         # Mangle gRPC server
+└── poc/                    # Proof of concept rules + demo client
     ├── demo_rules.mg       # Mangle rules for ResonantOS
-    ├── logician_client.py  # Python client
-    └── mangle-service/     # Mangle gRPC server (cloned)
+    └── logician_client.py  # Python client
 ```
 
 ## Requirements

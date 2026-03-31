@@ -37,6 +37,9 @@ media/
 *.swp
 .vscode/
 
+# Runtime logs
+logs/
+
 # Task files (may contain personal data)
 TASK.md
 

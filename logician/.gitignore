@@ -1,3 +1,6 @@
+# Stray nested repo residue (canonical copy lives at logician/mangle-service/)
+poc/mangle-service/
+
 # Mangle service binaries
 poc/mangle-service/mangle-server
 poc/mangle-service/client/client

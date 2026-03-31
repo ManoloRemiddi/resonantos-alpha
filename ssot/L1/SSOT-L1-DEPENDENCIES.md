@@ -39,7 +39,7 @@ ResonantOS is a modular system that layers on top of OpenClaw. Not all component
 ### Tier 3: Components (Optional, Add Capabilities)
 | Dependency | Version | macOS Install | Linux Install | Purpose |
 |-----------|---------|--------------|--------------|---------|
-| mangle-server | built from Go source | `go build` in `logician/poc/mangle-service/` | same | Logician reasoning engine |
+| mangle-server | built from Go source | `go build` in `logician/mangle-service/` | same | Logician reasoning engine |
 | Go | ≥1.21 | `brew install go` | `apt install golang` | Required to build mangle-server |
 | logician-proxy | Node.js | `npm install` in `logician-proxy/` | same | HTTP-to-gRPC proxy for Logician |
 | @grpc/grpc-js | ≥1.x | via logician-proxy package.json | same | gRPC client for Logician |

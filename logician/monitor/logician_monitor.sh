@@ -31,7 +31,7 @@ fi
 RESULT=$(node -e "
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
-const pd = protoLoader.loadSync(process.env.HOME + '/resonantos-alpha/logician/poc/mangle-service/proto/mangle.proto', { keepCase: true, longs: String, enums: String, defaults: true, oneofs: true });
+const pd = protoLoader.loadSync(process.env.HOME + '/resonantos-alpha/logician/mangle-service/proto/mangle.proto', { keepCase: true, longs: String, enums: String, defaults: true, oneofs: true });
 const proto = grpc.loadPackageDefinition(pd).mangle;
 const client = new proto.Mangle('unix://$SOCK', grpc.credentials.createInsecure());
 const call = client.Query({ query: 'agent(/main)' });
