@@ -1,0 +1,126 @@
+schemaVersion: 1
+status: experimental
+name: ResonantOS Alpha Linux install contract
+intent: install-over-existing-openclaw
+branchRole: linux-safe experimental handoff branch
+canonicalDocs:
+  human: INSTALL.md
+  agent: install/INSTALL_SPEC.yaml
+
+agentInstructions:
+  readFirst:
+    - install/INSTALL_SPEC.yaml
+    - INSTALL.md
+  rules:
+    - Treat this file as the canonical install contract for this branch.
+    - Prefer repo-local scripts and manifests over assumptions from older branches.
+    - If required repo files are missing or contradict this spec, stop and report instead of improvising.
+
+supportedTarget:
+  platform: linux
+  openclaw:
+    required: true
+    assumption: existing OpenClaw instance is already installed and healthy
+  repoState:
+    required: git branch checked out locally before installation begins
+
+preconditions:
+  requiredCommands:
+    - git
+    - openclaw
+    - node
+    - python3
+    - go
+  assumptions:
+    - openclaw.json already exists and is valid
+    - gateway is already running
+    - operator has permissions to restart ResonantOS-side services
+
+repoRuntimeBoundary:
+  repoContains:
+    - dashboard code and templates
+    - ResonantOS plugin source under extensions/
+    - Logician source, rules, proxy, and control scripts
+    - Shield code and control scripts
+    - setup agent source under agents/setup
+    - workspace templates under workspace-templates/
+    - ssot/
+  runtimeNotInRepo:
+    - ~/.openclaw/openclaw.json
+    - ~/.openclaw/extensions/* installed plugin artifacts
+    - ~/.openclaw/lcm.db and other live databases
+    - secrets, tokens, and env values
+    - live service state and pid files
+
+currentExecutionMode:
+  mode: manual-guided
+  canonicalInstaller:
+    status: missing
+    path: null
+    note: No one-shot installer script is committed yet; follow the manual sequence below.
+
+resonantOSComponents:
+  dashboard:
+    entrypoint: dashboard/server_v2.py
+    notes:
+      - Effective Linux runtime is still monolithic server_v2.py.
+  logician:
+    controlScript: logician/scripts/logician_ctl.sh
+    productionRules: logician/poc/production_rules.mg
+    proxy: logician-proxy/proxy.js
+    notes:
+      - Current experimental branch still uses the legacy poc rules path.
+  shield:
+    controlScript: shield/shield_ctl.sh
+    daemon: shield/daemon.py
+  repoPlugins:
+    - id: shield-gate
+      path: extensions/shield-gate
+    - id: coherence-gate
+      path: extensions/coherence-gate
+    - id: usage-tracker
+      path: extensions/usage-tracker
+    - id: r-awareness
+      path: extensions/r-awareness
+    - id: heuristic-auditor
+      path: extensions/heuristic-auditor
+  legacyExtensionFiles:
+    - extensions/r-memory.js
+    - extensions/usage-tracker.js
+
+manualInstallSequence:
+  - Validate prerequisites and confirm OpenClaw is already healthy.
+  - Read INSTALL.md for human-facing context and branch caveats.
+  - Install or sync repo plugins into the target OpenClaw runtime.
+  - Patch OpenClaw config to enable required ResonantOS plugins and settings.
+  - Build and start Logician using repo-local scripts.
+  - Start the dashboard using repo-local scripts.
+  - Start Shield using repo-local scripts.
+  - Optionally install and enable lossless-claw if LCM is desired on the target host.
+  - Run the smoke checks below before declaring success.
+
+successCriteria:
+  - Dashboard responds on port 19100.
+  - Gateway token endpoint returns a usable ws URL and token.
+  - Setup route loads without hardcoded legacy gateway values.
+  - Logician status and query paths are healthy.
+  - Shield health endpoint is healthy.
+  - Expected ResonantOS plugins are loaded.
+  - If LCM is enabled, the context-engine slot resolves to lossless-claw and /api/lcm/status is healthy.
+
+stopConditions:
+  - Required repo files referenced by this spec are missing.
+  - Logician rules/proxy paths do not match the repo tree.
+  - Plugin install method on the target host conflicts with repo instructions.
+  - Health checks fail after service restarts.
+
+knownGaps:
+  - No canonical one-shot installer script is committed yet.
+  - Fresh plugin install and enablement flow is not fully encoded in repo scripts.
+  - Workspace template set is partial compared with older installer expectations.
+  - LCM remains optional and is not bundled as a repo-local ResonantOS plugin.
+
+recommendedNextAdditions:
+  - scripts/install-linux.sh
+  - normalization of Logician rules path away from logician/poc/ once branch compatibility is settled
+  - any missing workspace templates required by the intended setup-agent onboarding flow

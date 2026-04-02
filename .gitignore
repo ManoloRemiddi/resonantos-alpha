@@ -96,4 +96,5 @@ logician/poc/mangle-service/mangle-server
 TASK.md.done
 TASK.md
 */TASK.md
-logician/poc/
+logician/poc/*
+!logician/poc/production_rules.mg

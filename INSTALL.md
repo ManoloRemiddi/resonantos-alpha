@@ -1,5 +1,9 @@
 # ResonantOS Alpha v0.6.0 — Installation Guide
 
+> **Status:** Experimental Linux install/handoff branch.
+>
+> If you are an OpenClaw agent or an operator guiding one, read `install/INSTALL_SPEC.yaml` before executing installation work. Treat that YAML file as the canonical install contract for this branch, and use this document as the human-facing guide.
+
 ## Prerequisites
 
 - [OpenClaw](https://docs.openclaw.ai) installed and running
