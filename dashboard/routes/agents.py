@@ -12,7 +12,7 @@ from flask import Blueprint, Response, jsonify, request
 from routes.config import OPENCLAW_CONFIG, OPENCLAW_HOME, RMEMORY_DIR, WORKSPACE
 from routes.logging_config import get_logger
 from routes.rmemory import _rmem_config, _rmem_effective_models
-from routes.shared import gw
+from routes.shared import get_gw_port, gw
 
 agents_bp = Blueprint("agents", __name__)
 logger = get_logger(__name__)
@@ -489,7 +489,7 @@ def api_system_agents() -> Response:
     try:
         cfg = json.loads(OPENCLAW_CONFIG.read_text())
         gw_cfg = cfg.get("gateway", {})
-        gw_port = gw_cfg.get("port", 18789)
+        gw_port = get_gw_port()
         gw_status = "running" if (gw.health and gw.health.get("agents")) else "stopped"
         system_agents.append(
             {

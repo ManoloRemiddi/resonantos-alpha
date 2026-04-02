@@ -1235,7 +1235,6 @@ async function initSetupPage() {
 
 async function initSetupGateway() {
     const shell = document.querySelector('.setup-shell');
-    const gatewayUrl = shell && shell.dataset.gatewayWsUrl ? shell.dataset.gatewayWsUrl : 'ws://127.0.0.1:18789';
 
     const [statusResponse, tokenResponse] = await Promise.all([
         fetch('/api/gateway/status'),
@@ -1245,6 +1244,13 @@ async function initSetupGateway() {
     const statusData = await statusResponse.json();
     const tokenData = await tokenResponse.json();
     const token = typeof tokenData.token === 'string' ? tokenData.token : '';
+    const gatewayUrl = (typeof tokenData.url === 'string' && tokenData.url)
+        ? tokenData.url
+        : ((shell && shell.dataset.gatewayWsUrl) ? shell.dataset.gatewayWsUrl : '');
+
+    if (!gatewayUrl) {
+        throw new Error('Gateway URL is missing');
+    }
 
     if (!token) {
         throw new Error('Gateway token is missing');

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import threading
 import time
 from datetime import timezone, datetime
@@ -18,9 +19,58 @@ except ImportError:
 
 logger = get_logger(__name__)
 
-GW_HOST = "127.0.0.1"
-GW_PORT = 18789
-GW_WS_URL = f"ws://{GW_HOST}:{GW_PORT}"
+DEFAULT_GW_HOST = os.environ.get("OPENCLAW_GATEWAY_HOST", "127.0.0.1")
+DEFAULT_GW_PORT = 18789
+
+
+def _load_openclaw_config() -> dict[str, Any]:
+    """Load the local OpenClaw config file when available."""
+    try:
+        if OPENCLAW_CONFIG.exists():
+            data = json.loads(OPENCLAW_CONFIG.read_text())
+            if isinstance(data, dict):
+                return data
+            logger.warning("Ignoring non-dict OpenClaw config at %s", OPENCLAW_CONFIG)
+    except Exception:
+        logger.warning("Failed to load OpenClaw config from %s", OPENCLAW_CONFIG, exc_info=True)
+    return {}
+
+
+def get_gw_host() -> str:
+    """Return the local host used for dashboard → gateway websocket connections."""
+    return DEFAULT_GW_HOST
+
+
+def get_gw_port() -> int:
+    """Return the configured local OpenClaw gateway port."""
+    raw_env = os.environ.get("OPENCLAW_GATEWAY_PORT", "").strip()
+    if raw_env:
+        try:
+            port = int(raw_env)
+            if 1 <= port <= 65535:
+                return port
+        except ValueError:
+            logger.warning("Ignoring invalid OPENCLAW_GATEWAY_PORT=%r", raw_env)
+
+    cfg = _load_openclaw_config()
+    raw_port = cfg.get("gateway", {}).get("port", DEFAULT_GW_PORT) if isinstance(cfg, dict) else DEFAULT_GW_PORT
+    try:
+        port = int(raw_port)
+        if 1 <= port <= 65535:
+            return port
+    except (TypeError, ValueError):
+        logger.warning("Invalid gateway.port in %s: %r", OPENCLAW_CONFIG, raw_port)
+    return DEFAULT_GW_PORT
+
+
+def get_gw_ws_url() -> str:
+    """Return the local websocket URL for the OpenClaw gateway."""
+    return f"ws://{get_gw_host()}:{get_gw_port()}"
+
+
+GW_HOST = get_gw_host()
+GW_PORT = get_gw_port()
+GW_WS_URL = get_gw_ws_url()
 
 
 def _load_ssot_access_store() -> dict[str, Any]:
@@ -34,6 +84,17 @@ def _load_ssot_access_store() -> dict[str, Any]:
     except Exception:
         logger.warning("Failed to load SSoT access store from %s", SSOT_ACCESS_FILE, exc_info=True)
     return {}
+
+
+def _resolve_env_placeholder(value: str) -> str:
+    """Resolve a simple ${VAR_NAME} placeholder from the current environment."""
+    if not isinstance(value, str):
+        return ""
+    stripped = value.strip()
+    if stripped.startswith("${") and stripped.endswith("}") and len(stripped) > 3:
+        env_name = stripped[2:-1].strip()
+        return os.environ.get(env_name, "")
+    return value
 
 
 def _read_gw_token() -> str:
@@ -55,11 +116,12 @@ def _read_gw_token() -> str:
     Side effects:
         Reads the OpenClaw configuration file from disk.
     """
-    try:
-        cfg = json.loads(OPENCLAW_CONFIG.read_text())
-        return cfg.get("gateway", {}).get("auth", {}).get("token", "")
-    except Exception:
-        return ""
+    cfg = _load_openclaw_config()
+    gateway_cfg = cfg.get("gateway", {}) if isinstance(cfg, dict) else {}
+    auth_cfg = gateway_cfg.get("auth", {}) if isinstance(gateway_cfg, dict) else {}
+    token = auth_cfg.get("token", "") if isinstance(auth_cfg, dict) else ""
+    token = token if isinstance(token, str) else ""
+    return _resolve_env_placeholder(token)
 
 
 GW_TOKEN = _read_gw_token()
@@ -435,7 +497,7 @@ class GatewayClient:
             "id": "c0",
             "method": "connect",
             "params": {
-                "auth": {"token": GW_TOKEN},
+                "auth": {"token": _read_gw_token()},
                 "minProtocol": 3,
                 "maxProtocol": 3,
                 "role": "operator",
@@ -472,7 +534,7 @@ class GatewayClient:
             return
         ws = websocket.WebSocket()
         ws.settimeout(10)
-        ws.connect(GW_WS_URL)
+        ws.connect(get_gw_ws_url())
         self._ws = ws
 
         challenge_received = False

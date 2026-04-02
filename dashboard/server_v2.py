@@ -487,13 +487,25 @@ def _write_updates_config(updates):
     return normalized
 
 
+def _get_update_target_branch() -> tuple[str, str]:
+    """Return the active branch and matching remote ref for dashboard updates."""
+    try:
+        branch_result = subprocess.run(
+            ["git", "branch", "--show-current"], cwd=DASHBOARD_REPO_DIR, capture_output=True, text=True, timeout=10
+        )
+        branch = branch_result.stdout.strip() or "main"
+    except Exception:
+        branch = "main"
+    return branch, f"origin/{branch}"
+
+
+
 def _perform_update_check_logic():
-    """Check whether the dashboard repository is behind `origin/main`.
+    """Check whether the dashboard repository is behind its active remote branch.
 
     Run the same `git fetch`, `rev-parse`, and `rev-list` sequence used by the
-    manual update endpoint, then condense the results into a small status
-    payload. Convert subprocess failures and timeouts into string errors so the
-    caller can store the outcome without raising.
+    manual update endpoint, but target the currently checked-out branch instead
+    of hard-coding `origin/main`.
 
     Dependencies:
         Uses `subprocess.run()` and `DASHBOARD_REPO_DIR`.
@@ -508,8 +520,10 @@ def _perform_update_check_logic():
         Executes `git` commands against the dashboard repository.
     """
     try:
+        branch, remote_ref = _get_update_target_branch()
+
         fetch_result = subprocess.run(
-            ["git", "fetch", "origin", "main"], cwd=DASHBOARD_REPO_DIR, capture_output=True, text=True, timeout=30
+            ["git", "fetch", "origin", branch], cwd=DASHBOARD_REPO_DIR, capture_output=True, text=True, timeout=30
         )
         if fetch_result.returncode != 0:
             return None, f"git fetch failed: {fetch_result.stderr.strip()}"
@@ -519,11 +533,11 @@ def _perform_update_check_logic():
         ).stdout.strip()
 
         remote = subprocess.run(
-            ["git", "rev-parse", "origin/main"], cwd=DASHBOARD_REPO_DIR, capture_output=True, text=True, timeout=10
+            ["git", "rev-parse", remote_ref], cwd=DASHBOARD_REPO_DIR, capture_output=True, text=True, timeout=10
         ).stdout.strip()
 
         behind_result = subprocess.run(
-            ["git", "rev-list", "--count", "HEAD..origin/main"],
+            ["git", "rev-list", "--count", f"HEAD..{remote_ref}"],
             cwd=DASHBOARD_REPO_DIR,
             capture_output=True,
             text=True,
@@ -531,17 +545,13 @@ def _perform_update_check_logic():
         )
         behind = int(behind_result.stdout.strip()) if behind_result.returncode == 0 else 0
 
-        branch_result = subprocess.run(
-            ["git", "branch", "--show-current"], cwd=DASHBOARD_REPO_DIR, capture_output=True, text=True, timeout=10
-        )
-        branch = branch_result.stdout.strip()
-
         return {
             "available": behind > 0,
             "behind": behind,
             "local": local[:12],
             "remote": remote[:12],
             "branch": branch,
+            "remoteRef": remote_ref,
         }, None
     except subprocess.TimeoutExpired:
         return None, "git command timed out"
@@ -549,13 +559,13 @@ def _perform_update_check_logic():
         return None, str(e)
 
 
-def _perform_auto_apply_logic():
-    """Apply the latest fast-forward update from `origin/main`.
 
-    Run a `git pull --ff-only` in the dashboard repository and translate the
-    subprocess result into a success flag plus a small response payload. Return
-    structured error details instead of raising so background update checks can
-    record the failure.
+def _perform_auto_apply_logic():
+    """Apply the latest fast-forward update from the active remote branch.
+
+    Run a `git pull --ff-only` in the dashboard repository against the current
+    branch's matching remote ref and translate the subprocess result into a
+    success flag plus a small response payload.
 
     Dependencies:
         Uses `subprocess.run()` and `DASHBOARD_REPO_DIR`.
@@ -571,16 +581,22 @@ def _perform_auto_apply_logic():
         succeeds.
     """
     try:
+        branch, remote_ref = _get_update_target_branch()
         pull_result = subprocess.run(
-            ["git", "pull", "--ff-only", "origin", "main"],
+            ["git", "pull", "--ff-only", "origin", branch],
             cwd=DASHBOARD_REPO_DIR,
             capture_output=True,
             text=True,
             timeout=60,
         )
         if pull_result.returncode == 0:
-            return True, {"output": pull_result.stdout.strip()}
-        return False, {"error": pull_result.stderr.strip() or "git pull failed", "output": pull_result.stdout.strip()}
+            return True, {"output": pull_result.stdout.strip(), "branch": branch, "remoteRef": remote_ref}
+        return False, {
+            "error": pull_result.stderr.strip() or "git pull failed",
+            "output": pull_result.stdout.strip(),
+            "branch": branch,
+            "remoteRef": remote_ref,
+        }
     except subprocess.TimeoutExpired:
         return False, {"error": "git pull timed out"}
     except Exception as e:
@@ -1453,6 +1469,7 @@ from routes.memory_bridge import memory_bridge_bp
 from routes.misc import misc_bp
 from routes.system import system_bp
 from routes.token_savings import token_savings_bp
+from routes.rmemory import rmemory_bp
 
 
 BLUEPRINT_MAP = {
@@ -1483,6 +1500,7 @@ for blueprint in [
     knowledge_bp,
     memory_bridge_bp,
     token_savings_bp,
+    rmemory_bp,
 ]:
     app.register_blueprint(blueprint)
 
@@ -1565,13 +1583,11 @@ def main():
 
     print(f"\n   Dashboard: http://localhost:19100\n")
     try:
-        serve(app, host="127.0.0.1", port=19100, threads=4)
+        serve(app, host="0.0.0.0", port=19100, threads=4)
     except Exception as e:
-        logger.exception("Dashboard failed to start; rolling back to origin/main")
+        logger.exception("Dashboard failed to start")
         print(f"\n[FATAL] Dashboard failed to start: {e}")
-        print("Rolling back to origin/main...")
-        subprocess.run(["git", "reset", "--hard", "origin/main"], cwd=str(Path(__file__).parent))
-        print("Run 'openclaw service restart dashboard' after fixing the issue.")
+        print("Repository left unchanged for manual recovery.")
         sys.exit(1)
 
 

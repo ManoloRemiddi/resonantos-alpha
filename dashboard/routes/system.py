@@ -24,7 +24,7 @@ from routes.rmemory import (
     _rmem_parse_log,
     _scan_ssot_layer,
 )
-from routes.shared import gw
+from routes.shared import get_gw_port, gw
 
 system_bp = Blueprint("system", __name__)
 logger = get_logger(__name__)
@@ -541,6 +541,12 @@ def api_lcm_status() -> Response:
         cur.execute("SELECT COUNT(DISTINCT conversation_id) as cnt FROM messages")
         conversations = cur.fetchone()["cnt"]
 
+        cur.execute("SELECT COUNT(*) as cnt FROM messages")
+        total_messages = cur.fetchone()["cnt"]
+
+        cur.execute("SELECT COUNT(*) as cnt FROM summaries")
+        total_summaries = cur.fetchone()["cnt"]
+
         cur.execute("SELECT depth, COUNT(*) as cnt FROM summaries GROUP BY depth")
         summary_by_depth = {str(row["depth"]): row["cnt"] for row in cur.fetchall()}
 
@@ -583,6 +589,9 @@ def api_lcm_status() -> Response:
             msg_count = 0
             sum_count = 0
 
+        db_size_bytes = LCM_DB.stat().st_size
+        db_size_mb = round(db_size_bytes / (1024 * 1024), 1)
+
         db.close()
 
         if total_items > 0:
@@ -596,8 +605,12 @@ def api_lcm_status() -> Response:
             {
                 "ok": True,
                 "connected": True,
+                "engineId": "lossless-claw",
                 "conversations": conversations,
-                "messages": msg_count,
+                "messages": total_messages,
+                "summaries": total_summaries,
+                "totalMessages": total_messages,
+                "totalSummaries": total_summaries,
                 "summaryByDepth": summary_by_depth,
                 "contextComposition": {
                     "totalItems": total_items,
@@ -606,6 +619,12 @@ def api_lcm_status() -> Response:
                     "messagePct": round(message_pct, 1),
                     "summaryPct": round(summary_pct, 1),
                 },
+                "database": {
+                    "path": str(LCM_DB),
+                    "sizeBytes": db_size_bytes,
+                    "sizeMb": db_size_mb,
+                },
+                "dbSizeMb": db_size_mb,
                 "totalSummaryTokens": total_summary_tokens,
             }
         )
@@ -722,13 +741,14 @@ def api_system_restart() -> Response:
     import signal
 
     try:
-        result = subprocess.run(["lsof", "-ti", "tcp:18789"], capture_output=True, text=True, timeout=10)
+        gw_port = get_gw_port()
+        result = subprocess.run(["lsof", "-ti", f"tcp:{gw_port}"], capture_output=True, text=True, timeout=10)
         pids = result.stdout.strip().split("\n")
         if not pids or not pids[0]:
-            return jsonify({"ok": False, "error": "Gateway process not found on port 18789"}), 404
+            return jsonify({"ok": False, "error": f"Gateway process not found on port {gw_port}"}), 404
         pid = int(pids[0])
         os.kill(pid, signal.SIGUSR1)
-        return jsonify({"ok": True, "message": f"SIGUSR1 sent to PID {pid}, restart initiated"})
+        return jsonify({"ok": True, "message": f"SIGUSR1 sent to PID {pid} on port {gw_port}, restart initiated"})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 

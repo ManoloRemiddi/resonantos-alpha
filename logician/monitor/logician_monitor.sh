@@ -1,52 +1,41 @@
 #!/bin/bash
 # Logician Health Monitor — deterministic, no AI
-# Checks unix socket health via test query
-# Run via launchd every 60s
+# Linux-safe: uses the repo-managed control script for health/restart.
 
 set -euo pipefail
 
-SOCK="/tmp/mangle.sock"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+CTL="$REPO_ROOT/logician/scripts/logician_ctl.sh"
 LOG="$REPO_ROOT/logician/logs/monitor.log"
-PLIST="com.resonantos.logician"
 STATUS_FILE="$REPO_ROOT/logician/monitor/status.json"
 
 mkdir -p "$(dirname "$LOG")" "$(dirname "$STATUS_FILE")"
 
 ts() { date -u +"%Y-%m-%dT%H:%M:%SZ"; }
+write_status() {
+  printf '%s\n' "$1" > "$STATUS_FILE"
+}
 
-# 1. Socket file check
-if [ ! -S "$SOCK" ]; then
-    echo "$(ts) FAIL: socket $SOCK missing — restarting" >> "$LOG"
-    launchctl kickstart -k "gui/$(id -u)/$PLIST" 2>/dev/null || true
-    sleep 3
-    if [ ! -S "$SOCK" ]; then
-        echo "$(ts) CRITICAL: restart failed" >> "$LOG"
-        printf '{"status":"down","lastCheck":"%s","lastError":"restart failed"}\n' "$(ts)" > "$STATUS_FILE"
-        exit 1
-    fi
-    echo "$(ts) RECOVERED after restart" >> "$LOG"
+if "$CTL" health >/tmp/logician-monitor-health.out 2>&1; then
+  write_status "{\"status\":\"healthy\",\"lastCheck\":\"$(ts)\",\"ok\":true,\"source\":\"monitor\"}"
+  exit 0
 fi
 
-# 2. gRPC query check via Node.js (lightweight — single fact query)
-RESULT=$(node -e "
-const grpc = require('@grpc/grpc-js');
-const protoLoader = require('@grpc/proto-loader');
-const pd = protoLoader.loadSync('${REPO_ROOT}/logician/poc/mangle-service/proto/mangle.proto', { keepCase: true, longs: String, enums: String, defaults: true, oneofs: true });
-const proto = grpc.loadPackageDefinition(pd).mangle;
-const client = new proto.Mangle('unix://$SOCK', grpc.credentials.createInsecure());
-const call = client.Query({ query: 'agent(/main)' });
-const r = [];
-call.on('data', d => r.push(d.answer));
-call.on('end', () => { console.log(JSON.stringify(r)); process.exit(0); });
-call.on('error', () => { console.log('ERROR'); process.exit(1); });
-setTimeout(() => { console.log('TIMEOUT'); process.exit(1); }, 3000);
-" 2>&1) || true
+echo "$(ts) WARN: health check failed — attempting restart" >> "$LOG"
+cat /tmp/logician-monitor-health.out >> "$LOG" 2>/dev/null || true
 
-if echo "$RESULT" | grep -q 'agent(/main)'; then
-    printf '{"status":"healthy","lastCheck":"%s","lastQuery":"agent(/main)","ok":true}\n' "$(ts)" > "$STATUS_FILE"
-else
-    echo "$(ts) WARN: gRPC query failed: $RESULT" >> "$LOG"
-    printf '{"status":"degraded","lastCheck":"%s","lastError":"query failed"}\n' "$(ts)" > "$STATUS_FILE"
+if "$CTL" restart >/tmp/logician-monitor-restart.out 2>&1; then
+  sleep 2
+  if "$CTL" health >/tmp/logician-monitor-health.out 2>&1; then
+    echo "$(ts) RECOVERED: restart succeeded" >> "$LOG"
+    write_status "{\"status\":\"healthy\",\"lastCheck\":\"$(ts)\",\"ok\":true,\"source\":\"monitor-restart\"}"
+    exit 0
+  fi
 fi
+
+echo "$(ts) CRITICAL: restart failed" >> "$LOG"
+cat /tmp/logician-monitor-restart.out >> "$LOG" 2>/dev/null || true
+cat /tmp/logician-monitor-health.out >> "$LOG" 2>/dev/null || true
+write_status "{\"status\":\"down\",\"lastCheck\":\"$(ts)\",\"ok\":false,\"source\":\"monitor\",\"lastError\":\"restart failed\"}"
+exit 1

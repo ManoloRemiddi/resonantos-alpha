@@ -3,7 +3,7 @@ const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
 
-const PROTO_PATH = path.join(__dirname, '..', 'logician', 'poc', 'mangle-service', 'proto', 'mangle.proto');
+const PROTO_PATH = path.join(__dirname, '..', 'logician', 'mangle-service', 'proto', 'mangle.proto');
 const SOCK_ADDR = process.env.MANGLE_SOCK || '/tmp/mangle.sock';
 const HTTP_PORT = parseInt(process.env.PORT || '8081', 10);
 
@@ -46,7 +46,7 @@ const server = http.createServer(async (req, res) => {
   try {
     if (req.url === '/health' && req.method === 'GET') {
       try {
-        await queryMangle('fn:true()');
+        await queryMangle('agent(/main)');
         res.end(JSON.stringify({ ok: true, mangle: 'connected' }));
       } catch (err) {
         res.statusCode = 503;

@@ -15,6 +15,7 @@ from routes.settings_helpers import (
     _MEMORY_CRON_IDS,
     _discover_settings_skills,
     _get_agent_skill_allow,
+    _get_update_target_branch,
     _list_skill_agents,
     _memory_log_state,
     _perform_update_check_logic,
@@ -525,74 +526,28 @@ def api_skills_setup_request() -> Response:
 
 @settings_bp.route("/api/settings/check-update")
 def api_check_update() -> Response:
-    """Check whether the dashboard is behind `origin/main`.
+    """Check whether the dashboard is behind its active remote branch.
 
-    Fetch the remote main branch, compare the local HEAD against `origin/main`,
-    and report whether an update is available along with short commit hashes and
-    the current branch name. Timeout handling is explicit because the route shells out to git.
-
-    Dependencies:
-        Uses subprocess git commands executed inside DASHBOARD_REPO_DIR.
+    Compare the current checkout against the matching remote ref for the active
+    branch and report whether an update is available.
 
     Returns:
         A JSON response describing update availability, or an error response if git commands fail.
     """
-    import subprocess
-
-    try:
-        fetch_result = subprocess.run(
-            ["git", "fetch", "origin", "main"], cwd=DASHBOARD_REPO_DIR, capture_output=True, text=True, timeout=30
-        )
-        if fetch_result.returncode != 0:
-            return jsonify({"error": f"git fetch failed: {fetch_result.stderr.strip()}"}), 500
-
-        local = subprocess.run(
-            ["git", "rev-parse", "HEAD"], cwd=DASHBOARD_REPO_DIR, capture_output=True, text=True, timeout=10
-        ).stdout.strip()
-
-        remote = subprocess.run(
-            ["git", "rev-parse", "origin/main"], cwd=DASHBOARD_REPO_DIR, capture_output=True, text=True, timeout=10
-        ).stdout.strip()
-
-        behind_result = subprocess.run(
-            ["git", "rev-list", "--count", f"HEAD..origin/main"],
-            cwd=DASHBOARD_REPO_DIR,
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        behind = int(behind_result.stdout.strip()) if behind_result.returncode == 0 else 0
-
-        branch_result = subprocess.run(
-            ["git", "branch", "--show-current"], cwd=DASHBOARD_REPO_DIR, capture_output=True, text=True, timeout=10
-        )
-        branch = branch_result.stdout.strip()
-
-        return jsonify(
-            {
-                "available": behind > 0,
-                "behind": behind,
-                "local": local[:12],
-                "remote": remote[:12],
-                "branch": branch,
-            }
-        )
-    except subprocess.TimeoutExpired:
-        return jsonify({"error": "git command timed out"}), 504
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    check_result, check_error = _perform_update_check_logic()
+    if check_result is None:
+        if check_error == "git command timed out":
+            return jsonify({"error": check_error}), 504
+        return jsonify({"error": check_error or "unknown git error"}), 500
+    return jsonify(check_result)
 
 
 @settings_bp.route("/api/settings/update", methods=["POST"])
 def api_apply_update() -> Response:
-    """Apply a fast-forward update from `origin/main`.
+    """Apply a fast-forward update from the active remote branch.
 
-    Run `git pull --ff-only` in the dashboard repository so the settings UI can
-    trigger a safe update without creating merge commits. The response includes
-    command output and a user-facing message describing success or failure.
-
-    Dependencies:
-        Uses subprocess git commands executed inside DASHBOARD_REPO_DIR.
+    Run `git pull --ff-only` against the current branch so the settings UI can
+    trigger a safe update without creating merge commits.
 
     Returns:
         A JSON response containing update status, command output, and any error text.
@@ -600,8 +555,9 @@ def api_apply_update() -> Response:
     import subprocess
 
     try:
+        branch, remote_ref = _get_update_target_branch()
         pull_result = subprocess.run(
-            ["git", "pull", "--ff-only", "origin", "main"],
+            ["git", "pull", "--ff-only", "origin", branch],
             cwd=DASHBOARD_REPO_DIR,
             capture_output=True,
             text=True,
@@ -617,6 +573,8 @@ def api_apply_update() -> Response:
                 "success": success,
                 "output": output,
                 "error": error if not success else None,
+                "branch": branch,
+                "remoteRef": remote_ref,
                 "message": "Update applied successfully. Restart the dashboard to load changes."
                 if success
                 else f"Update failed: {error}",

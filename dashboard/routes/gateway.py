@@ -6,7 +6,7 @@ from typing import Any
 
 from flask import Blueprint, Response, jsonify, request
 
-from routes.shared import GW_TOKEN, GW_WS_URL, gw
+from routes.shared import _read_gw_token, get_gw_ws_url, gw
 
 gateway_bp = Blueprint("gateway", __name__)
 
@@ -113,15 +113,15 @@ def api_gateway_token() -> Response:
     the payload minimal and limited to the connection details the UI needs.
 
     Dependencies:
-        GW_WS_URL: Shared websocket URL for the local gateway.
-        GW_TOKEN: Shared authentication token for gateway access.
+        get_gw_ws_url(): Resolves the local websocket URL for the gateway.
+        _read_gw_token(): Reads the current gateway authentication token.
 
     Returns:
         Response: JSON payload containing gateway connection credentials.
     """
     return jsonify(
         {
-            "url": GW_WS_URL,
-            "token": GW_TOKEN,
+            "url": get_gw_ws_url(),
+            "token": _read_gw_token(),
         }
     )

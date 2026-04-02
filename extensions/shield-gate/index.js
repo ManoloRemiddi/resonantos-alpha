@@ -25,7 +25,7 @@ const SAFE_DESTINATIONS = (process.env.RESONANTOS_SAFE_DESTINATIONS || "")
   .map((value) => value.trim())
   .filter(Boolean);
 const LOGICIAN_SOCK = process.env.LOGICIAN_SOCK || "/tmp/mangle.sock";
-const PROTO_PATH = path.join(REPO_ROOT, "logician", "poc", "mangle-service", "proto", "mangle.proto");
+const LOGICIAN_QUERY_URL = process.env.LOGICIAN_QUERY_URL || "http://127.0.0.1:8081/query";
 const LOG_FILE = path.join(REPO_ROOT, "shield", "logs", "shield-gate.log");
 const ERROR_EXPLAIN_INSTRUCTION = "\n\n⚠️ MANDATORY: Explain this block to the user briefly. What was blocked and what you are doing instead. Never leave a block message unexplained.";
 
@@ -310,15 +310,16 @@ function queryLogicianSync(query, program) {
 function queryLogician(query) {
   const cached = _logicianCache.get(query);
   if (cached && Date.now() - cached.ts < LOGICIAN_CACHE_TTL_MS) return cached.answers;
-  const answers = queryLogicianSync(query) || [];
-  _logicianCache.set(query, { answers, ts: Date.now() });
+  const answers = queryLogicianSync(query);
+  if (answers !== null) _logicianCache.set(query, { answers, ts: Date.now() });
   return answers;
 }
 
 // Check if Logician proves a specific fact
 function logicianProves(query) {
   const answers = queryLogician(query);
-  return answers && answers.length > 0;
+  if (answers === null) return null;
+  return answers.length > 0;
 }
 
 // --- Core Check ---
@@ -1621,7 +1622,7 @@ module.exports = function shieldGateExtension(api) {
           const targetAgent = params?.agentId || params?.runtime || "unknown";
           if (targetAgent !== "unknown") {
             const spawnAllowed = logicianProves(`spawn_allowed(/main, /${targetAgent})`);
-            if (!spawnAllowed) {
+            if (spawnAllowed === false) {
               log("BLOCK", "Logician: spawn not in allowed set", { from: "main", to: targetAgent });
               return { block: true, blockReason: "Spawn Permission Gate: agent 'main' cannot spawn '" + targetAgent + "'" };
             }
@@ -2024,7 +2025,7 @@ module.exports = function shieldGateExtension(api) {
       // --- Layer 10b: Logician spawn permission check ---
       if (fs.existsSync(LOGICIAN_SOCK)) {
         const proves = logicianProves(`spawn_allowed(/${parentAgent}, /${childAgent})`);
-        if (!proves) {
+        if (proves === false) {
           log("BLOCK", "Logician: spawn not in permission set", {
             parent: parentAgent,
             child: childAgent,

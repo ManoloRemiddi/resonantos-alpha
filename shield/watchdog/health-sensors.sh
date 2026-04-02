@@ -10,11 +10,38 @@ set -euo pipefail
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 FORMAT="${1:-json}"
-GATEWAY_PORT="${OPENCLAW_GATEWAY_PORT:-18789}"
 OPENCLAW_USER="${OPENCLAW_USER:-augmentor}"
-OPENCLAW_HOME="/Users/${OPENCLAW_USER}/.openclaw"
+OPENCLAW_HOME="${OPENCLAW_HOME:-/Users/${OPENCLAW_USER}/.openclaw}"
+OPENCLAW_CONFIG="${OPENCLAW_CONFIG_PATH:-${OPENCLAW_HOME}/openclaw.json}"
 LAUNCH_AGENT_LABEL="ai.openclaw.gateway"
 LAUNCH_AGENT_PLIST="${HOME}/Library/LaunchAgents/${LAUNCH_AGENT_LABEL}.plist"
+
+resolve_gateway_port() {
+    if [ -n "${OPENCLAW_GATEWAY_PORT:-}" ]; then
+        printf '%s' "${OPENCLAW_GATEWAY_PORT}"
+        return
+    fi
+
+    if [ -f "$OPENCLAW_CONFIG" ]; then
+        python3 - "$OPENCLAW_CONFIG" <<'PY'
+import json, sys
+path = sys.argv[1]
+default = 18789
+try:
+    with open(path, 'r', encoding='utf-8') as fh:
+        cfg = json.load(fh)
+    port = int(cfg.get('gateway', {}).get('port', default))
+    print(port if 1 <= port <= 65535 else default)
+except Exception:
+    print(default)
+PY
+        return
+    fi
+
+    printf '18789'
+}
+
+GATEWAY_PORT="$(resolve_gateway_port)"
 
 # --- Sensor Functions ---
 # Each returns: status (ok|degraded|critical), reason, details
@@ -40,10 +67,10 @@ sensor_gateway_http() {
     local http_code
     # OpenClaw gateway health check
     http_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 3 --max-time 5 \
-        "http://127.0.0.1:${GATEWAY_PORT}/api/health" 2>/dev/null || echo "000")
+        "http://127.0.0.1:${GATEWAY_PORT}/health" 2>/dev/null || echo "000")
     
     if [ "$http_code" = "200" ]; then
-        echo "ok|Gateway HTTP responding (200 on /api/health)|port:${GATEWAY_PORT}"
+        echo "ok|Gateway HTTP responding (200 on /health)|port:${GATEWAY_PORT}"
     elif [ "$http_code" = "000" ]; then
         echo "critical|Gateway HTTP unreachable — connection refused or timeout on port ${GATEWAY_PORT}|http_code:000"
     else

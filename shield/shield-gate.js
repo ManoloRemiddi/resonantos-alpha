@@ -41,7 +41,7 @@ const SAFE_DESTINATIONS = (process.env.RESONANTOS_SAFE_DESTINATIONS || "")
   .map((value) => value.trim())
   .filter(Boolean);
 const LOGICIAN_SOCK = process.env.LOGICIAN_SOCK || "/tmp/mangle.sock";
-const PROTO_PATH = path.join(REPO_ROOT, "logician", "poc", "mangle-service", "proto", "mangle.proto");
+const PROTO_PATH = path.join(REPO_ROOT, "logician", "mangle-service", "proto", "mangle.proto");
 const LOG_FILE = path.join(REPO_ROOT, "shield", "logs", "shield-gate.log");
 const ERROR_EXPLAIN_INSTRUCTION = "\n\n⚠️ MANDATORY: Explain this block to the user briefly. What was blocked and what you are doing instead. Never leave a block message unexplained.";
 

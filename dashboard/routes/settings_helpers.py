@@ -189,6 +189,19 @@ def _write_updates_config(updates: dict[str, Any]) -> dict[str, Any]:
     return normalized
 
 
+def _get_update_target_branch() -> tuple[str, str]:
+    """Return the active branch and matching remote ref for dashboard updates."""
+    try:
+        branch_result = subprocess.run(
+            ["git", "branch", "--show-current"], cwd=DASHBOARD_REPO_DIR, capture_output=True, text=True, timeout=10
+        )
+        branch = branch_result.stdout.strip() or "main"
+    except Exception:
+        branch = "main"
+    return branch, f"origin/{branch}"
+
+
+
 def _perform_update_check_logic() -> tuple[dict[str, Any] | None, str | None]:
     """Run update check logic.
     Wrap local command execution and normalize the result for the route handlers that
@@ -205,8 +218,10 @@ def _perform_update_check_logic() -> tuple[dict[str, Any] | None, str | None]:
     Side effects:
         Invokes local subprocesses to inspect or mutate system state."""
     try:
+        branch, remote_ref = _get_update_target_branch()
+
         fetch_result = subprocess.run(
-            ["git", "fetch", "origin", "main"], cwd=DASHBOARD_REPO_DIR, capture_output=True, text=True, timeout=30
+            ["git", "fetch", "origin", branch], cwd=DASHBOARD_REPO_DIR, capture_output=True, text=True, timeout=30
         )
         if fetch_result.returncode != 0:
             return None, f"git fetch failed: {fetch_result.stderr.strip()}"
@@ -216,11 +231,11 @@ def _perform_update_check_logic() -> tuple[dict[str, Any] | None, str | None]:
         ).stdout.strip()
 
         remote = subprocess.run(
-            ["git", "rev-parse", "origin/main"], cwd=DASHBOARD_REPO_DIR, capture_output=True, text=True, timeout=10
+            ["git", "rev-parse", remote_ref], cwd=DASHBOARD_REPO_DIR, capture_output=True, text=True, timeout=10
         ).stdout.strip()
 
         behind_result = subprocess.run(
-            ["git", "rev-list", "--count", "HEAD..origin/main"],
+            ["git", "rev-list", "--count", f"HEAD..{remote_ref}"],
             cwd=DASHBOARD_REPO_DIR,
             capture_output=True,
             text=True,
@@ -228,17 +243,13 @@ def _perform_update_check_logic() -> tuple[dict[str, Any] | None, str | None]:
         )
         behind = int(behind_result.stdout.strip()) if behind_result.returncode == 0 else 0
 
-        branch_result = subprocess.run(
-            ["git", "branch", "--show-current"], cwd=DASHBOARD_REPO_DIR, capture_output=True, text=True, timeout=10
-        )
-        branch = branch_result.stdout.strip()
-
         return {
             "available": behind > 0,
             "behind": behind,
             "local": local[:12],
             "remote": remote[:12],
             "branch": branch,
+            "remoteRef": remote_ref,
         }, None
     except subprocess.TimeoutExpired:
         return None, "git command timed out"

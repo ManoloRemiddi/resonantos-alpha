@@ -144,40 +144,48 @@ function refreshLCM() {
                     (data.message || data.error || 'Database not initialized') + '</div>';
                 return;
             }
-            
-            let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px;">';
-            html += '<div><div style="font-size:11px;color:var(--text-secondary);">Conversations</div>';
-            html += '<div style="font-size:20px;font-weight:600;">' + data.conversations + '</div></div>';
-            html += '<div><div style="font-size:11px;color:var(--text-secondary);">Messages</div>';
-            html += '<div style="font-size:20px;font-weight:600;">' + data.messages + '</div></div>';
-            
-            // Summaries by depth - summaryByDepth is an object like {"0": 14}
+
             const summaryByDepth = data.summaryByDepth || {};
             const d0 = summaryByDepth['0'] || 0;
             const d1 = summaryByDepth['1'] || 0;
             const d2plus = Object.keys(summaryByDepth)
                 .filter(k => parseInt(k) >= 2)
                 .reduce((sum, k) => sum + summaryByDepth[k], 0);
-            
-            html += '<div><div style="font-size:11px;color:var(--text-secondary);">Leaf Summaries (d0)</div>';
-            html += '<div style="font-size:20px;font-weight:600;">' + d0 + '</div></div>';
-            html += '<div><div style="font-size:11px;color:var(--text-secondary);">Condensed (d1+)</div>';
-            html += '<div style="font-size:20px;font-weight:600;">' + (d1 + d2plus) + '</div></div>';
+            const totalMessages = data.totalMessages ?? data.messages ?? 0;
+            const totalSummaries = data.totalSummaries ?? Object.values(summaryByDepth).reduce((sum, value) => sum + value, 0);
+            const dbSizeMb = data.dbSizeMb ?? data.database?.sizeMb;
+            const engineId = data.engineId || 'unknown';
+
+            let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px;">';
+            html += '<div><div style="font-size:11px;color:var(--text-secondary);">Engine</div>';
+            html += '<div style="font-size:20px;font-weight:600;">' + engineId + '</div></div>';
+            html += '<div><div style="font-size:11px;color:var(--text-secondary);">Conversations</div>';
+            html += '<div style="font-size:20px;font-weight:600;">' + data.conversations + '</div></div>';
+            html += '<div><div style="font-size:11px;color:var(--text-secondary);">Stored Messages</div>';
+            html += '<div style="font-size:20px;font-weight:600;">' + totalMessages.toLocaleString() + '</div></div>';
+            html += '<div><div style="font-size:11px;color:var(--text-secondary);">Stored Summaries</div>';
+            html += '<div style="font-size:20px;font-weight:600;">' + totalSummaries.toLocaleString() + '</div></div>';
+            if (dbSizeMb !== undefined && dbSizeMb !== null) {
+                html += '<div><div style="font-size:11px;color:var(--text-secondary);">DB Size</div>';
+                html += '<div style="font-size:20px;font-weight:600;">' + dbSizeMb + ' MB</div></div>';
+            }
             html += '</div>';
-            
-            // Context composition bar
+
+            html += '<div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;">';
+            html += 'Summary Layers: d0 ' + d0 + ' · d1+ ' + (d1 + d2plus) + '</div>';
+
             const ctx = data.contextComposition || {};
             const totalItems = ctx.totalItems || 0;
             if (totalItems > 0) {
                 html += '<div style="margin-bottom:12px;">';
-                html += '<div style="font-size:11px;color:var(--text-secondary);margin-bottom:4px;">Context Composition (' + totalItems + ' items)</div>';
+                html += '<div style="font-size:11px;color:var(--text-secondary);margin-bottom:4px;">Current Assembled Context (' + totalItems + ' items)</div>';
                 html += '<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--bg-secondary);">';
-                
+
                 const msgItems = ctx.messages || 0;
                 const sumItems = ctx.summaries || 0;
                 const msgPct = (ctx.messagePct || 0).toFixed(1);
                 const sumPct = (ctx.summaryPct || 0).toFixed(1);
-                
+
                 if (msgItems > 0) {
                     html += '<div style="width:' + msgPct + '%;background:#3b82f6;" title="Messages: ' + msgItems + '"></div>';
                 }
@@ -191,11 +199,14 @@ function refreshLCM() {
                 html += '</div>';
                 html += '</div>';
             }
-            
-            // Total summary tokens
+
             html += '<div style="margin-top:12px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);">';
-            html += 'Total Summary Tokens: ' + (data.totalSummaryTokens || 0).toLocaleString() + '</div>';
-            
+            html += 'Total Summary Tokens: ' + (data.totalSummaryTokens || 0).toLocaleString();
+            if (totalItems > 0) {
+                html += ' · Current Context Items: ' + totalItems;
+            }
+            html += '</div>';
+
             el.innerHTML = html;
         })
         .catch(err => {

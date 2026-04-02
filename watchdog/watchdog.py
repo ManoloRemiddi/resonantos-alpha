@@ -8,6 +8,7 @@ Logs all actions to watchdog.log.
 Runs continuously via launchd (com.resonantos.watchdog).
 """
 
+import json
 import subprocess
 import time
 import os
@@ -20,11 +21,13 @@ LOG_FILE = BASE_DIR / "watchdog.log"
 MAX_RESTART_ATTEMPTS = 3
 CHECK_INTERVAL = 120
 UID = str(os.getuid())
+DEFAULT_GATEWAY_PORT = 18789
+OPENCLAW_CONFIG = Path(os.environ.get("OPENCLAW_CONFIG_PATH", str(Path.home() / '.openclaw' / "openclaw.json")))
 
 SERVICES = {
     "gateway": {
-        "port": 18789,
-        "health_url": "http://localhost:18789/health",
+        "port": DEFAULT_GATEWAY_PORT,
+        "health_url": f"http://localhost:{DEFAULT_GATEWAY_PORT}/health",
         "launchd_label": "ai.openclaw.gateway",
     },
     "dashboard": {
@@ -51,6 +54,37 @@ def log(message):
         f.write(log_entry)
     print(log_entry.strip())
 
+
+def get_gateway_port() -> int:
+    raw_env = os.environ.get("OPENCLAW_GATEWAY_PORT", "").strip()
+    if raw_env:
+        try:
+            port = int(raw_env)
+            if 1 <= port <= 65535:
+                return port
+        except ValueError:
+            pass
+
+    try:
+        if OPENCLAW_CONFIG.exists():
+            cfg = json.loads(OPENCLAW_CONFIG.read_text())
+            raw_port = cfg.get("gateway", {}).get("port", DEFAULT_GATEWAY_PORT)
+            port = int(raw_port)
+            if 1 <= port <= 65535:
+                return port
+    except Exception:
+        pass
+
+    return DEFAULT_GATEWAY_PORT
+
+
+def refresh_gateway_service_config() -> int:
+    port = get_gateway_port()
+    SERVICES["gateway"]["port"] = port
+    SERVICES["gateway"]["health_url"] = f"http://localhost:{port}/health"
+    return port
+
+
 def check_http(url):
     try:
         import urllib.request
@@ -74,6 +108,8 @@ def check_socket(socket_path):
         return False
 
 def check_service(name):
+    if name == "gateway":
+        refresh_gateway_service_config()
     svc = SERVICES[name]
     if svc.get("socket_path") and check_socket(svc["socket_path"]):
         return True
@@ -110,6 +146,8 @@ def kill_stale_port(port):
         log(f"Error killing stale port {port}: {e}")
 
 def restart_service(name):
+    if name == "gateway":
+        refresh_gateway_service_config()
     svc = SERVICES[name]
     label = svc["launchd_label"]
     target = f"gui/{UID}/{label}"
@@ -160,6 +198,7 @@ def restart_service(name):
 def main():
     log("=" * 50)
     log("Watchdog v2 started")
+    log(f"Gateway port: {refresh_gateway_service_config()}")
     log("=" * 50)
 
     while True:

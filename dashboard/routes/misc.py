@@ -8,7 +8,7 @@ from typing import Any
 from flask import Blueprint, Response, jsonify, redirect, request, send_from_directory
 
 from routes.chatbots import _get_db
-from routes.shared import GW_PORT, _read_gw_token
+from routes.shared import _read_gw_token, get_gw_port
 
 misc_bp = Blueprint("misc", __name__)
 
@@ -22,13 +22,13 @@ def chat_redirect() -> Response:
     when token bootstrap is unavailable.
 
     Dependencies:
-        _read_gw_token() and GW_PORT.
+        _read_gw_token() and get_gw_port().
 
     Returns:
         Response: Redirect response targeting the local OpenClaw web chat.
     """
     token = _read_gw_token()
-    port = GW_PORT
+    port = get_gw_port()
     if token:
         return redirect(f"http://localhost:{port}/#token={token}")
     return redirect(f"http://localhost:{port}/")
