@@ -1,0 +1,64 @@
+{
+  "wallets_yearly": {
+    "2ijW3oQxZMYeoiHerT4txiZUwpyq53uaytf2sQfuUNP3": {
+      "2026": 137
+    }
+  },
+  "daily": [
+    {
+      "ts": "2026-02-18T17:05:18.935469+00:00",
+      "recipient": "2ijW3oQxZMYeoiHerT4txiZUwpyq53uaytf2sQfuUNP3",
+      "amount": 5
+    },
+    {
+      "ts": "2026-02-18T17:05:43.284931+00:00",
+      "recipient": "2ijW3oQxZMYeoiHerT4txiZUwpyq53uaytf2sQfuUNP3",
+      "amount": 5
+    },
+    {
+      "ts": "2026-02-18T17:06:27.196267+00:00",
+      "recipient": "2ijW3oQxZMYeoiHerT4txiZUwpyq53uaytf2sQfuUNP3",
+      "amount": 5
+    },
+    {
+      "ts": "2026-02-18T17:08:17.170158+00:00",
+      "recipient": "2ijW3oQxZMYeoiHerT4txiZUwpyq53uaytf2sQfuUNP3",
+      "amount": 5
+    },
+    {
+      "ts": "2026-02-18T17:14:37.250287+00:00",
+      "recipient": "2ijW3oQxZMYeoiHerT4txiZUwpyq53uaytf2sQfuUNP3",
+      "amount": 5
+    },
+    {
+      "ts": "2026-02-18T17:32:02.426985+00:00",
+      "recipient": "2ijW3oQxZMYeoiHerT4txiZUwpyq53uaytf2sQfuUNP3",
+      "amount": 5
+    },
+    {
+      "ts": "2026-02-18T17:33:56.008986+00:00",
+      "recipient": "2ijW3oQxZMYeoiHerT4txiZUwpyq53uaytf2sQfuUNP3",
+      "amount": 50
+    },
+    {
+      "ts": "2026-02-19T18:58:49.912566+00:00",
+      "recipient": "2ijW3oQxZMYeoiHerT4txiZUwpyq53uaytf2sQfuUNP3",
+      "amount": 1
+    },
+    {
+      "ts": "2026-02-22T16:01:37.927926+00:00",
+      "recipient": "2ijW3oQxZMYeoiHerT4txiZUwpyq53uaytf2sQfuUNP3",
+      "amount": 5
+    },
+    {
+      "ts": "2026-02-22T16:02:01.249163+00:00",
+      "recipient": "2ijW3oQxZMYeoiHerT4txiZUwpyq53uaytf2sQfuUNP3",
+      "amount": 50
+    },
+    {
+      "ts": "2026-02-22T16:02:30.274077+00:00",
+      "recipient": "2ijW3oQxZMYeoiHerT4txiZUwpyq53uaytf2sQfuUNP3",
+      "amount": 1
+    }
+  ]
+}

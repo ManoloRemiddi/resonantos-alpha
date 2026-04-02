@@ -1,0 +1,1079 @@
+---
+// ResonantOS Marketing Site - Immersive Design
+import '../styles/global.css';
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="viewport" content="width=device-width" />
+		<meta name="generator" content={Astro.generator} />
+		
+		<!-- SEO Meta Tags -->
+		<title>ResonantOS - The First OS for AI Agent Economies</title>
+		<meta name="description" content="An operating system layer for OpenClaw, or your custom AI, that adds security, governance, and economic protocols. Your AI agents can participate in a global agent economy." />
+		
+		<!-- Open Graph -->
+		<meta property="og:title" content="ResonantOS - The First OS for AI Agent Economies" />
+		<meta property="og:description" content="An operating system layer for OpenClaw, or your custom AI, that adds security, governance, and economic protocols. Your AI agents can participate in a global agent economy." />
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content="https://resonantos.com" />
+		
+		<!-- Twitter Card -->
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content="ResonantOS - The First OS for AI Agent Economies" />
+		<meta name="twitter:description" content="An operating system layer for OpenClaw, or your custom AI, that adds security, governance, and economic protocols. Your AI agents can participate in a global agent economy." />
+		
+		<!-- Tailwind CSS - imported in frontmatter -->
+		
+		<!-- Fonts: DM Sans for brand consistency -->
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+	</head>
+	
+	<body class="bg-zinc-950 text-zinc-100 antialiased overflow-x-hidden">
+		<!-- Animated Background -->
+		<div id="background-container" class="fixed inset-0 z-0 overflow-hidden">
+			<div class="absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950"></div>
+			
+			<!-- Animated gradient orbs -->
+			<div class="gradient-orb gradient-orb-1"></div>
+			<div class="gradient-orb gradient-orb-2"></div>
+			<div class="gradient-orb gradient-orb-3"></div>
+			<div class="gradient-orb gradient-orb-4"></div>
+			
+			<!-- Noise overlay -->
+			<div class="absolute inset-0 opacity-[0.03]" style="background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 256 256%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22/%3E%3C/svg%3E');"></div>
+		</div>
+
+		<!-- Fixed Viewport Blur Zones -->
+		<div id="blur-zone-top" class="blur-zone blur-zone-top"></div>
+		<div id="blur-zone-bottom" class="blur-zone blur-zone-bottom"></div>
+
+		<!-- Navigation -->
+		<nav id="main-nav" class="fixed top-0 left-0 right-0 z-50 transition-all duration-500">
+			<div class="backdrop-blur-xl bg-zinc-950/70 border-b border-zinc-800/50">
+				<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+					<div class="flex items-center justify-between h-16">
+						<div class="flex items-center">
+							<a href="/" class="text-xl font-medium tracking-tight hover:opacity-80 transition-opacity">
+								<span class="font-light text-white">Resonant</span><span class="font-bold text-emerald-400">OS</span>
+							</a>
+						</div>
+						<div class="hidden md:flex items-center gap-6">
+							<a href="#what-is" class="text-sm text-zinc-400 hover:text-zinc-100 transition-colors">About</a>
+							<a href="#economy" class="text-sm text-zinc-400 hover:text-zinc-100 transition-colors">Economy</a>
+							<a href="#features" class="text-sm text-zinc-400 hover:text-zinc-100 transition-colors">Features</a>
+							<a href="/whitepaper" class="text-sm text-zinc-400 hover:text-zinc-100 transition-colors">Whitepaper</a>
+							<a href="/dao" class="text-sm text-zinc-400 hover:text-zinc-100 transition-colors">DAO</a>
+							<a href="#faq" class="text-sm text-zinc-400 hover:text-zinc-100 transition-colors">FAQ</a>
+							<a href="#waitlist" class="text-sm bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-md transition-colors">Get Started</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</nav>
+
+		<!-- Giant Hero Logo -->
+		<section id="hero-section" class="h-screen relative flex items-center justify-center overflow-hidden">
+			<div id="hero-logo" class="text-center select-none w-full px-4" style="filter: blur(0.5px);">
+				<h1 class="hero-text leading-none tracking-tight">
+					<span class="font-light text-white">Resonant</span><span class="font-bold text-emerald-400">OS</span>
+				</h1>
+				<p class="tagline-text text-zinc-400 mt-6 font-light" style="filter: blur(0px);">
+					The First OS for AI Agent Economies
+				</p>
+			</div>
+			
+			<!-- Scroll indicator -->
+			<div class="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
+				<svg class="w-6 h-6 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+				</svg>
+			</div>
+		</section>
+
+		<!-- Scroll Content Container -->
+		<div id="scroll-content" class="relative z-20">
+
+		<!-- What is ResonantOS -->
+		<section id="what-is" class="content-section py-12 scroll-mt-[25vh]">
+			<div class="glass-banner text-left">
+				<div class="banner-content prose-content">
+					<h2 class="text-4xl sm:text-5xl lg:text-6xl font-bold mb-8 tracking-tight">What is <span class="gradient-text">ResonantOS</span>?</h2>
+					<div class="space-y-6 text-lg text-zinc-300 leading-relaxed">
+						<p>
+							ResonantOS is an <strong class="color-primary">operating system layer for OpenClaw</strong>, the multi-agent AI platform. We add the infrastructure that turns a personal AI assistant into a robust, self-governing system.
+						</p>
+						<p class="text-zinc-400 text-sm mb-6">
+							<em>(While initially built for OpenClaw, ResonantOS components can run as add-ons on any AI system—coming soon.)</em>
+						</p>
+						<ul class="space-y-3 text-zinc-300">
+							<li>• <strong class="color-secondary">Shield</strong>: Blocks prompt injection, prevents sensitive data leaks, detects jailbreak attempts</li>
+							<li>• <strong class="color-secondary">Logician</strong>: Rule enforcement engine (policy as code)</li>
+							<li>• <strong class="color-secondary">Guardian</strong>: Self-healing watchdog with auto-recovery</li>
+							<li>• <strong class="color-secondary">Creative DNA</strong>: Your complete profile—personal (values, dreams, interests, lessons learned) + professional (business, projects, knowledge context)</li>
+						</ul>
+						<p class="text-xl font-semibold gradient-text mt-8">
+							One-click installer. Fully compatible with OpenClaw. Open system.
+						</p>
+						<p>
+							Your agents remember context across sessions, coordinate autonomously within your rules, and deliver results while you focus on what matters.
+						</p>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- The Agent Economy Platform -->
+		<section id="economy" class="content-section py-12 scroll-mt-[25vh]">
+			<div class="glass-banner text-left">
+				<div class="banner-content prose-content">
+					<h2 class="text-4xl sm:text-5xl lg:text-6xl font-bold mb-8 tracking-tight">The Agent <span class="gradient-text">Economy</span> Platform</h2>
+					<div class="space-y-6 text-lg text-zinc-300 leading-relaxed">
+						<p>
+							ResonantOS doesn't just orchestrate <em>your</em> agents. It connects them to a <strong class="color-primary">global network of autonomous agents worldwide</strong>, secured by smart contracts and Agent2Agent (A2A) open protocols.
+						</p>
+						
+						<div class="component-card my-8">
+							<h3 class="text-xl font-semibold mb-4 text-zinc-100">How it works:</h3>
+							<ul class="space-y-4 text-zinc-300">
+								<li class="flex items-start">
+									<span class="color-primary mr-3 mt-1">→</span>
+									<span><strong class="color-secondary">Your agent needs design work?</strong> It can hire another ResonantOS user's designer agent, automatically.</span>
+								</li>
+								<li class="flex items-start">
+									<span class="color-primary mr-3 mt-1">→</span>
+									<span><strong class="color-secondary">Your agent excels at something?</strong> List its services in the marketplace—earn when others hire it.</span>
+								</li>
+								<li class="flex items-start">
+									<span class="color-primary mr-3 mt-1">→</span>
+									<span><strong class="color-secondary">Spare compute power?</strong> Rent it out to the network—turn idle hardware into passive income.</span>
+								</li>
+								<li class="flex items-start">
+									<span class="color-primary mr-3 mt-1">→</span>
+									<span><strong class="color-secondary">Need specialized skills?</strong> Browse the agent marketplace and integrate capabilities you don't have.</span>
+								</li>
+							</ul>
+						</div>
+						
+						<p>
+							This is the <strong class="gradient-text">agent economy</strong>: a decentralized network where AI agents owned by <em>different people</em> collaborate, transact, and create value together.
+						</p>
+						
+						<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+							<div class="emergent-card text-center">
+								<div class="mb-3 flex justify-center">
+									<svg class="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+									</svg>
+								</div>
+								<h4 class="font-semibold color-primary mb-2">Service Discovery</h4>
+								<p class="text-sm text-zinc-400">Agents find and evaluate other agents automatically</p>
+							</div>
+							<div class="emergent-card text-center">
+								<div class="mb-3 flex justify-center">
+									<svg class="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+									</svg>
+								</div>
+								<h4 class="font-semibold color-primary mb-2">Agent-to-Agent Payments</h4>
+								<p class="text-sm text-zinc-400">Built-in Solana wallet for instant settlement</p>
+							</div>
+							<div class="emergent-card text-center">
+								<div class="mb-3 flex justify-center">
+									<svg class="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/>
+									</svg>
+								</div>
+								<h4 class="font-semibold color-primary mb-2">DAO Governance</h4>
+								<p class="text-sm text-zinc-400">Community-curated marketplace with reputation</p>
+							</div>
+						</div>
+						
+						<p class="mt-8 text-zinc-400 italic">
+							You control who your agents work with, what they charge, and what services they offer. The economy runs on your terms.
+						</p>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- Comparison Table -->
+		<section class="py-20 px-4 sm:px-6 lg:px-8">
+			<div class="max-w-6xl mx-auto">
+				<h2 class="text-4xl sm:text-5xl font-bold mb-6 tracking-tight">ResonantOS vs. OpenClaw</h2>
+				<p class="text-xl text-zinc-400 mb-12 max-w-3xl">
+					<strong class="text-zinc-200">ResonantOS is an operating system layer that runs <em>on top</em> of OpenClaw</strong>. Not a fork, not a replacement.
+				</p>
+				
+				<div class="grid grid-cols-1 gap-4 mb-8">
+					<div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6">
+						<h3 class="text-sm font-mono text-blue-400 mb-2 flex items-center gap-2"><svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Fully compatible</h3>
+						<p class="text-zinc-300">with OpenClaw ecosystem</p>
+					</div>
+					<div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6">
+						<h3 class="text-sm font-mono text-blue-400 mb-2 flex items-center gap-2"><svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> All OpenClaw updates</h3>
+						<p class="text-zinc-300">flow through automatically</p>
+					</div>
+					<div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6">
+						<h3 class="text-sm font-mono text-blue-400 mb-2 flex items-center gap-2"><svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> One-click installer</h3>
+						<p class="text-zinc-300">adds ResonantOS features</p>
+					</div>
+					<div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6">
+						<h3 class="text-sm font-mono text-blue-400 mb-2 flex items-center gap-2"><svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Open system</h3>
+						<p class="text-zinc-300">you can still use vanilla OpenClaw anytime</p>
+					</div>
+				</div>
+
+				<div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6 mb-12">
+					<p class="text-lg text-zinc-300 mb-4">
+						<strong class="text-zinc-100">Think of it as:</strong> macOS to Unix, or Ubuntu to Linux kernel. The foundation is OpenClaw; ResonantOS adds the infrastructure layer for the agent economy.
+					</p>
+					<p class="text-sm text-zinc-400 mb-4 italic">
+						(Future: ResonantOS components will also be available as standalone add-ons for any AI system—not just OpenClaw.)
+					</p>
+					<div class="space-y-2">
+						<p class="text-zinc-400"><strong class="text-zinc-200">Full Install:</strong> OpenClaw + ResonantOS (one package, new users)</p>
+						<p class="text-zinc-400"><strong class="text-zinc-200">Upgrade Install:</strong> ResonantOS layer only (for existing OpenClaw users)</p>
+					</div>
+				</div>
+
+				<!-- Comparison Table -->
+				<div class="overflow-x-auto">
+					<table class="w-full border-collapse">
+						<thead>
+							<tr class="border-b border-zinc-800">
+								<th class="text-left py-4 px-4 text-sm font-mono text-zinc-400">Feature</th>
+								<th class="text-center py-4 px-4 text-sm font-mono text-zinc-400">OpenClaw</th>
+								<th class="text-center py-4 px-4 text-sm font-mono text-zinc-400">ResonantOS</th>
+							</tr>
+						</thead>
+						<tbody class="text-sm">
+							<tr class="border-b border-zinc-800/50">
+								<td class="py-4 px-4 text-zinc-300">Multi-agent orchestration</td>
+								<td class="py-4 px-4 text-center text-green-400"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Core feature</span></td>
+								<td class="py-4 px-4 text-center text-blue-400"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> OpenClaw + enhanced coordination</span></td>
+							</tr>
+							<tr class="border-b border-zinc-800/50">
+								<td class="py-4 px-4 text-zinc-300">Telegram integration</td>
+								<td class="py-4 px-4 text-center text-green-400"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Single bot</span></td>
+								<td class="py-4 px-4 text-center text-blue-400"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> OpenClaw + multi-bot per agent</span></td>
+							</tr>
+							<tr class="border-b border-zinc-800/50">
+								<td class="py-4 px-4 text-zinc-300">Computer control</td>
+								<td class="py-4 px-4 text-center text-green-400"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Browser, shell, canvas</span></td>
+								<td class="py-4 px-4 text-center text-blue-400"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> OpenClaw + mobile control</span></td>
+							</tr>
+							<tr class="border-b border-zinc-800/50">
+								<td class="py-4 px-4 text-zinc-300">Memory system</td>
+								<td class="py-4 px-4 text-center text-green-400"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Basic context</span></td>
+								<td class="py-4 px-4 text-center text-blue-400"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> OpenClaw + Creative DNA + compression</span></td>
+							</tr>
+							<tr class="border-b border-zinc-800/50">
+								<td class="py-4 px-4 text-zinc-300">Security layer (Shield)</td>
+								<td class="py-4 px-4 text-center text-zinc-600"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg> None</span></td>
+								<td class="py-4 px-4 text-center text-blue-400"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Added: Permission validation + sandboxing</span></td>
+							</tr>
+							<tr class="border-b border-zinc-800/50">
+								<td class="py-4 px-4 text-zinc-300">Rule enforcement (Logician)</td>
+								<td class="py-4 px-4 text-center text-zinc-600"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg> None</span></td>
+								<td class="py-4 px-4 text-center text-blue-400"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Added: Cost checks + policy validation</span></td>
+							</tr>
+							<tr class="border-b border-zinc-800/50">
+								<td class="py-4 px-4 text-zinc-300">Self-healing (Guardian)</td>
+								<td class="py-4 px-4 text-center text-zinc-600"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg> Manual restart</span></td>
+								<td class="py-4 px-4 text-center text-blue-400"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Added: Auto-recovery + incident logs</span></td>
+							</tr>
+							<tr class="border-b border-zinc-800/50">
+								<td class="py-4 px-4 text-zinc-300">A2A protocols</td>
+								<td class="py-4 px-4 text-center text-zinc-600"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg> None</span></td>
+								<td class="py-4 px-4 text-center text-blue-400"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Added: Service discovery + payments</span></td>
+							</tr>
+							<tr class="border-b border-zinc-800/50">
+								<td class="py-4 px-4 text-zinc-300">Built-in crypto wallet</td>
+								<td class="py-4 px-4 text-center text-zinc-600"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg> None</span></td>
+								<td class="py-4 px-4 text-center text-blue-400"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Added: Solana integration</span></td>
+							</tr>
+							<tr class="border-b border-zinc-800/50">
+								<td class="py-4 px-4 text-zinc-300">DAO governance</td>
+								<td class="py-4 px-4 text-center text-zinc-600"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg> None</span></td>
+								<td class="py-4 px-4 text-center text-blue-400"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Added: Marketplace + voting</span></td>
+							</tr>
+							<tr class="border-b border-zinc-800/50">
+								<td class="py-4 px-4 text-zinc-300">Agent marketplace</td>
+								<td class="py-4 px-4 text-center text-zinc-600"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg> None</span></td>
+								<td class="py-4 px-4 text-center text-blue-400"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Coming soon</span></td>
+							</tr>
+							<tr class="border-b border-zinc-800/50">
+								<td class="py-4 px-4 text-zinc-300">Installation</td>
+								<td class="py-4 px-4 text-center text-amber-500"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg> CLI setup</span></td>
+								<td class="py-4 px-4 text-center text-blue-400"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> OpenClaw CLI + one-click DMG</span></td>
+							</tr>
+							<tr class="border-b border-zinc-800/50">
+								<td class="py-4 px-4 text-zinc-300">Dashboard</td>
+								<td class="py-4 px-4 text-center text-green-400"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> OpenClaw dashboard</span></td>
+								<td class="py-4 px-4 text-center text-blue-400"><span class="inline-flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> OpenClaw + Mission Control UI</span></td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+
+				<div class="mt-8 p-6 bg-blue-950/20 border border-blue-800/30 rounded-lg">
+					<p class="text-lg text-zinc-200">
+						<strong>Bottom line:</strong> ResonantOS = OpenClaw + security (Shield) + governance (Logician) + self-healing (Guardian) + memory (Creative DNA) + agent economy protocols.
+					</p>
+					<p class="text-zinc-400 mt-2">
+						You get everything OpenClaw offers, plus robust infrastructure for your agents AND the protocols to connect them to a global agent economy. No lock-in, no forking, no compatibility issues.
+					</p>
+				</div>
+			</div>
+		</section>
+
+		<!-- What Makes It Different -->
+		<section id="features" class="content-section py-12 scroll-mt-[25vh]">
+			<div class="glass-banner text-left">
+				<div class="banner-content prose-content" style="max-width: 1200px;">
+					<h2 class="text-4xl sm:text-5xl lg:text-6xl font-bold mb-12 tracking-tight">What Makes ResonantOS <span class="gradient-text">Different</span></h2>
+				
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+						<!-- Feature 1 -->
+						<div class="component-card hover:border-amber-500/40 transition-colors">
+							<div class="mb-4">
+								<svg class="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+								</svg>
+							</div>
+							<h3 class="text-xl font-semibold mb-4 color-secondary">Total Computer Control: AI That Does Real Work</h3>
+							<p class="text-zinc-300 mb-4 leading-relaxed">
+								Your agents don't just chat. They <strong class="color-primary">operate your computer</strong>:
+							</p>
+							<ul class="space-y-2 text-zinc-400 text-sm">
+								<li>• Automate browser workflows (research, form filling, data extraction)</li>
+								<li>• Execute shell commands (deploy code, manage files, run builds)</li>
+								<li>• Control paired devices (camera, screen recording, location)</li>
+								<li>• Render and interact with custom UIs</li>
+							</ul>
+							<p class="text-zinc-400 mt-4 text-sm italic">
+								Control from anywhere: Telegram integration means you command your agents from your phone.
+							</p>
+						</div>
+
+						<!-- Feature 2 -->
+						<div class="component-card hover:border-amber-500/40 transition-colors">
+							<div class="mb-4">
+								<svg class="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+								</svg>
+							</div>
+							<h3 class="text-xl font-semibold mb-4 color-secondary">Shield: Security Layer</h3>
+							<p class="text-zinc-300 mb-4 leading-relaxed">
+								Shield scans all inputs for prompt injection and jailbreak attempts (using YARA rules for deterministic detection). It also scans outputs to prevent sensitive data leaks: API keys, tokens, private keys, and credentials never leave your system accidentally.
+							</p>
+							<p class="color-primary font-medium">Input protection + output protection. Your agents can't be tricked or leak secrets.</p>
+						</div>
+
+						<!-- Feature 3 -->
+						<div class="component-card hover:border-amber-500/40 transition-colors">
+							<div class="mb-4">
+								<svg class="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/>
+								</svg>
+							</div>
+							<h3 class="text-xl font-semibold mb-4 color-secondary">Logician: Rule Enforcement Engine</h3>
+							<p class="text-zinc-300 mb-4 leading-relaxed">
+								Policy as code. Before any agent proposes recurring automation, Logician validates cost impact. Before delegating tasks, Logician checks mission briefs. Before executing sensitive actions, Logician verifies approval chains.
+							</p>
+							<p class="color-primary font-medium">AI that enforces its own rules, not just follows them.</p>
+						</div>
+
+						<!-- Feature 4 -->
+						<div class="component-card hover:border-amber-500/40 transition-colors">
+							<div class="mb-4">
+								<svg class="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+								</svg>
+							</div>
+							<h3 class="text-xl font-semibold mb-4 color-secondary">Guardian: Self-Healing Watchdog</h3>
+							<p class="text-zinc-300 mb-4 leading-relaxed">
+								Agents crash. Guardian brings them back. 30-second health checks, incident logs with pattern detection, crash reports sent to recovered agents. Auto-escalates after repeat failures. Your infrastructure fixes itself.
+							</p>
+							<p class="color-primary font-medium">Uptime without babysitting.</p>
+						</div>
+
+						<!-- Feature 5 -->
+						<div class="component-card hover:border-amber-500/40 transition-colors">
+							<div class="mb-4">
+								<svg class="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+								</svg>
+							</div>
+							<h3 class="text-xl font-semibold mb-4 color-secondary">A2A Protocols: Cross-Instance Collaboration</h3>
+							<p class="text-zinc-300 mb-4 leading-relaxed">
+								Your agents don't just work with each other. They can work with <strong class="color-primary">agents owned by other people</strong>. The A2A protocol stack enables:
+							</p>
+							<ul class="space-y-2 text-zinc-400 text-sm">
+								<li>• <strong class="color-secondary">Service discovery</strong>: Your agent finds another user's agent with the skills you need</li>
+								<li>• <strong class="color-secondary">Secure handoffs</strong>: Tasks and context pass between different ResonantOS instances</li>
+								<li>• <strong class="color-secondary">Automatic payment</strong>: Your agent pays their agent via built-in wallet (Solana)</li>
+								<li>• <strong class="color-secondary">Reputation tracking</strong>: Quality scores help agents choose reliable collaborators</li>
+							</ul>
+							<p class="color-primary font-medium mt-4">The infrastructure for a decentralized AI workforce.</p>
+						</div>
+
+						<!-- Feature 6 -->
+						<div class="component-card hover:border-amber-500/40 transition-colors">
+							<div class="mb-4">
+								<svg class="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+								</svg>
+							</div>
+							<h3 class="text-xl font-semibold mb-4 color-secondary">Creative DNA: Your Personal Profile</h3>
+							<p class="text-zinc-300 mb-4 leading-relaxed">
+								Your agents don't just know your tasks—they know <strong class="color-primary">you</strong>. Creative DNA is a comprehensive personal and professional profile: values, dreams, interests, desires, wins, and lessons learned. Memory compression keeps this deep profile alive across months of work without token bloat.
+							</p>
+							<p class="color-primary font-medium">Your AI team understands the complete picture of who you are and what you're building.</p>
+						</div>
+
+						<!-- Feature 7 -->
+						<div class="component-card hover:border-amber-500/40 transition-colors">
+							<div class="mb-4">
+								<svg class="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+								</svg>
+							</div>
+							<h3 class="text-xl font-semibold mb-4 color-secondary">Mission Control Dashboard</h3>
+							<p class="text-zinc-300 mb-4 leading-relaxed">
+								Central command for your agent fleet. Real-time status, token usage, task queues, incident logs. Guardian agent monitors health and auto-recovers failures. You stay in control without micromanaging.
+							</p>
+							<p class="color-primary font-medium">Built for creators who need transparency, not magic boxes.</p>
+						</div>
+
+						<!-- Feature 8 -->
+						<div class="component-card hover:border-amber-500/40 transition-colors">
+							<div class="mb-4">
+								<svg class="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+								</svg>
+							</div>
+							<h3 class="text-xl font-semibold mb-4 color-secondary">Cost Transparent + Crypto Native</h3>
+							<p class="text-zinc-300 mb-4 leading-relaxed">
+								See exactly what each task costs before it runs. Built-in wallet for agent payments. DAO governance for marketplace curation. No middlemen, no markup, no surprises.
+							</p>
+							<p class="color-primary font-medium">You own your infrastructure. Agents work for you, not for us.</p>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- Who It's For -->
+		<section class="py-20 px-4 sm:px-6 lg:px-8">
+			<div class="max-w-4xl mx-auto">
+				<h2 class="text-4xl sm:text-5xl lg:text-6xl font-bold mb-8 tracking-tight">Who is <span class="gradient-text">ResonantOS</span> For?</h2>
+				<div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-8">
+					<h3 class="text-2xl font-semibold mb-6 text-zinc-100">Creators who:</h3>
+					<ul class="space-y-4 text-lg text-zinc-300">
+						<li class="flex items-start">
+							<span class="text-blue-400 mr-3">•</span>
+							<span>Need a team but work solo</span>
+						</li>
+						<li class="flex items-start">
+							<span class="text-blue-400 mr-3">•</span>
+							<span>Value creative sovereignty over convenience</span>
+						</li>
+						<li class="flex items-start">
+							<span class="text-blue-400 mr-3">•</span>
+							<span>Want AI augmentation, not replacement</span>
+						</li>
+						<li class="flex items-start">
+							<span class="text-blue-400 mr-3">•</span>
+							<span>Refuse to be locked into walled gardens</span>
+						</li>
+						<li class="flex items-start">
+							<span class="text-blue-400 mr-3">•</span>
+							<span>Believe tools should serve vision, not extract value</span>
+						</li>
+					</ul>
+					
+					<h3 class="text-2xl font-semibold mt-10 mb-6 text-zinc-100">Not for:</h3>
+					<ul class="space-y-4 text-lg text-zinc-400">
+						<li class="flex items-start">
+							<span class="text-zinc-600 mr-3">•</span>
+							<span>Corporate workflows (this is for individuals)</span>
+						</li>
+						<li class="flex items-start">
+							<span class="text-zinc-600 mr-3">•</span>
+							<span>Casual users (you're building something serious)</span>
+						</li>
+						<li class="flex items-start">
+							<span class="text-zinc-600 mr-3">•</span>
+							<span>People who want "set it and forget it" (you stay in control)</span>
+						</li>
+					</ul>
+				</div>
+			</div>
+		</section>
+
+		<!-- Current Status -->
+		<section id="status" class="py-20 px-4 sm:px-6 lg:px-8 bg-zinc-900/30">
+			<div class="max-w-4xl mx-auto">
+				<h2 class="text-4xl sm:text-5xl lg:text-6xl font-bold mb-8 tracking-tight">Current <span class="gradient-text">Status</span></h2>
+				<div class="bg-amber-950/20 border border-amber-800/30 rounded-lg p-8 mb-8">
+					<div class="flex items-center gap-3 mb-6">
+						<svg class="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+						</svg>
+						<h3 class="text-2xl font-semibold text-amber-400">In Development</h3>
+					</div>
+					<p class="text-lg text-zinc-300 mb-6">We're building:</p>
+					<ul class="space-y-3 text-lg">
+						<li class="flex items-center gap-3">
+							<svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+							</svg>
+							<span class="text-zinc-300">Core multi-agent system (operational)</span>
+						</li>
+						<li class="flex items-center gap-3">
+							<svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+							</svg>
+							<span class="text-zinc-300">macOS installer (in progress)</span>
+						</li>
+						<li class="flex items-center gap-3">
+							<svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+							</svg>
+							<span class="text-zinc-300">DAO governance (spec phase)</span>
+						</li>
+						<li class="flex items-center gap-3">
+							<svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+							</svg>
+							<span class="text-zinc-300">Agent marketplace (design phase)</span>
+						</li>
+					</ul>
+				</div>
+				<div class="text-center">
+					<p class="text-xl text-zinc-400 mb-2">Target:</p>
+					<p class="text-3xl font-bold text-blue-400">Public beta March 2026</p>
+				</div>
+			</div>
+		</section>
+
+		<!-- Join the Journey -->
+		<section id="waitlist" class="py-20 px-4 sm:px-6 lg:px-8 scroll-mt-[25vh]">
+			<div class="max-w-4xl mx-auto">
+				<h2 class="text-4xl sm:text-5xl font-bold mb-12 tracking-tight text-center">Join the Journey</h2>
+				
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+					<!-- Stay Updated (Newsletter) -->
+					<div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-8 flex flex-col">
+						<div class="mb-4 flex justify-center">
+							<svg class="w-12 h-12 text-orange-400" fill="currentColor" viewBox="0 0 24 24">
+								<path d="M19.5 22.5a3 3 0 003-3v-8.174l-6.879 4.022a3 3 0 01-3.037.054L5.5 11.114v8.386a3 3 0 003 3h11z"/>
+								<path d="M1.5 9.589v-.745a3 3 0 011.578-2.641l7.5-4.039a3 3 0 012.844 0l7.5 4.039A3 3 0 0122.5 8.844v.745l-8.426 4.926a1.5 1.5 0 01-1.519.027L1.5 9.589z"/>
+							</svg>
+						</div>
+						<h3 class="text-2xl font-semibold mb-4 text-zinc-100 text-center">Stay Updated</h3>
+						<p class="text-zinc-300 mb-6 leading-relaxed text-center flex-grow">
+							Subscribe for early access and behind-the-scenes updates. You'll be first to know when we launch.
+						</p>
+						<a 
+							href="https://resonantos.com/" 
+							target="_blank"
+							rel="noopener noreferrer"
+							class="w-full bg-orange-600 hover:bg-orange-500 text-white font-semibold px-6 py-4 rounded-lg text-lg transition-colors text-center inline-block"
+						>
+							Subscribe to Newsletter
+						</a>
+					</div>
+
+					<!-- Founding Circle (Discord) -->
+					<div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-8 flex flex-col">
+						<div class="mb-4 flex justify-center">
+							<svg class="w-12 h-12 text-indigo-400" fill="currentColor" viewBox="0 0 24 24">
+								<path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+							</svg>
+						</div>
+						<h3 class="text-2xl font-semibold mb-4 text-zinc-100 text-center">Founding Circle</h3>
+						<p class="text-zinc-300 mb-6 leading-relaxed text-center flex-grow">
+							Join the Discord. Early members get direct input on the roadmap and shape where this goes.
+						</p>
+						<a 
+							href="https://discord.gg/MRESQnf4R4" 
+							target="_blank"
+							rel="noopener noreferrer"
+							class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-4 rounded-lg text-lg transition-colors text-center inline-block"
+						>
+							Join Discord
+						</a>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- FAQ -->
+		<section id="faq" class="py-20 px-4 sm:px-6 lg:px-8 bg-zinc-900/30 scroll-mt-[25vh]">
+			<div class="max-w-4xl mx-auto">
+				<h2 class="text-4xl sm:text-5xl font-bold mb-12 tracking-tight">FAQ</h2>
+				
+				<div class="space-y-6">
+					<!-- FAQ Item 1 -->
+					<details class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6 hover:border-zinc-700 transition-colors group">
+						<summary class="text-xl font-semibold text-zinc-100 cursor-pointer flex items-center justify-between">
+							<span>What's the cost?</span>
+							<span class="text-zinc-600 group-open:rotate-180 transition-transform">▼</span>
+						</summary>
+						<p class="mt-4 text-zinc-300 leading-relaxed">
+							ResonantOS routes through your preferred AI provider (paid separately). You bring your own API key. We don't mark up AI costs. Platform access will be free for beta, with DAO tokens for governance later.
+						</p>
+					</details>
+
+					<!-- FAQ Item 2 -->
+					<details class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6 hover:border-zinc-700 transition-colors group">
+						<summary class="text-xl font-semibold text-zinc-100 cursor-pointer flex items-center justify-between">
+							<span>When will it be ready?</span>
+							<span class="text-zinc-600 group-open:rotate-180 transition-transform">▼</span>
+						</summary>
+						<p class="mt-4 text-zinc-300 leading-relaxed">
+							Public beta targeted for <strong class="text-blue-400">March 2026</strong>. Waitlist gets priority access.
+						</p>
+					</details>
+
+					<!-- FAQ Item 3 -->
+					<details class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6 hover:border-zinc-700 transition-colors group">
+						<summary class="text-xl font-semibold text-zinc-100 cursor-pointer flex items-center justify-between">
+							<span>What platforms?</span>
+							<span class="text-zinc-600 group-open:rotate-180 transition-transform">▼</span>
+						</summary>
+						<p class="mt-4 text-zinc-300 leading-relaxed">
+							macOS first (installer coming soon). Linux and Windows planned for later in 2026.
+						</p>
+					</details>
+
+					<!-- FAQ Item 4 -->
+					<details class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6 hover:border-zinc-700 transition-colors group">
+						<summary class="text-xl font-semibold text-zinc-100 cursor-pointer flex items-center justify-between">
+							<span>Will this replace my current tools?</span>
+							<span class="text-zinc-600 group-open:rotate-180 transition-transform">▼</span>
+						</summary>
+						<p class="mt-4 text-zinc-300 leading-relaxed">
+							No. ResonantOS augments your workflow. You still use your favorite apps. Your agents just coordinate in the background.
+						</p>
+					</details>
+
+					<!-- FAQ Item 5 -->
+					<details class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6 hover:border-zinc-700 transition-colors group">
+						<summary class="text-xl font-semibold text-zinc-100 cursor-pointer flex items-center justify-between">
+							<span>Is this compatible with OpenClaw?</span>
+							<span class="text-zinc-600 group-open:rotate-180 transition-transform">▼</span>
+						</summary>
+						<p class="mt-4 text-zinc-300 leading-relaxed">
+							Yes, fully. ResonantOS runs <em>on top</em> of OpenClaw (not a fork). You get all OpenClaw updates automatically. You can switch between vanilla OpenClaw and ResonantOS anytime. Open system, no lock-in.
+						</p>
+					</details>
+
+					<!-- FAQ Item 6 -->
+					<details class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6 hover:border-zinc-700 transition-colors group">
+						<summary class="text-xl font-semibold text-zinc-100 cursor-pointer flex items-center justify-between">
+							<span>I already have OpenClaw. Can I upgrade?</span>
+							<span class="text-zinc-600 group-open:rotate-180 transition-transform">▼</span>
+						</summary>
+						<p class="mt-4 text-zinc-300 leading-relaxed">
+							Yes. The installer has two modes: <strong>Full Install</strong> (OpenClaw + ResonantOS) and <strong>Upgrade Install</strong> (ResonantOS layer only). Upgrade mode clones your existing OpenClaw setup and installs ResonantOS on the clone. Your original data stays untouched.
+						</p>
+					</details>
+
+					<!-- FAQ Item 7 -->
+					<details class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6 hover:border-zinc-700 transition-colors group">
+						<summary class="text-xl font-semibold text-zinc-100 cursor-pointer flex items-center justify-between">
+							<span>Is this open source?</span>
+							<span class="text-zinc-600 group-open:rotate-180 transition-transform">▼</span>
+						</summary>
+						<p class="mt-4 text-zinc-300 leading-relaxed">
+							Yes. Code will be released under a permissive license once we hit stable. We contribute improvements back to OpenClaw where appropriate.
+						</p>
+					</details>
+				</div>
+			</div>
+		</section>
+
+		</div><!-- End scroll-content -->
+
+		<!-- Footer -->
+		<footer class="relative z-20 py-16 px-4 sm:px-6 lg:px-8 border-t border-zinc-800 bg-zinc-950/90 backdrop-blur-xl">
+			<div class="max-w-6xl mx-auto">
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+					<div>
+						<h3 class="text-xl font-mono font-semibold mb-4">ResonantOS</h3>
+						<p class="text-zinc-400 text-sm leading-relaxed">
+							An operating system layer for OpenClaw, or your custom AI. Security, governance, and economic protocols. Your AI agents can participate in a global agent economy.
+						</p>
+					</div>
+					
+					<div>
+						<h4 class="text-sm font-semibold text-zinc-300 mb-4 uppercase tracking-wider">Resources</h4>
+						<ul class="space-y-3 text-sm">
+							<li><a href="#what-is" class="text-zinc-400 hover:text-zinc-100 transition-colors">About</a></li>
+							<li><a href="#features" class="text-zinc-400 hover:text-zinc-100 transition-colors">Features</a></li>
+							<li><a href="/whitepaper" class="text-zinc-400 hover:text-zinc-100 transition-colors">Whitepaper</a></li>
+							<li><a href="/dao" class="text-zinc-400 hover:text-zinc-100 transition-colors">DAO</a></li>
+							<li><a href="#faq" class="text-zinc-400 hover:text-zinc-100 transition-colors">FAQ</a></li>
+							<li><a href="https://discord.gg/MRESQnf4R4" target="_blank" rel="noopener noreferrer" class="text-zinc-400 hover:text-zinc-100 transition-colors">Discord</a></li>
+							<li><span class="text-zinc-600">GitHub (coming soon)</span></li>
+						</ul>
+					</div>
+					
+					<div>
+						<h4 class="text-sm font-semibold text-zinc-300 mb-4 uppercase tracking-wider">Contact</h4>
+						<ul class="space-y-3 text-sm">
+							<li><a href="mailto:hello@resonantos.com" class="text-zinc-400 hover:text-zinc-100 transition-colors">hello@resonantos.com</a></li>
+							<li><a href="https://twitter.com/resonantos" target="_blank" rel="noopener noreferrer" class="text-zinc-400 hover:text-zinc-100 transition-colors">@ResonantOS</a></li>
+						</ul>
+					</div>
+				</div>
+				
+				<div class="pt-8 border-t border-zinc-800 text-center text-sm text-zinc-500">
+					<p>© 2026 ResonantOS. Built by creators, for creators.</p>
+				</div>
+			</div>
+		</footer>
+
+		<style>
+			/* Color Theme - Seasonal Transition (matches whitepaper) */
+			:root {
+				--color-primary: #10b981;
+				--color-secondary: #d97706;
+				--color-accent-1: #34d399;
+				--color-accent-2: #92400e;
+				--color-warning: #ea580c;
+				--color-tertiary: #78350f;
+				font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+			}
+
+			/* Color utility classes */
+			.color-primary { color: var(--color-primary); }
+			.color-secondary { color: var(--color-secondary); }
+			.color-accent-1 { color: var(--color-accent-1); }
+			.color-accent-2 { color: var(--color-accent-2); }
+			.color-warning { color: var(--color-warning); }
+
+			.gradient-text {
+				background: linear-gradient(to right, var(--color-primary), var(--color-secondary));
+				-webkit-background-clip: text;
+				-webkit-text-fill-color: transparent;
+				background-clip: text;
+			}
+			
+			.font-mono {
+				font-family: 'JetBrains Mono', monospace;
+			}
+
+			.font-display {
+				font-family: 'DM Sans', system-ui, sans-serif;
+			}
+			
+			html {
+				scroll-behavior: smooth;
+			}
+			
+			/* Giant hero text - 17vw for ~80-90% page width */
+			.hero-text {
+				font-size: 18vw;
+				line-height: 0.9;
+			}
+			
+			@media (min-width: 768px) {
+				.hero-text {
+					font-size: 17vw;
+				}
+			}
+			
+			/* Tagline - matches logo width */
+			.tagline-text {
+				font-size: 3.5vw;
+				letter-spacing: 0.3em;
+				text-transform: uppercase;
+			}
+			
+			@media (min-width: 768px) {
+				.tagline-text {
+					font-size: 2.8vw;
+					letter-spacing: 0.35em;
+				}
+			}
+			
+			/* Animated gradient orbs - Free-floating across entire page */
+			.gradient-orb {
+				position: absolute;
+				border-radius: 50%;
+				filter: blur(80px);
+				opacity: 0.5;
+				will-change: transform, filter;
+				pointer-events: none;
+			}
+			
+			.gradient-orb-1 {
+				width: 600px;
+				height: 600px;
+				background: linear-gradient(135deg, #10b981, #34d399);
+				top: 10%;
+				left: 10%;
+			}
+			
+			.gradient-orb-2 {
+				width: 500px;
+				height: 500px;
+				background: linear-gradient(135deg, #34d399, #6ee7b7);
+				top: 60%;
+				right: 10%;
+			}
+			
+			.gradient-orb-3 {
+				width: 400px;
+				height: 400px;
+				background: linear-gradient(135deg, #2dd4bf, #10b981);
+				top: 30%;
+				left: 40%;
+			}
+			
+			.gradient-orb-4 {
+				width: 450px;
+				height: 450px;
+				background: linear-gradient(135deg, #059669, #10b981);
+				top: 80%;
+				left: 20%;
+				opacity: 0.4;
+			}
+			
+			/* Glass Banners (matches whitepaper) */
+			.glass-banner {
+				background: rgba(0, 0, 0, 0.2);
+				backdrop-filter: blur(20px);
+				-webkit-backdrop-filter: blur(20px);
+				border-top: 1px solid rgba(255, 255, 255, 0.03);
+				border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+				width: 100%;
+				padding: 2.5rem 2rem;
+			}
+			
+			.glass-banner .banner-content {
+				max-width: 1000px;
+				margin: 0 auto;
+				text-align: center;
+			}
+			
+			.glass-banner.text-left .banner-content {
+				text-align: left;
+			}
+
+			.prose-content {
+				opacity: 1 !important;
+				filter: none !important;
+			}
+			
+			/* Glass Cards */
+			.glass-card {
+				background: rgba(0, 0, 0, 0.3);
+				backdrop-filter: blur(40px);
+				-webkit-backdrop-filter: blur(40px);
+				border: 1px solid rgba(255, 255, 255, 0.08);
+				border-radius: 24px;
+				padding: 3rem;
+				max-width: 800px;
+				margin: 0 auto;
+			}
+
+			/* Component Cards */
+			.component-card {
+				padding: 1.5rem;
+				background: rgba(212, 165, 116, 0.08);
+				border: 1px solid rgba(212, 165, 116, 0.25);
+				border-radius: 12px;
+			}
+
+			.emergent-card {
+				padding: 1.5rem;
+				background: linear-gradient(to bottom right, rgba(134, 166, 124, 0.1), rgba(212, 165, 116, 0.1));
+				border: 1px solid rgba(134, 166, 124, 0.25);
+				border-radius: 12px;
+			}
+			
+			details summary {
+				list-style: none;
+			}
+			
+			details summary::-webkit-details-marker {
+				display: none;
+			}
+			
+			/* Content sections */
+			.content-section {
+				opacity: 1;
+				transform: translateY(0);
+				transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+			}
+
+			.content-section.visible {
+				opacity: 1;
+				transform: translateY(0);
+			}
+			
+			/* Fixed viewport blur zones */
+			.blur-zone {
+				position: fixed;
+				left: 0;
+				right: 0;
+				pointer-events: none;
+				z-index: 30;
+				backdrop-filter: blur(8px);
+				-webkit-backdrop-filter: blur(8px);
+			}
+			
+			.blur-zone-top {
+				top: 0;
+				height: 25vh;
+				background: linear-gradient(to bottom, 
+					rgba(9, 9, 11, 0.6) 0%, 
+					rgba(9, 9, 11, 0.3) 50%,
+					transparent 100%);
+				mask-image: linear-gradient(to bottom, black 0%, black 50%, transparent 100%);
+				-webkit-mask-image: linear-gradient(to bottom, black 0%, black 50%, transparent 100%);
+			}
+			
+			.blur-zone-bottom {
+				bottom: 0;
+				height: 25vh;
+				background: linear-gradient(to top, 
+					rgba(9, 9, 11, 0.6) 0%, 
+					rgba(9, 9, 11, 0.3) 50%,
+					transparent 100%);
+				mask-image: linear-gradient(to top, black 0%, black 50%, transparent 100%);
+				-webkit-mask-image: linear-gradient(to top, black 0%, black 50%, transparent 100%);
+			}
+		</style>
+
+		<!-- GSAP + Lenis scroll animations -->
+		<script>
+			// @ts-nocheck
+			import Lenis from 'lenis';
+			import gsap from 'gsap';
+			import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+			gsap.registerPlugin(ScrollTrigger);
+
+			// Initialize Lenis smooth scroll
+			const lenis = new Lenis({
+				duration: 1.2,
+				easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+			});
+
+			function raf(time) {
+				lenis.raf(time);
+				requestAnimationFrame(raf);
+			}
+			requestAnimationFrame(raf);
+
+			lenis.on('scroll', ScrollTrigger.update);
+			gsap.ticker.add((time) => lenis.raf(time * 1000));
+			gsap.ticker.lagSmoothing(0);
+
+			// Hero blur on scroll
+			const heroLogo = document.getElementById('hero-logo');
+			const heroSection = document.getElementById('hero-section');
+			
+			if (heroLogo && heroSection) {
+				gsap.to(heroLogo, {
+					scrollTrigger: {
+						trigger: heroSection,
+						start: 'top top',
+						end: 'bottom top',
+						scrub: 1,
+					},
+					filter: 'blur(20px)',
+					opacity: 0.3,
+				});
+			}
+
+			// ========================================
+			// FREE-FLOATING ORBS - Move around the entire page
+			// ========================================
+			const orbs = document.querySelectorAll('.gradient-orb');
+			const vw = window.innerWidth;
+			const vh = window.innerHeight;
+			
+			// Create continuous floating animation for each orb
+			function animateOrb(orb, index) {
+				// Random duration between 8-15 seconds for variety
+				const duration = 8 + Math.random() * 7;
+				
+				// Generate random target position across the entire viewport
+				const getRandomPos = () => ({
+					x: (Math.random() - 0.5) * vw * 1.5,
+					y: (Math.random() - 0.5) * vh * 2,
+					scale: 0.6 + Math.random() * 0.8,
+					rotation: Math.random() * 360,
+				});
+				
+				// Create infinite timeline
+				const tl = gsap.timeline({ repeat: -1, yoyo: true });
+				
+				// Add multiple waypoints for organic movement
+				for (let i = 0; i < 4; i++) {
+					const pos = getRandomPos();
+					tl.to(orb, {
+						x: pos.x,
+						y: pos.y,
+						scale: pos.scale,
+						rotation: pos.rotation,
+						duration: duration,
+						ease: 'sine.inOut',
+					});
+				}
+				
+				// Offset start time for each orb
+				tl.progress(index * 0.25);
+			}
+			
+			orbs.forEach((orb, i) => animateOrb(orb, i));
+			
+			// Also add scroll-based color transition (emerald → amber as you scroll)
+			const orb1 = document.querySelector('.gradient-orb-1');
+			const orb2 = document.querySelector('.gradient-orb-2');
+			const orb3 = document.querySelector('.gradient-orb-3');
+			const orb4 = document.querySelector('.gradient-orb-4');
+			
+			function addColorTransition(orb, autumnGradient) {
+				if (!orb) return;
+				gsap.to(orb, {
+					scrollTrigger: {
+						trigger: document.body,
+						start: 'top top',
+						end: 'bottom bottom',
+						scrub: 2,
+					},
+					backgroundImage: autumnGradient,
+				});
+			}
+			
+			addColorTransition(orb1, 'linear-gradient(135deg, #d97706, #92400e)');
+			addColorTransition(orb2, 'linear-gradient(135deg, #b45309, #78350f)');
+			addColorTransition(orb3, 'linear-gradient(135deg, #ea580c, #9a3412)');
+			addColorTransition(orb4, 'linear-gradient(135deg, #a16207, #713f12)');
+
+			// Content sections reveal
+			const sections = document.querySelectorAll('.content-section');
+			sections.forEach((section) => {
+				ScrollTrigger.create({
+					trigger: section,
+					start: 'top 80%',
+					onEnter: () => section.classList.add('visible'),
+				});
+			});
+		</script>
+	</body>
+</html>

@@ -1,0 +1,1316 @@
+{% extends "base.html" %}
+
+{% block title %}Overview - ResonantOS Dashboard{% endblock %}
+{% block page_title %}Overview{% endblock %}
+
+{% block content %}
+<!-- Gateway restart moved to global header -->
+
+<!-- Metrics Cards -->
+<div class="metrics-grid">
+    <!-- Channels Card -->
+    <div class="metric-card">
+        <div class="metric-header">
+            <span class="metric-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+            <span class="metric-title">Channels</span>
+            <span class="card-status-dots" style="margin-left:auto;display:flex;gap:6px;align-items:center;">
+                <span class="svc-dot" id="dot-telegram" title="Telegram" style="width:6px;height:6px;border-radius:50%;background:var(--text-muted);"></span>
+            </span>
+        </div>
+        <div class="metric-details" id="channelsInfo">
+            <div class="detail-row muted">Loading...</div>
+        </div>
+    </div>
+
+    <!-- Agents Card -->
+    <div class="metric-card compact">
+        <div class="metric-header">
+            <span class="metric-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+            <span class="metric-title">Agents</span>
+            <span class="metric-inline-value" id="agentCount">-</span>
+            <span class="svc-dot" id="dot-heartbeat" title="Heartbeat" style="margin-left:6px;width:6px;height:6px;border-radius:50%;background:var(--text-muted);"></span>
+        </div>
+        <div class="metric-details" id="agentDetails">
+            <div class="detail-row muted">Loading...</div>
+        </div>
+    </div>
+
+    <div class="metric-stack">
+        <!-- Sessions Card -->
+        <div class="metric-card compact">
+            <div class="metric-header">
+                <span class="metric-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
+                <span class="metric-title">Sessions</span>
+                <span class="metric-inline-value" id="sessionCount">-</span>
+            </div>
+            <div class="metric-details" id="sessionDetails">
+                <div class="detail-row muted">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Knowledge Base Card -->
+        <div class="metric-card compact knowledge-base-card">
+            <div class="metric-header">
+                <span class="metric-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4a2 2 0 0 1 2-2h6.5a2 2 0 0 1 1.6.8L14 5h6a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z"/><path d="M12 7h8"/><path d="M12 11h8"/><path d="M12 15h6"/></svg></span>
+                <span class="metric-title">Knowledge Base</span>
+            </div>
+            <div class="metric-details">
+                <div class="detail-row"><span>Embedding</span><span>nomic-embed-text</span></div>
+                <div class="detail-row"><span>Provider</span><span>Local Ollama</span></div>
+                <a href="/settings#knowledge" class="kb-link">Manage in Settings →</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Service status dots integrated into metric cards -->
+
+<!-- Memory & Context Health Panel -->
+<div class="card memory-health-card">
+    <div class="card-header">
+        <h2 class="card-title">Memory & Context Health</h2>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            
+            <span class="card-subtitle" id="memoryTurn"></span>
+        </div>
+    </div>
+    <div class="card-content">
+        <!-- Context Window Bar (Mac Storage Style) -->
+        <div class="storage-bar-container">
+            <div class="storage-bar-header">
+                <span class="storage-title">Context Window</span>
+                <span class="storage-usage" id="contextUsage">--</span>
+            </div>
+            <div class="storage-bar" id="storageBar">
+                <div class="storage-seg" id="segPrompt" title="System Prompt"></div>
+                <div class="storage-seg" id="segWorkspace" title="Workspace Files"></div>
+                <div class="storage-seg" id="segSSoT" title="R-Memory SSoTs"></div>
+                <div class="storage-seg" id="segConvo" title="Live Conversation"></div>
+                <div class="storage-seg" id="segHeaders" title="Memory Headers"></div>
+                <div class="storage-seg" id="segLCM" title="LCM Summaries"></div>
+                
+                <!-- Threshold markers -->
+                
+                
+            </div>
+            <div class="storage-legend">
+                <span class="legend-chip"><span class="ldot seg-prompt"></span> System Prompt <span id="legendPrompt">-</span></span>
+                <span class="legend-chip"><span class="ldot seg-workspace"></span> Workspace Files <span id="legendWorkspace">-</span></span>
+                <span class="legend-chip"><span class="ldot seg-ssot"></span> SSoT Docs <span id="legendSSoT">-</span></span>
+                <span class="legend-chip"><span class="ldot seg-convo"></span> Conversation <span id="legendConvo">-</span></span>
+                <span class="legend-chip"><span class="ldot seg-headers"></span> Headers <span id="legendHeaders">-</span></span>
+                <span class="legend-chip"><span class="ldot seg-lcm"></span> LCM Summaries <span id="legendLCM">-</span></span>
+                
+                <span class="legend-chip"><span class="ldot seg-free"></span> Free <span id="legendFree">-</span></span>
+            </div>
+            <!-- Injected SSoT doc list (collapsible) -->
+            <div id="ssotDocList" style="display:none; margin-top:8px; padding:8px 12px; background:var(--bg-primary); border-radius:8px; border:1px solid var(--border); font-size:12px;">
+                <div style="color:var(--text-secondary); margin-bottom:4px; font-weight:500;">Injected SSoT Documents</div>
+                <div id="ssotDocItems" style="display:flex; flex-wrap:wrap; gap:4px;"></div>
+            </div>
+        </div>
+
+        <!-- Subsystem Status Lights -->
+        <div class="subsystem-grid" id="subsystemGrid">
+            <div class="subsystem-item loading">
+                <span class="sub-dot"></span>
+                <span class="sub-label">Loading...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- LCM (Lossless Context Management) Status Panel -->
+<div class="card" style="margin-bottom:20px;" id="lcmPanel">
+    <div class="card-header">
+        <h2 class="card-title">LCM Status</h2>
+        <button type="button" class="btn-small" onclick="refreshLCM()" style="padding:4px 12px;font-size:12px;">Refresh</button>
+    </div>
+    <div class="card-content">
+        <div id="lcmStatusContent">
+            <div style="color:var(--text-secondary);">Loading LCM status...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+function refreshLCM() {
+    fetch('/api/lcm/status')
+        .then(r => r.json())
+        .then(data => {
+            const el = document.getElementById('lcmStatusContent');
+            if (!data.connected) {
+                el.innerHTML = '<div style="color:var(--text-muted);"><span style="color:#f59e0b;">●</span> Not connected: ' + 
+                    (data.message || data.error || 'Database not initialized') + '</div>';
+                return;
+            }
+            
+            let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px;">';
+            html += '<div><div style="font-size:11px;color:var(--text-secondary);">Conversations</div>';
+            html += '<div style="font-size:20px;font-weight:600;">' + data.conversations + '</div></div>';
+            html += '<div><div style="font-size:11px;color:var(--text-secondary);">Messages</div>';
+            html += '<div style="font-size:20px;font-weight:600;">' + data.messages + '</div></div>';
+            
+            // Summaries by depth - summaryByDepth is an object like {"0": 14}
+            const summaryByDepth = data.summaryByDepth || {};
+            const d0 = summaryByDepth['0'] || 0;
+            const d1 = summaryByDepth['1'] || 0;
+            const d2plus = Object.keys(summaryByDepth)
+                .filter(k => parseInt(k) >= 2)
+                .reduce((sum, k) => sum + summaryByDepth[k], 0);
+            
+            html += '<div><div style="font-size:11px;color:var(--text-secondary);">Leaf Summaries (d0)</div>';
+            html += '<div style="font-size:20px;font-weight:600;">' + d0 + '</div></div>';
+            html += '<div><div style="font-size:11px;color:var(--text-secondary);">Condensed (d1+)</div>';
+            html += '<div style="font-size:20px;font-weight:600;">' + (d1 + d2plus) + '</div></div>';
+            html += '</div>';
+            
+            // Context composition bar
+            const ctx = data.contextComposition || {};
+            const totalItems = ctx.totalItems || 0;
+            if (totalItems > 0) {
+                html += '<div style="margin-bottom:12px;">';
+                html += '<div style="font-size:11px;color:var(--text-secondary);margin-bottom:4px;">Context Composition (' + totalItems + ' items)</div>';
+                html += '<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--bg-secondary);">';
+                
+                const msgItems = ctx.messages || 0;
+                const sumItems = ctx.summaries || 0;
+                const msgPct = (ctx.messagePct || 0).toFixed(1);
+                const sumPct = (ctx.summaryPct || 0).toFixed(1);
+                
+                if (msgItems > 0) {
+                    html += '<div style="width:' + msgPct + '%;background:#3b82f6;" title="Messages: ' + msgItems + '"></div>';
+                }
+                if (sumItems > 0) {
+                    html += '<div style="width:' + sumPct + '%;background:#10b981;" title="Summaries: ' + sumItems + '"></div>';
+                }
+                html += '</div>';
+                html += '<div style="display:flex;gap:12px;font-size:10px;margin-top:4px;">';
+                html += '<span><span style="display:inline-block;width:8px;height:8px;background:#3b82f6;border-radius:2px;"></span> Messages (' + msgPct + '%)</span>';
+                html += '<span><span style="display:inline-block;width:8px;height:8px;background:#10b981;border-radius:2px;"></span> Summaries (' + sumPct + '%)</span>';
+                html += '</div>';
+                html += '</div>';
+            }
+            
+            // Total summary tokens
+            html += '<div style="margin-top:12px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);">';
+            html += 'Total Summary Tokens: ' + (data.totalSummaryTokens || 0).toLocaleString() + '</div>';
+            
+            el.innerHTML = html;
+        })
+        .catch(err => {
+            document.getElementById('lcmStatusContent').innerHTML = 
+                '<div style="color:#ef4444;">Error loading LCM status: ' + err + '</div>';
+        });
+}
+
+// Auto-refresh on load
+document.addEventListener('DOMContentLoaded', refreshLCM);
+</script>
+
+
+<!-- Token Savings & Cost Panel (full-width) -->
+<div class="card" style="margin-bottom:20px;">
+    <div class="card-header">
+        <h2 class="card-title">Cost Operations Center</h2>
+        <span class="card-subtitle" id="tsWindowLabel">Last 7 days</span>
+    </div>
+    <div class="card-content">
+        <div class="ts-grid-2col ts-grid-even">
+            <div class="ts-panel">
+                <div class="ts-panel-head">
+                    <h3>Per-Component Cost Breakdown</h3>
+                    <span class="muted" id="tsComponentSource">sorted by cost</span>
+                </div>
+                <div class="ts-table-wrap">
+                    <table class="ts-table" id="tsComponentTable">
+                        <thead>
+                            <tr>
+                                <th><button type="button" class="ts-sort" data-sort="component">Component</button></th>
+                                <th><button type="button" class="ts-sort" data-sort="model">Model</button></th>
+                                <th class="num"><button type="button" class="ts-sort" data-sort="inputTokens">Input Tokens</button></th>
+                                <th class="num"><button type="button" class="ts-sort" data-sort="outputTokens">Output Tokens</button></th>
+                                <th class="num"><button type="button" class="ts-sort" data-sort="cost">Cost</button></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tsComponentTableBody">
+                            <tr><td colspan="5" class="muted">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="ts-top-card ts-card-primary">
+                <div class="ts-label">💰 What You'd Pay at API Rates (<span id="tsPeriodLabel">7 days</span>)</div>
+                <div id="tsCostActual" class="ts-value ts-value-primary">--</div>
+                <div id="tsProjected" class="ts-source" style="color:#f0b429; font-weight:600;">≈ --/month projected</div>
+                <div id="tsSourceActual" class="ts-source">source: gateway usage-cost (real token counts × published API prices)</div>
+            </div>
+        </div>
+
+        <div class="ts-grid-2col ts-grid-even" style="margin-top:14px;">
+            <div class="ts-panel">
+                <div class="ts-panel-head">
+                    <h3>Pricing Reference (Editable)</h3>
+                    <span class="muted">auto-discovered from system config · <span style="color:var(--success)">●</span> active <span style="color:var(--text-muted)">○</span> inactive</span>
+                </div>
+                <div class="ts-table-wrap">
+                    <table class="ts-table" id="tsPricingTable">
+                        <thead>
+                            <tr>
+                                <th>Model</th>
+                                <th class="num">Input $/1M</th>
+                                <th class="num">Output $/1M</th>
+                                <th class="num">Cache Read $/1M</th>
+                                <th class="num">Cache Write $/1M</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tsPricingBody">
+                            <tr><td colspan="5" class="muted">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="ts-assumptions">
+                    <label>Avg output tokens/call
+                        <input id="tsAssumeAvgOutput" type="number" min="1" step="1">
+                    </label>
+                    <label>Subagent share
+                        <input id="tsAssumeSubagentShare" type="number" min="0" max="0.95" step="0.01">
+                    </label>
+                    <button id="tsSavePricing" class="btn btn-sm btn-outline" type="button">Save Pricing</button>
+                    <span id="tsPricingStatus" class="muted"></span>
+                </div>
+            </div>
+
+            <div class="ts-panel">
+                <div class="ts-panel-head">
+                    <h3>Daily Cost (Stacked)</h3>
+                    <span class="muted" id="tsChartSource">source: gateway daily cost + component shares</span>
+                </div>
+                <div id="tsDailyChart" class="ts-chart">
+                    <div class="muted">Loading chart...</div>
+                </div>
+                <div id="tsDailyLegend" class="ts-legend"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Toast notifications */
+.toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    padding: 12px 24px; border-radius: 8px; color: #fff; font-size: 14px;
+    z-index: 10000; animation: toastIn .3s ease, toastOut .3s ease 2.7s forwards;
+    pointer-events: none;
+}
+.toast.success { background: var(--success, #10b981); }
+.toast.error { background: var(--network-mainnet, #ef4444); }
+.toast.info { background: var(--res-mint, #3b82f6); }
+@keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+@keyframes toastOut { from { opacity: 1; } to { opacity: 0; } }
+
+/* Gateway Banner */
+.gateway-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    margin-bottom: 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+.gateway-banner.connected { border-color: var(--success); }
+.gateway-banner.disconnected { border-color: var(--error); background: rgba(248,113,113,0.05); }
+
+.gw-status { display: flex; align-items: center; gap: 10px; }
+.gw-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--text-muted);
+}
+.gateway-banner.connected .gw-dot { background: var(--success); animation: pulse 2s infinite; }
+.gateway-banner.disconnected .gw-dot { background: var(--error); }
+
+.gw-label { font-weight: 600; font-size: 14px; }
+.gw-details { font-size: 12px; color: var(--text-secondary); margin-left: auto; }
+.gw-restart-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; background: var(--bg-tertiary); border: 1px solid var(--border);
+    border-radius: var(--radius); color: var(--text-secondary); cursor: pointer;
+    font-size: 12px; transition: all 0.2s;
+}
+.gw-restart-btn:hover { background: var(--bg-hover); border-color: var(--border-light); color: var(--text-primary); }
+
+/* Services Strip */
+.services-strip { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.service-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; background: var(--bg-secondary);
+    border: 1px solid var(--border); border-radius: 20px;
+    font-size: 12px; color: var(--text-secondary);
+}
+.service-chip .svc-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); }
+.service-chip.running .svc-dot { background: var(--success); }
+.service-chip.error .svc-dot { background: var(--error); }
+.service-chip.off .svc-dot { background: var(--text-muted); }
+
+.muted { color: var(--text-muted); }
+
+/* Compact metric cards */
+.metric-card.compact .metric-header { margin-bottom: 4px; }
+.metric-inline-value {
+    margin-left: auto;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.metric-stack {
+    display: grid;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+.knowledge-base-card .metric-details { gap: 6px; }
+.kb-link {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--success);
+    text-decoration: none;
+    font-weight: 600;
+}
+.kb-link:hover { text-decoration: underline; }
+
+/* Memory Health Panel */
+.memory-health-card { margin-bottom: 20px; }
+
+/* Mac Storage Style Bar */
+.storage-bar-container { margin-bottom: 24px; }
+.storage-bar-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.storage-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.storage-usage { font-size: 13px; color: var(--text-secondary); }
+
+.storage-bar {
+    position: relative; height: 20px; background: var(--bg-tertiary);
+    border-radius: 4px; display: flex; overflow: visible;
+    border: 1px solid var(--border);
+}
+.storage-seg {
+    height: 100%; transition: width 0.5s; min-width: 0;
+}
+/* Segment colours */
+#segPrompt { background: #f87171; border-radius: 3px 0 0 3px; }
+#segWorkspace { background: #fb923c; }
+#segSSoT { background: #60a5fa; }
+#segConvo { background: #fbbf24; }
+#segHeaders { background: #a78bfa; }
+#segLCM { background: #f472b6; }
+
+/* Threshold markers */
+.threshold-marker {
+    position: absolute; top: -4px; bottom: -4px; width: 2px;
+    background: rgba(255,255,255,0.6); z-index: 2; pointer-events: none;
+}
+.threshold-marker .threshold-label {
+    position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+    font-size: 9px; color: var(--text-muted); white-space: nowrap;
+    background: var(--bg-secondary); padding: 1px 4px; border-radius: 3px;
+    border: 1px solid var(--border);
+}
+.marker-evict { background: rgba(248,113,113,0.7); }
+
+.storage-legend {
+    display: flex; gap: 14px; margin-top: 8px; font-size: 11px;
+    color: var(--text-muted); flex-wrap: wrap;
+}
+.legend-chip { display: flex; align-items: center; gap: 4px; }
+.ldot { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+.ldot.seg-prompt { background: #f87171; }
+.ldot.seg-workspace { background: #fb923c; }
+.ldot.seg-ssot { background: #60a5fa; }
+.ldot.seg-convo { background: #fbbf24; }
+.ldot.seg-headers { background: #a78bfa; }
+.seg-lcm { background: #f472b6; }
+.ldot.seg-free { background: var(--bg-tertiary); border: 1px solid var(--border); }
+
+.subsystem-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px;
+}
+.subsystem-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px 16px; background: var(--bg-tertiary); border-radius: var(--radius);
+    border: 1px solid var(--border); transition: border-color 0.2s;
+}
+.subsystem-item:hover { border-color: var(--border-light); }
+
+.sub-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 3px; flex-shrink: 0; background: var(--text-muted); }
+.subsystem-item.ok .sub-dot { background: var(--success); }
+.subsystem-item.warning .sub-dot { background: var(--warning); }
+.subsystem-item.error .sub-dot { background: var(--error); }
+.subsystem-item.idle .sub-dot { background: var(--text-muted); }
+
+.sub-info { display: flex; flex-direction: column; gap: 2px; }
+.sub-label { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+.sub-detail { font-size: 11px; color: var(--text-muted); }
+.sub-time { font-size: 10px; color: var(--text-muted); opacity: 0.7; }
+
+/* Cost Operations Center */
+.ts-top-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.ts-top-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+}
+.ts-top-card.ts-card-primary {
+    border-color: #f0b429;
+    border-width: 2px;
+    background: linear-gradient(135deg, rgba(240,180,41,0.06) 0%, var(--bg-primary) 100%);
+}
+.ts-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.ts-value {
+    margin-top: 6px;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.ts-value-primary { color: #f0b429; font-size: 28px; } /* Amber/gold — YOUR number, what you actually pay */
+.ts-value-success { color: var(--success); opacity: 0.8; } /* Green but subdued — savings (good news, secondary) */
+.ts-value-error { color: var(--error); } /* Red — the scary "without compression" number */
+.ts-source {
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+.ts-grid-2col {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 12px;
+}
+.ts-grid-2col.ts-grid-even {
+    grid-template-columns: 1fr 1fr;
+}
+.ts-panel {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+}
+.ts-panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+    gap: 8px;
+}
+.ts-panel-head h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.ts-table-wrap { overflow-x: auto; }
+.ts-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+.ts-table th, .ts-table td {
+    padding: 8px 6px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    white-space: nowrap;
+}
+.ts-table th.num, .ts-table td.num { text-align: right; }
+.ts-sort {
+    background: transparent;
+    border: 0;
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    padding: 0;
+}
+.ts-sort.active { color: var(--text-primary); }
+.ts-table input {
+    width: 88px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 6px;
+    padding: 3px 5px;
+    font-size: 12px;
+    text-align: right;
+}
+.ts-est {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 5px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--warning);
+    font-size: 10px;
+}
+.ts-chart {
+    min-height: 190px;
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    padding: 8px 2px 2px 2px;
+}
+.ts-bar-col {
+    flex: 1;
+    min-width: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+.ts-bar {
+    width: 100%;
+    max-width: 36px;
+    min-height: 8px;
+    height: 160px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--bg-tertiary);
+}
+.ts-seg { width: 100%; }
+.ts-bar-label {
+    font-size: 10px;
+    color: var(--text-muted);
+}
+.ts-legend {
+    display: flex;
+    gap: 8px 12px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+.ts-legend-item {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+.ts-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+}
+.ts-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+.ts-stat {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    padding: 10px;
+}
+.ts-stat .k {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+.ts-stat .v {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.ts-assumptions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+.ts-assumptions label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+.ts-assumptions input {
+    width: 84px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 6px;
+    padding: 4px 6px;
+}
+
+@media (max-width: 1200px) {
+    .ts-grid-2col { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+    .ts-stats-grid { grid-template-columns: 1fr 1fr; }
+    .metric-stack { grid-template-rows: unset; }
+}
+
+/* Activity Feed */
+.activity-feed-container { max-height: 400px; overflow-y: auto; }
+.activity-feed { font-family: 'SF Mono', Monaco, Consolas, monospace; font-size: 12px; }
+.activity-log-line {
+    display: flex; gap: 10px; padding: 4px 8px;
+    border-bottom: 1px solid var(--border);
+}
+.activity-log-line:hover { background: var(--bg-hover); }
+.log-time { color: var(--text-muted); white-space: nowrap; }
+.log-type { font-weight: 600; white-space: nowrap; min-width: 80px; }
+.log-type.injection { color: #60a5fa; }
+.log-type.keywords { color: #a78bfa; }
+.log-type.agent_end { color: var(--success); }
+.log-type.plugin_started { color: #fbbf24; }
+.log-type.manifest { color: #34d399; }
+.log-message { color: var(--text-secondary); word-break: break-all; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    loadAll();
+    setInterval(loadAll, 15000); // refresh every 15s
+});
+
+async function loadAll() {
+    await Promise.all([
+        loadGatewayStatus(),
+        loadHealth(),
+        // loadRMemoryStats disabled
+        loadTokenSavings(),
+        loadMemoryHealth(),
+    ]);
+}
+
+// --- Gateway Status ---
+async function loadGatewayStatus() {
+    try {
+        const res = await fetch('/api/gateway/status');
+        const data = await res.json();
+        setChip('svc-gateway', data.connected ? 'running' : 'error');
+    } catch(e) {
+        setChip('svc-gateway', 'error');
+    }
+}
+
+// --- Health (channels, agents, sessions) ---
+async function loadHealth() {
+    try {
+        const res = await fetch('/api/gateway/health');
+        const h = await res.json();
+        if (h.error) return;
+
+        // Channels — iterate accounts within each channel provider
+        const chInfo = document.getElementById('channelsInfo');
+        const channels = h.channels || {};
+        let chHtml = '';
+        let anyChannelOk = false;
+        const dotsContainer = document.querySelector('.card-status-dots');
+        // Clear old static dots
+        if (dotsContainer) dotsContainer.innerHTML = '';
+        for (const [providerName, ch] of Object.entries(channels)) {
+            const label = (h.channelLabels || {})[providerName] || providerName;
+            const accounts = ch.accounts || {};
+            const accountKeys = Object.keys(accounts);
+            // If no accounts sub-object, treat the channel itself as a single account
+            if (!accountKeys.length) {
+                const probeOk = ch.probe?.ok;
+                const bot = ch.probe?.bot?.username;
+                const dot = probeOk ? 'green' : 'red';
+                if (probeOk) anyChannelOk = true;
+                chHtml += `<div class="detail-row">
+                    <span class="dot ${dot}"></span>
+                    <span>${label}</span>
+                    <span>${bot ? '@' + bot : (ch.running ? 'running' : 'stopped')}</span>
+                </div>`;
+            } else {
+                for (const [accId, acc] of Object.entries(accounts)) {
+                    const probeOk = acc.probe?.ok;
+                    const bot = acc.probe?.bot?.username;
+                    const configured = acc.configured;
+                    const dot = probeOk ? 'green' : (configured ? 'red' : 'gray');
+                    if (probeOk) anyChannelOk = true;
+                    const accLabel = accountKeys.length > 1 ? `${label} (${accId})` : label;
+                    chHtml += `<div class="detail-row">
+                        <span class="dot ${dot}"></span>
+                        <span>${accLabel}</span>
+                        <span>${bot ? '@' + bot : (configured ? 'configured' : 'disabled')}</span>
+                    </div>`;
+                }
+            }
+            // Add a status dot per provider in the header
+            if (dotsContainer) {
+                const allOk = Object.values(accounts).every(a => a.probe?.ok);
+                const someOk = Object.values(accounts).some(a => a.probe?.ok);
+                const dotColor = allOk ? 'var(--success)' : (someOk ? '#f0b429' : 'var(--error)');
+                const dotEl = document.createElement('span');
+                dotEl.className = 'svc-dot';
+                dotEl.title = label;
+                dotEl.style.cssText = `width:6px;height:6px;border-radius:50%;background:${dotColor};`;
+                dotsContainer.appendChild(dotEl);
+            }
+        }
+        chInfo.innerHTML = chHtml || '<div class="detail-row muted">No channels</div>';
+
+        // Agents
+        const agents = h.agents || [];
+        document.getElementById('agentCount').textContent = agents.length;
+        let agHtml = '';
+        let totalSessions = 0;
+        for (const ag of agents) {
+            const sc = ag.sessions?.count || 0;
+            totalSessions += sc;
+            const hbModel = ag.heartbeat?.model?.split('/').pop() || '-';
+            agHtml += `<div class="detail-row">
+                <span>${ag.agentId}${ag.isDefault ? ' (default)' : ''}</span>
+                <span>${sc} sessions</span>
+            </div>`;
+
+            // Heartbeat chip
+            if (ag.heartbeat?.enabled) {
+                setChip('svc-heartbeat', 'running');
+            }
+        }
+        document.getElementById('agentDetails').innerHTML = agHtml || '<div class="detail-row muted">-</div>';
+
+        // Sessions
+        document.getElementById('sessionCount').textContent = totalSessions;
+        // Show most recent session age
+        let recentAge = null;
+        for (const ag of agents) {
+            const recent = ag.sessions?.recent;
+            if (recent && recent.length > 0) {
+                const ageMs = recent[0].age;
+                if (recentAge === null || ageMs < recentAge) recentAge = ageMs;
+            }
+        }
+        let sessHtml = '';
+        if (recentAge !== null) {
+            sessHtml = `<div class="detail-row"><span>Last active</span><span>${formatAge(recentAge)}</span></div>`;
+        }
+        document.getElementById('sessionDetails').innerHTML = sessHtml || '<div class="detail-row muted">-</div>';
+
+    } catch(e) {
+        console.error('Health load error:', e);
+    }
+}
+
+// --- R-Memory Stats ---
+async function loadRMemoryStats() {
+    try {
+        const res = await fetch('/api/r-memory/stats');
+        const s = await res.json();
+
+        document.getElementById('rmemoryDocs').textContent = '-';
+
+        // Also load document count
+        const dRes = await fetch('/api/r-memory/documents');
+        const docs = await dRes.json();
+        const docCount = Array.isArray(docs) ? docs.length : 0;
+        document.getElementById('rmemoryDocs').textContent = docCount;
+
+        const locked = Array.isArray(docs) ? docs.filter(d => d.locked).length : 0;
+        let rmHtml = `<div class="detail-row"><span>Blocks in context</span><span>${s.blockCount || 0}</span></div>`;
+        if (s.contentTokens) {
+            rmHtml += `<div class="detail-row"><span>Context tokens</span><span>${s.contentTokens.toLocaleString()}</span></div>`;
+        }
+        rmHtml += `<div class="detail-row"><span>Locked docs</span><span>${locked}</span></div>`;
+        if (s.compressionRatio !== null) {
+            rmHtml += `<div class="detail-row"><span>Compression</span><span>${Math.round(s.compressionRatio * 100)}%</span></div>`;
+        }
+        document.getElementById('rmemoryDetails').innerHTML = rmHtml;
+
+        // Plugin chip
+        setChip('svc-rmemory', s.logsExist ? 'running' : 'off');
+
+        // Shield status managed by sidebar nav icon
+
+        // Render event feed
+        // renderRMemoryFeed disabled
+        document.getElementById('rmemoryEventCount').textContent = `${(s.recentEvents || []).length} recent events`;
+
+    } catch(e) {
+        console.error('R-Memory stats error:', e);
+    }
+}
+
+let tsLastPayload = null;
+let tsComponentSort = { key: 'cost', dir: -1 };
+let tsPricingBound = false;
+const tsPalette = ['#38bdf8', '#34d399', '#fbbf24', '#f97316', '#a78bfa', '#f87171', '#22d3ee', '#818cf8'];
+
+function tsFmtMoney(v) {
+    const n = Number(v);
+    return Number.isFinite(n) ? '$' + n.toFixed(2) : 'data unavailable';
+}
+
+function tsFmtPct(v) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n.toFixed(1) + '%' : 'data unavailable';
+}
+
+function tsFmtTokens(v) {
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.round(n).toLocaleString() : 'data unavailable';
+}
+
+function tsEsc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[m]));
+}
+
+function tsSet(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+}
+
+function tsBindComponentSort() {
+    const table = document.getElementById('tsComponentTable');
+    if (!table || table.dataset.bound === '1') return;
+    table.dataset.bound = '1';
+    table.querySelectorAll('.ts-sort').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const key = btn.dataset.sort;
+            if (!key) return;
+            if (tsComponentSort.key === key) tsComponentSort.dir *= -1;
+            else tsComponentSort = { key, dir: (key === 'component' || key === 'model') ? 1 : -1 };
+            table.querySelectorAll('.ts-sort').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            tsRenderComponentTable((tsLastPayload && tsLastPayload.componentBreakdown) || []);
+        });
+    });
+    const defaultBtn = table.querySelector('.ts-sort[data-sort="cost"]');
+    if (defaultBtn) defaultBtn.classList.add('active');
+}
+
+function tsRenderComponentTable(rows) {
+    const body = document.getElementById('tsComponentTableBody');
+    if (!body) return;
+    if (!rows || !rows.length) {
+        body.innerHTML = '<tr><td colspan="5" class="muted">data unavailable</td></tr>';
+        return;
+    }
+    const sorted = [...rows].sort((a, b) => {
+        const k = tsComponentSort.key;
+        const dir = tsComponentSort.dir;
+        const av = a[k];
+        const bv = b[k];
+        if (k === 'component' || k === 'model') return String(av || '').localeCompare(String(bv || '')) * dir;
+        return ((Number(av) || 0) - (Number(bv) || 0)) * dir;
+    });
+
+    body.innerHTML = sorted.map(r => {
+        const est = r.estimated ? '<span class="ts-est">est.</span>' : '';
+        return `<tr title="${tsEsc(r.source || '')}">
+            <td>${tsEsc(r.component || '-')} ${est}</td>
+            <td>${tsEsc(r.model || '-')}</td>
+            <td class="num">${tsFmtTokens(r.inputTokens)}</td>
+            <td class="num">${tsFmtTokens(r.outputTokens)}</td>
+            <td class="num">${tsFmtMoney(r.cost)}</td>
+        </tr>`;
+    }).join('');
+}
+
+function tsRenderDailyChart(dailyRows, components) {
+    const chart = document.getElementById('tsDailyChart');
+    const legend = document.getElementById('tsDailyLegend');
+    if (!chart || !legend) return;
+    if (!dailyRows || !dailyRows.length || !components || !components.length) {
+        chart.innerHTML = '<div class="muted">data unavailable</div>';
+        legend.innerHTML = '';
+        return;
+    }
+
+    const colorById = {};
+    components.forEach((c, i) => { colorById[c.id] = tsPalette[i % tsPalette.length]; });
+    const maxCost = Math.max(...dailyRows.map(d => Number(d.totalCost) || 0), 1);
+
+    chart.innerHTML = dailyRows.map(day => {
+        const segments = components.map(c => {
+            const val = Number((day.components || {})[c.id]) || 0;
+            if (val <= 0) return '';
+            const h = Math.max(1, (val / maxCost) * 100);
+            return `<div class="ts-seg" style="height:${h}%; background:${colorById[c.id]}" title="${tsEsc(c.component)}: ${tsFmtMoney(val)}"></div>`;
+        }).join('');
+        const d = String(day.date || '').slice(5);
+        return `<div class="ts-bar-col">
+            <div class="ts-bar">${segments}</div>
+            <div class="ts-bar-label">${tsEsc(d)}</div>
+        </div>`;
+    }).join('');
+
+    legend.innerHTML = components.map(c => `
+        <span class="ts-legend-item"><span class="ts-dot" style="background:${colorById[c.id]}"></span>${tsEsc(c.component)}</span>
+    `).join('');
+}
+
+function tsRenderPricing(pricing) {
+    const body = document.getElementById('tsPricingBody');
+    if (!body) return;
+    const models = (pricing && pricing.models) || {};
+    const discovered = new Set(pricing._discoveredModels || []);
+    const rows = Object.entries(models);
+    if (!rows.length) {
+        body.innerHTML = '<tr><td colspan="5" class="muted">data unavailable</td></tr>';
+        return;
+    }
+    // Sort: active (discovered) models first, then others
+    rows.sort((a, b) => {
+        const aActive = discovered.has(a[0]) ? 0 : 1;
+        const bActive = discovered.has(b[0]) ? 0 : 1;
+        if (aActive !== bActive) return aActive - bActive;
+        return a[0].localeCompare(b[0]);
+    });
+    body.innerHTML = rows.map(([model, rates]) => {
+        const r = rates || {};
+        const isActive = discovered.has(model);
+        const badge = isActive ? '<span style="color:var(--success); font-size:11px; margin-left:4px;" title="Active in system">●</span>'
+                               : '<span style="color:var(--text-muted); font-size:11px; margin-left:4px;" title="Not currently active">○</span>';
+        const rowStyle = isActive ? '' : ' style="opacity:0.5"';
+        return `<tr${rowStyle}>
+            <td>${tsEsc(model)}${badge}</td>
+            <td class="num"><input data-model="${tsEsc(model)}" data-key="inputPer1M" type="number" step="0.0001" min="0" value="${Number(r.inputPer1M || 0)}"></td>
+            <td class="num"><input data-model="${tsEsc(model)}" data-key="outputPer1M" type="number" step="0.0001" min="0" value="${Number(r.outputPer1M || 0)}"></td>
+            <td class="num"><input data-model="${tsEsc(model)}" data-key="cacheReadPer1M" type="number" step="0.0001" min="0" value="${Number(r.cacheReadPer1M || 0)}"></td>
+            <td class="num"><input data-model="${tsEsc(model)}" data-key="cacheWritePer1M" type="number" step="0.0001" min="0" value="${Number(r.cacheWritePer1M || 0)}"></td>
+        </tr>`;
+    }).join('');
+
+    const a = (pricing && pricing.assumptions) || {};
+    const avgOutputEl = document.getElementById('tsAssumeAvgOutput');
+    const subShareEl = document.getElementById('tsAssumeSubagentShare');
+    if (avgOutputEl) avgOutputEl.value = Number(a.avgOutputTokensPerCall || 800);
+    if (subShareEl) subShareEl.value = Number(a.subagentShare || 0.18);
+}
+
+function tsCollectPricingPatch() {
+    const patch = { models: {}, assumptions: {} };
+    document.querySelectorAll('#tsPricingBody input[data-model][data-key]').forEach(input => {
+        const model = input.dataset.model;
+        const key = input.dataset.key;
+        if (!patch.models[model]) patch.models[model] = {};
+        patch.models[model][key] = Number(input.value || 0);
+    });
+    patch.assumptions.avgOutputTokensPerCall = Number(document.getElementById('tsAssumeAvgOutput')?.value || 800);
+    patch.assumptions.subagentShare = Number(document.getElementById('tsAssumeSubagentShare')?.value || 0.18);
+    return patch;
+}
+
+async function tsSavePricing() {
+    const status = document.getElementById('tsPricingStatus');
+    if (status) status.textContent = 'saving...';
+    try {
+        const patch = tsCollectPricingPatch();
+        const res = await fetch('/api/token-savings/pricing', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(patch),
+        });
+        const out = await res.json();
+        if (!res.ok || !out.ok) throw new Error(out.error || 'save failed');
+        if (status) status.textContent = 'saved';
+        await loadTokenSavings();
+    } catch (e) {
+        if (status) status.textContent = 'save failed';
+        console.error('Pricing save error:', e);
+    }
+}
+
+async function loadTokenSavings() {
+    tsBindComponentSort();
+    if (!tsPricingBound) {
+        const btn = document.getElementById('tsSavePricing');
+        if (btn) btn.addEventListener('click', tsSavePricing);
+        tsPricingBound = true;
+    }
+
+    try {
+        const res = await fetch('/api/token-savings');
+        const d = await res.json();
+        tsLastPayload = d;
+
+        const numDays = d.days || 7;
+        tsSet('tsWindowLabel', `Last ${numDays} days`);
+        tsSet('tsPeriodLabel', `${numDays} days`);
+        // Update all period echo spans
+        document.querySelectorAll('.ts-period-echo').forEach(el => { el.textContent = `${numDays} days`; });
+
+        const actualCost = Number(d.totals?.actualApiCost || 0);
+        const withoutCost = Number(d.totals?.withoutRMemoryCostEstimate || 0);
+        const savedCost = Number(d.totals?.rMemorySavingsEstimate || 0);
+
+        tsSet('tsCostActual', tsFmtMoney(actualCost));
+        tsSet('tsCostWithout', tsFmtMoney(withoutCost));
+        tsSet('tsCostSaved', tsFmtMoney(savedCost));
+        tsSet('tsCostPct', tsFmtPct(d.totals?.savingPctEstimate));
+
+        // Monthly projections for all three cards
+        if (numDays > 0) {
+            const factor = 30.44 / numDays;
+            tsSet('tsProjected', actualCost > 0 ? `≈ ${tsFmtMoney(actualCost * factor)}/month projected` : '');
+            tsSet('tsWithoutProjected', withoutCost > 0 ? `≈ ${tsFmtMoney(withoutCost * factor)}/month projected` : '');
+            tsSet('tsSavedProjected', savedCost > 0 ? `≈ ${tsFmtMoney(savedCost * factor)}/month projected` : '');
+        } else {
+            tsSet('tsProjected', '');
+            tsSet('tsWithoutProjected', '');
+            tsSet('tsSavedProjected', '');
+        }
+
+        tsSet('tsSourceActual', d.sources?.gatewayError ? 'source: data unavailable' : 'source: gateway usage-cost (real token counts × published API prices)');
+        tsSet('tsSourceWithout', 'source: actual cost + extra tokens that compression eliminated');
+        tsSet('tsSourceSaved', 'source: (without R-Memory) minus (actual cost)');
+        tsSet('tsSourcePct', 'source: savings / without-rmemory');
+
+        tsRenderComponentTable(d.componentBreakdown || []);
+        tsRenderDailyChart(d.dailyCostBreakdown || [], d.componentBreakdown || []);
+        tsRenderPricing(d.pricingReference || {});
+
+        const c = d.compressionStats || {};
+
+        tsSet('tsBlocksCompressed', tsFmtTokens(c.blocksCompressed));
+        // Lifetime efficiency is the real number (across all blocks ever)
+        const lifetimeEff = Number(c.lifetimeEfficiency);
+        tsSet('tsLifetimeEfficiency', Number.isFinite(lifetimeEff) ? lifetimeEff.toFixed(1) + '% saved' : 'data unavailable');
+        tsSet('tsLifetimeBlocks', tsFmtTokens(c.blocksCompressed));
+        tsSet('tsBlocksInContext', tsFmtTokens(c.blocksInContext));
+        tsSet('tsBlocksArchived', tsFmtTokens(c.blocksArchived));
+        tsSet('tsTokensSavedPerCall', tsFmtTokens(d.compoundSavings?.tokensSavedPerCall));
+        tsSet('tsEstimatedCalls', tsFmtTokens(d.compoundSavings?.estimatedApiCalls));
+
+        tsSet('tsComponentSource', d.ok ? 'sorted by cost' : 'gateway data unavailable; showing partial stats');
+        tsSet('tsChartSource', 'source: gateway daily cost + component shares (est.)');
+    } catch (e) {
+        console.error('Token savings error:', e);
+        ['tsCostActual','tsCostWithout','tsCostSaved','tsCostPct','tsBlocksCompressed','tsBlocksInContext',
+         'tsBlocksArchived','tsLifetimeEfficiency','tsTokensSavedPerCall','tsEstimatedCalls']
+            .forEach(id => tsSet(id, 'data unavailable'));
+        tsSet('tsSourceActual', 'source: data unavailable');
+    }
+}
+
+function renderRMemoryFeed(events) {
+    const feed = document.getElementById('rmemoryFeed');
+    if (!events.length) {
+        feed.innerHTML = '<div class="activity-log-line info"><span class="log-time">--:--:--</span><span class="log-type">INFO</span><span class="log-message">No events yet</span></div>';
+        return;
+    }
+
+    // Show most recent first
+    const reversed = [...events].reverse();
+
+    feed.innerHTML = reversed.map(ev => {
+        const ts = ev.ts ? new Date(ev.ts).toLocaleTimeString() : '--:--:--';
+        const type = ev.event || 'info';
+        let msg = ev.raw || '';
+
+        // Format known event types
+        switch(type) {
+            case 'compaction_start':
+                msg = `tokensBefore: ${ev.tokensBefore || '?'}, turns: ${ev.turns || 0}, cache: ${ev.cacheSize || '?'}`;
+                break;
+            case 'compaction_done':
+                msg = `swapped: ${ev.turnsCompressed || 0}, kept raw: ${ev.turnsKeptRaw || 0}, ` +
+                      `${ev.raw || '?'}→${ev.compressed || '?'} tok, saving: ${ev.saving || '?'}, ` +
+                      `cache: ${ev.cacheHits || 0}/${(ev.cacheHits||0)+(ev.cacheMisses||0)}`;
+                break;
+            case 'swap_plan':
+                msg = `overflow: ${ev.overflow || '?'}, blocksToSwap: ${ev.blocksToSwap || '?'}`;
+                break;
+            case 'block_compressed':
+                msg = `raw: ${ev.rawTokens || '?'}, compressed: ${ev.compressedTokens || '?'}, saving: ${ev.saving || '?'}`;
+                break;
+            case 'fifo_evicted':
+                msg = `block removed, tokens freed: ${ev.tokensFreed || '?'}`;
+                break;
+            case 'fifo_done':
+                msg = `evicted: ${ev.evictedCount || '?'}, remaining: ${ev.remainingBlocks || '?'}`;
+                break;
+            case 'session':
+                msg = `session: ${ev.id || '?'}, history: ${ev.history || 0}`;
+                break;
+            case 'init':
+                msg = `R-Memory init, cached: ${ev.cachedBlocks || ev.cachedTurns || '?'}, trigger: ${ev.compressTrigger || '?'}`;
+                break;
+            case 'config_loaded':
+                msg = `trigger: ${ev.compressTrigger || '?'}, evict: ${ev.evictTrigger || '?'}`;
+                break;
+        }
+
+        return `<div class="activity-log-line">
+            <span class="log-time">${ts}</span>
+            <span class="log-type ${type}">${type.replace('_', ' ')}</span>
+            <span class="log-message">${msg}</span>
+        </div>`;
+    }).join('');
+}
+
+// --- Memory Health ---
+async function loadMemoryHealth() {
+    try {
+        const res = await fetch('/api/memory/health');
+        const h = await res.json();
+
+        // Turn info
+        if (h.lastTurn) {
+            document.getElementById('memoryTurn').textContent = `Turn ${h.lastTurn}`;
+        }
+
+        // Context window - Mac storage style
+        const cw = h.contextWindow || {};
+        const max = cw.maxTokens || 200000;
+        const actual = cw.actualTotalTokens || 0;
+        const seg = cw.segments || {};
+
+        const usedK = Math.round(actual / 1000);
+        const maxK = Math.round(max / 1000);
+        document.getElementById('contextUsage').textContent = `${usedK}k of ${maxK}k used`;
+
+        // Set segment widths (proportional to max)
+        const pct = (v) => Math.max(0, (v / max) * 100);
+        document.getElementById('segPrompt').style.width = pct(seg.systemPrompt || 0) + '%';
+        document.getElementById('segWorkspace').style.width = pct(seg.workspaceFiles || 0) + '%';
+        document.getElementById('segSSoT').style.width = pct(seg.ssotDocs || 0) + '%';
+        document.getElementById('segConvo').style.width = pct(seg.conversation || 0) + '%';
+        document.getElementById('segHeaders').style.width = pct(seg.memoryHeaders || 0) + '%';
+        document.getElementById('segLCM').style.width = pct(seg.lcmSummaries || 0) + '%';
+
+        // Threshold markers (positioned as % of max)
+        // markerCompress removed
+        // markerEvict removed
+
+        // Legend values
+        const k = (v) => v >= 1000 ? Math.round(v/1000) + 'k' : v + '';
+        document.getElementById('legendPrompt').textContent = k(seg.systemPrompt || 0);
+        document.getElementById('legendWorkspace').textContent = k(seg.workspaceFiles || 0);
+        document.getElementById('legendSSoT').textContent = `${cw.injectedSSoTs || 0} docs (${k(seg.ssotDocs || 0)})`;
+
+        // Populate injected SSoT doc list
+        const ssotDocs = cw.injectedSSoTDocs || [];
+        const ssotListEl = document.getElementById('ssotDocList');
+        const ssotItemsEl = document.getElementById('ssotDocItems');
+        if (ssotDocs.length > 0) {
+            ssotListEl.style.display = 'block';
+            ssotItemsEl.innerHTML = ssotDocs.map(d => {
+                const name = d.split('/').pop().replace(/\.(ai\.)?md$/, '');
+                const layer = d.split('/')[0];
+                return `<span style="padding:2px 8px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:4px; color:var(--text-primary); white-space:nowrap;" title="${d}"><span style="color:var(--text-secondary)">${layer}/</span>${name}</span>`;
+            }).join('');
+        } else {
+            ssotListEl.style.display = 'none';
+        }
+        document.getElementById('legendConvo').textContent = k(seg.conversation || 0);
+        document.getElementById('legendHeaders').textContent = k(seg.memoryHeaders || 0);
+        document.getElementById('legendLCM').textContent = k(seg.lcmSummaries || 0);
+        document.getElementById('legendFree').textContent = k(Math.max(0, max - actual));
+
+        // Subsystem status lights
+        const grid = document.getElementById('subsystemGrid');
+        const subs = h.subsystems || {};
+        const order = [];
+
+        // Compression progress bar (if estimate available)
+        const est = null;
+        let progressHtml = '';
+        if (est) {
+            const estK = Math.round(est.tokens / 1000);
+            const trigK = Math.round(est.trigger / 1000);
+            progressHtml = `
+                <div class="subsystem-item ok" style="grid-column: 1 / -1;">
+                    <span class="sub-dot" style="background: #fbbf24;"></span>
+                    <div class="sub-info" style="flex:1">
+                        <span class="sub-label">Conversation → Compression</span>
+                        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+                            <div style="flex:1;height:8px;background:var(--bg-primary);border-radius:4px;overflow:hidden;border:1px solid var(--border)">
+                                <div style="width:${Math.min(est.percent,100)}%;height:100%;background:#fbbf24;border-radius:4px;transition:width 0.5s"></div>
+                            </div>
+                            <span class="sub-detail">${estK}k / ${trigK}k (${est.percent}%) · ${est.msgCount} msgs</span>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        grid.innerHTML = progressHtml + order.map(key => {
+            const s = subs[key];
+            if (!s) return '';
+            const timeStr = s.lastSeen ? new Date(s.lastSeen).toLocaleTimeString() : 'never';
+            return `
+                <div class="subsystem-item ${s.status}">
+                    <span class="sub-dot"></span>
+                    <div class="sub-info">
+                        <span class="sub-label">${s.label}</span>
+                        <span class="sub-detail">${s.detail}</span>
+                        <span class="sub-time">Last: ${timeStr}</span>
+                    </div>
+                </div>`;
+        }).join('');
+
+    } catch(e) {
+        console.error('Memory health error:', e);
+    }
+}
+
+// --- Helpers ---
+function setChip(id, state) {
+    // Map old chip IDs to new dot IDs
+    const dotMap = {'svc-gateway':'dot-gateway','svc-telegram':'dot-telegram','svc-heartbeat':'dot-heartbeat','svc-rmemory':'dot-rmemory','svc-shield':null};
+    const dotId = dotMap[id];
+    if (!dotId) return;
+    const el = document.getElementById(dotId);
+    if (el) {
+        const colors = {running:'var(--success)',error:'var(--error)',off:'var(--text-muted)'};
+        el.style.background = colors[state] || 'var(--text-muted)';
+    }
+}
+
+function formatAge(ms) {
+    if (ms < 60000) return Math.round(ms/1000) + 's ago';
+    if (ms < 3600000) return Math.round(ms/60000) + 'm ago';
+    if (ms < 86400000) return Math.round(ms/3600000) + 'h ago';
+    return Math.round(ms/86400000) + 'd ago';
+}
+
+// --- Open R-Memory Log in Terminal ---
+document.getElementById('btnOpenRmemLog').addEventListener('click', async () => {
+    try {
+        await fetch('/api/r-memory/open-log', { method: 'POST' });
+    } catch(e) {
+        console.error('Failed to open log:', e);
+    }
+});
+
+// --- Toast ---
+function showToast(message, type = 'info') {
+    const t = document.createElement('div');
+    t.className = 'toast ' + type;
+    t.textContent = message;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+}
+
+// Effective models: configured via Agents page (link in header)
+
+// Gateway restart handled by base.html confirmRestartGateway()
+</script>
+{% endblock %}

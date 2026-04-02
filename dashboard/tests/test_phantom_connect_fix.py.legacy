@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+"""
+Verification script for the Phantom Connect button bug fix.
+Tests that the wallet.html template contains the correct patterns
+for both paths: wallet added in Step 1 and wallet added later.
+
+Run: python3 tests/test_phantom_connect_fix.py
+"""
+
+import sys
+from pathlib import Path
+
+WALLET_HTML = Path(__file__).parent.parent / "templates" / "wallet.html"
+
+
+def check(label, condition):
+    status = "✅ PASS" if condition else "❌ FAIL"
+    print(f"  {status}: {label}")
+    return condition
+
+
+def main():
+    if not WALLET_HTML.exists():
+        print(f"ERROR: {WALLET_HTML} not found")
+        return False
+
+    content = WALLET_HTML.read_text()
+    all_pass = True
+
+    print("=== Phantom Connect Button Bug Fix Verification ===\n")
+
+    print("[1] Eager reconnect via { onlyIfTrusted: true }")
+    all_pass &= check(
+        "Uses onlyIfTrusted for auto-reconnect (previously approved sites)",
+        "provider.connect({ onlyIfTrusted: true })" in content,
+    )
+    all_pass &= check(
+        "Old provider.isConnected synchronous check removed",
+        "provider.isConnected" not in content,
+    )
+
+    print("\n[2] Fresh provider reference in connectPhantom()")
+    # Find the connectPhantom function and check it gets a fresh provider
+    idx = content.find("async function connectPhantom()")
+    if idx == -1:
+        print("  ❌ FAIL: connectPhantom function not found")
+        all_pass = False
+    else:
+        fn_body = content[idx : idx + 600]
+        all_pass &= check(
+            "Gets fresh provider via getPhantomProvider()",
+            "const provider = getPhantomProvider();" in fn_body,
+        )
+        all_pass &= check(
+            "Uses local 'provider' variable (not stale global)",
+            "await provider.connect()" in fn_body,
+        )
+
+    print("\n[3] Double-click guard")
+    all_pass &= check(
+        "_phantomConnecting guard variable declared",
+        "let _phantomConnecting = false;" in content,
+    )
+    all_pass &= check(
+        "Guard checked before connect",
+        "if (_phantomConnecting) return;" in content,
+    )
+    all_pass &= check(
+        "Guard reset in finally block",
+        "_phantomConnecting = false;" in content,
+    )
+
+    print("\n[4] Phantom event listeners (disconnect / accountChanged)")
+    all_pass &= check(
+        "Listens for 'disconnect' event",
+        "provider.on('disconnect'" in content,
+    )
+    all_pass &= check(
+        "Listens for 'accountChanged' event",
+        "provider.on('accountChanged'" in content,
+    )
+
+    print("\n[5] Display bug fix (substring → slice)")
+    all_pass &= check(
+        "Uses slice(-4) instead of substring(-4)",
+        "connectedAddress.slice(-4)" in content,
+    )
+    all_pass &= check(
+        "No remaining substring() calls on connectedAddress",
+        "connectedAddress.substring" not in content,
+    )
+
+    print("\n[6] Event listener binding intact")
+    all_pass &= check(
+        "phantomConnect click listener attached in initializeWallet",
+        "document.getElementById('phantomConnect').addEventListener('click', connectPhantom)" in content,
+    )
+
+    print("\n" + ("=" * 50))
+    if all_pass:
+        print("✅ ALL CHECKS PASSED — Fix verified")
+    else:
+        print("❌ SOME CHECKS FAILED — Review needed")
+
+    return all_pass
+
+
+if __name__ == "__main__":
+    ok = main()
+    sys.exit(0 if ok else 1)

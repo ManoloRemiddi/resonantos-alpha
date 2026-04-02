@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Pre-commit validation hook for the repository.
+# Runs the repository's configured pre-commit checks before allowing a commit.
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+PRE_COMMIT_BIN="$REPO_ROOT/dashboard/.venv/bin/pre-commit"
+PRE_COMMIT_CONFIG="$REPO_ROOT/.pre-commit-config.yaml"
+
+if [ ! -x "$PRE_COMMIT_BIN" ]; then
+  echo "[Hook] Missing pre-commit executable: $PRE_COMMIT_BIN" >&2
+  exit 1
+fi
+
+if [ ! -f "$PRE_COMMIT_CONFIG" ]; then
+  echo "[Hook] Missing pre-commit config: $PRE_COMMIT_CONFIG" >&2
+  exit 1
+fi
+
+cd "$REPO_ROOT"
+
+echo "[Hook] Running pre-commit validation..."
+exec "$PRE_COMMIT_BIN" run --config "$PRE_COMMIT_CONFIG" --hook-stage pre-commit

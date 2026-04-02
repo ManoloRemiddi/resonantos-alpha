@@ -1,0 +1,55 @@
+{
+  "TestWallet123": {
+    "identityNftMinted": true,
+    "step": "complete"
+  },
+  "TestWallet456": {
+    "identityNftMinted": true,
+    "step": "complete"
+  },
+  "ReviewerWallet1": {
+    "identityNftMinted": true,
+    "step": "complete"
+  },
+  "ExtReviewer1": {
+    "identityNftMinted": true,
+    "step": "complete"
+  },
+  "ExtReviewer2": {
+    "identityNftMinted": true,
+    "step": "complete"
+  },
+  "ExtReviewer3": {
+    "identityNftMinted": true,
+    "step": "complete"
+  },
+  "2ijW3oQxZMYeoiHerT4txiZUwpyq53uaytf2sQfuUNP3": {
+    "alphaAgreed": true,
+    "alphaAgreedAt": "2026-02-22T15:38:21.539690+00:00",
+    "alphaSignature": "TY8K/SFkWayD5RmPLR0h0ER3pBJSxtIbxqmZM/D7uLs7Z6pRCfYbDLbhjQvQf979YRbnd/a61stHuFimNhURAg==",
+    "licenseSigned": true,
+    "licenseSignedAt": "2026-02-22T15:39:13.741178+00:00",
+    "licenseHash": "16df4da9c067eba38e6bcc3b007cc1242a062df7cab5aafd183542c02a1528ce",
+    "licenseSignature": "zIfifnCb9lWRonPLq3sxH3LoH4+lX5rHQlooGj1dhX/eCiqxKlXEY1JBeLYZAhNlZ6WKI84i8Ayp8a4k0LFUAg==",
+    "licenseNft": "E95ZoCfCeWS3fWB83Rc8AqALER9rYJtgbkR2RAhyvyKE",
+    "manifestoSigned": true,
+    "manifestoSignedAt": "2026-02-22T16:01:07.032774+00:00",
+    "manifestoHash": "6d8ebcd76d23aabdf8cbd212b730c3f8bfa19f4a8441712dab26aa88c1b2862a",
+    "manifestoSignature": "VCeOvHG6LU9EWiCHEUXKl3jgX6+0rosIh8sD6yyBkTUzSUe5jrfR9cc/AV3rwR7vZMq2zxGjn/iY6eEVXMd5CQ==",
+    "manifestoNft": "ED1dBC6WEBP3RP4c5YDVeyQ3e8zR2PDdSL8ezyUThdQR",
+    "identityNftMinted": true,
+    "identityNftMint": "6ZQfDKmUFRaZ6h1znWnk9XpjSAkskBbeNJzjMpiw5ubd",
+    "alphaNftMinted": true,
+    "alphaNftMint": "HDxc1k7sNqgWLWQYyzFBqEPfXzS7t2pe98RZ8soZmuzt",
+    "symbioticPairCreated": true,
+    "symbioticPda": "UhdaSmNvd3ZcSi3wqadfxhHo6Hp7JPwu2oCCn29z2o9"
+  },
+  "vbYQ7rZu19Rjtro9obQxFeHq5UPNF5RQXA8jP8qywfF": {
+    "symbioticPairCreated": true,
+    "symbioticPda": "7vCWtMnBsje6Dwg7taq2LwRuENpWtukeV4J4NviMfaoL",
+    "licenseSigned": false,
+    "manifestoSigned": false,
+    "identityNftMinted": true,
+    "alphaNftMinted": false
+  }
+}

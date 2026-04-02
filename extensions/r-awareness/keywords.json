@@ -1,0 +1,283 @@
+{
+  "_comment": "Compound keyword map: multi-word phrases to SSoT doc paths (relative to ssotRoot). Prefer .ai.md when available.",
+  "keywords": [
+    {
+      "phrases": [
+        "system architecture",
+        "system overview",
+        "resonantos architecture"
+      ],
+      "doc": "L1/SSOT-L1-SYSTEM-OVERVIEW.ai.md"
+    },
+    {
+      "phrases": [
+        "shield",
+        "security gate",
+        "shield gate",
+        "file protection"
+      ],
+      "doc": "L1/SSOT-L1-SHIELD.ai.md"
+    },
+    {
+      "phrases": [
+        "logician",
+        "mangle rules",
+        "policy engine",
+        "datalog"
+      ],
+      "doc": "L1/SSOT-L1-LOGICIAN.ai.md"
+    },
+    {
+      "phrases": [
+        "dashboard",
+        "flask app",
+        "web interface",
+        "dashboard page"
+      ],
+      "doc": "L1/SSOT-L1-DASHBOARD.ai.md"
+    },
+    {
+      "phrases": [
+        "memory architecture",
+        "memory stack",
+        "memory layers",
+        "four layer memory"
+      ],
+      "doc": "L1/SSOT-L1-MEMORY-ARCHITECTURE.ai.md"
+    },
+    {
+      "phrases": [
+        "memory log",
+        "memory log format",
+        "dna sequencing",
+        "process log"
+      ],
+      "doc": "L1/SSOT-L1-MEMORY-LOG.ai.md"
+    },
+    {
+      "phrases": [
+        "symbiotic wallet",
+        "wallet architecture",
+        "solana wallet",
+        "three wallet"
+      ],
+      "doc": "L1/SSOT-L1-SYMBIOTIC-WALLET.ai.md"
+    },
+    {
+      "phrases": [
+        "token economy",
+        "token economics",
+        "rct token",
+        "res token",
+        "rex token"
+      ],
+      "doc": "L2/token-economy/SSOT-L2-TOKEN-ECONOMY-PHASE1.md"
+    },
+    {
+      "phrases": [
+        "dao orchestration",
+        "dao architecture",
+        "dao membership"
+      ],
+      "doc": "L2/dao/SSOT-L2-DAO-ORCHESTRATION.md"
+    },
+    {
+      "phrases": [
+        "swarm architecture",
+        "swarm node",
+        "beeamd",
+        "multi node"
+      ],
+      "doc": "L1/SSOT-L1-SWARM-ARCHITECTURE.ai.md"
+    },
+    {
+      "phrases": [
+        "alignment protocol",
+        "trust protocol",
+        "bidirectional trust"
+      ],
+      "doc": "L1/SSOT-L1-ALIGNMENT-PROTOCOL.ai.md"
+    },
+    {
+      "phrases": [
+        "autonomous development",
+        "autonomous protocol",
+        "self debate"
+      ],
+      "doc": "L1/SSOT-L1-AUTONOMOUS-DEVELOPMENT-PROTOCOL.ai.md"
+    },
+    {
+      "phrases": [
+        "protocol creation",
+        "create protocol",
+        "new protocol"
+      ],
+      "doc": "L1/SSOT-L1-PROTOCOL-CREATION-PROTOCOL.ai.md"
+    },
+    {
+      "phrases": [
+        "brand guide",
+        "brand narrative",
+        "brand identity"
+      ],
+      "doc": "L2/brand/SSOT-L2-BRAND-NARRATIVE-GUIDE.md"
+    },
+    {
+      "phrases": [
+        "content strategy",
+        "youtube strategy",
+        "content plan"
+      ],
+      "doc": "L2/content-strategy/SSOT-L2-CONTENT-STRATEGY.md"
+    },
+    {
+      "phrases": [
+        "creative dna",
+        "creative identity",
+        "dna patterns"
+      ],
+      "doc": "L2/creative-dna/SSOT-L2-CREATIVE-DNA.md"
+    },
+    {
+      "phrases": [
+        "augmentatism",
+        "philosophy",
+        "world model",
+        "cosmodestiny"
+      ],
+      "doc": "L0/SSOT-L0-PHILOSOPHY.ai.md"
+    },
+    {
+      "phrases": [
+        "constitution",
+        "resonant constitution"
+      ],
+      "doc": "L0/SSOT-L0-CONSTITUTION.ai.md"
+    },
+    {
+      "phrases": [
+        "business plan",
+        "revenue model",
+        "monetization"
+      ],
+      "doc": "L0/SSOT-L0-BUSINESS-PLAN.ai.md"
+    },
+    {
+      "phrases": [
+        "rag system",
+        "vector search",
+        "embedding",
+        "semantic search"
+      ],
+      "doc": "L1/SSOT-L1-RAG-SYSTEM.ai.md"
+    },
+    {
+      "phrases": [
+        "codex cli",
+        "openai codex",
+        "codex delegation"
+      ],
+      "doc": "L1/SSOT-L1-OPENAI-CODEX.ai.md"
+    },
+    {
+      "phrases": [
+        "r-awareness",
+        "ssot injection",
+        "context injection"
+      ],
+      "doc": "L1/SSOT-L1-R-AWARENESS.ai.md"
+    },
+    {
+      "phrases": [
+        "r-memory",
+        "conversation compression",
+        "lossless compression"
+      ],
+      "doc": "L1/SSOT-L1-R-MEMORY.ai.md"
+    },
+    {
+      "phrases": [
+        "opus model",
+        "opus capabilities",
+        "claude opus"
+      ],
+      "doc": "private/OPUS-4-6-SELF-KNOWLEDGE.ai.md"
+    },
+    {
+      "phrases": [
+        "watchdog",
+        "health check",
+        "watchdog monitor"
+      ],
+      "doc": "L1/SSOT-L1-WATCHDOG-ARCHITECTURE.ai.md"
+    },
+    {
+      "phrases": [
+        "self improvement",
+        "failure pattern",
+        "improvement pipeline"
+      ],
+      "doc": "L1/SSOT-L1-SELF-IMPROVEMENT-PROTOCOL.ai.md"
+    },
+    {
+      "phrases": [
+        "openclaw plugin",
+        "plugin development",
+        "plugin hook"
+      ],
+      "doc": "L1/SSOT-L1-OPENCLAW-PLUGINS.md"
+    },
+    {
+      "phrases": [
+        "onboarding",
+        "setup agent",
+        "alpha test",
+        "new user"
+      ],
+      "doc": "L2/SSOT-L2-ONBOARDING-AGENT.md"
+    },
+    {
+      "phrases": [
+        "internal benchmark",
+        "model benchmark",
+        "benchmark score"
+      ],
+      "doc": "L2/SSOT-L2-INTERNAL-BENCHMARKS.md"
+    },
+    {
+      "phrases": [
+        "cost optimization",
+        "token cost",
+        "api cost"
+      ],
+      "doc": "L2/SSOT-L2-COST-OPTIMIZATION.md"
+    },
+    {
+      "phrases": [
+        "sovereignty plan",
+        "local model",
+        "model sovereignty"
+      ],
+      "doc": "L2/SSOT-L2-SOVEREIGNTY-PLAN.md"
+    },
+    {
+      "phrases": [
+        "TOL",
+        "think out loud",
+        "think out loud session",
+        "TOL session"
+      ],
+      "doc": "L1/SSOT-L1-PROTO-TOL.md"
+    },
+    {
+      "phrases": [
+        "project plan",
+        "PLAN.md",
+        "multi-phase",
+        "project planning",
+        "phase planning"
+      ],
+      "doc": "L1/SSOT-L1-PROTO-PROJECT-PLANNING.md"
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+#!/bin/bash
+# ============================================================================
+# gh wrapper — Visibility Guard enforcement layer
+# ============================================================================
+# This wrapper sits in PATH before the real gh binary and intercepts
+# visibility-change commands. All other commands pass through unchanged.
+#
+# Real gh: /opt/homebrew/bin/gh
+# Guard:   <repo>/shield/visibility_guard.sh
+# ============================================================================
+
+REAL_GH="/opt/homebrew/bin/gh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GUARD="$(cd "$SCRIPT_DIR/.." && pwd)/visibility_guard.sh"
+
+# Fast path: if guard script doesn't exist, pass through (fail-open only if guard missing)
+if [[ ! -x "$GUARD" ]]; then
+    exec "$REAL_GH" "$@"
+fi
+
+# Detect command pattern
+case "$1" in
+    repo)
+        if [[ "${2:-}" == "edit" ]]; then
+            # Check visibility guard for repo edit
+            shift 2  # remove "repo" "edit"
+            if ! bash "$GUARD" check-repo-edit "$@"; then
+                exit 1
+            fi
+            # Passed guard — execute real command
+            exec "$REAL_GH" repo edit "$@"
+        fi
+        ;;
+    api)
+        # Check API calls for visibility mutations
+        shift  # remove "api"
+        if ! bash "$GUARD" check-api "$@"; then
+            exit 1
+        fi
+        exec "$REAL_GH" api "$@"
+        ;;
+esac
+
+# All other commands: pass through
+exec "$REAL_GH" "$@"

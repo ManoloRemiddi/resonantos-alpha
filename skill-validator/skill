@@ -1,0 +1,20 @@
+#!/bin/bash
+# Skill Validator CLI Wrapper
+# Usage: skill validate <path> | approve <name> | list | check <name>
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VALIDATOR="$SCRIPT_DIR/skill_validator.py"
+
+# Ensure Python is available
+PYTHON="${PYTHON:-python3}"
+
+if ! command -v "$PYTHON" &>/dev/null; then
+    echo "Error: Python 3 not found. Install Python or set PYTHON env var." >&2
+    exit 1
+fi
+
+# Make validator executable if needed
+chmod +x "$VALIDATOR" 2>/dev/null
+
+# Run the validator
+exec "$PYTHON" "$VALIDATOR" "$@"

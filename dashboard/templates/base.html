@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ResonantOS Dashboard{% endblock %}</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link rel="stylesheet" href="/static/css/dashboard-branded.css">
+    <style>
+        /* Symbiotic Shield Status Indicator */
+        .gw-restart-btn-header {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 4px 6px;
+            cursor: pointer;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .gw-restart-btn-header:hover {
+            color: var(--warning);
+            border-color: var(--warning);
+        }
+        .shield-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            margin: 8px 12px 8px 12px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius);
+            font-size: 12px;
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .shield-status:hover {
+            background: var(--bg-hover);
+            border-color: var(--border-light);
+        }
+
+        .shield-icon {
+            display: flex;
+            align-items: center;
+        }
+
+        .shield-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .shield-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: auto;
+        }
+
+        .shield-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            transition: background 0.3s;
+        }
+
+        .shield-status.active .shield-dot {
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        .shield-status.inactive .shield-dot {
+            background: var(--error);
+        }
+
+        .shield-status.warning .shield-dot {
+            background: var(--warning);
+        }
+
+        .shield-mode {
+            color: var(--text-muted);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .shield-status.active .shield-mode {
+            color: var(--success);
+        }
+
+        .shield-status.inactive .shield-mode {
+            color: var(--error);
+        }
+
+        /* Shield nav icon: color + pulse based on status */
+        .nav-item .shield-nav-icon {
+            transition: color 0.3s;
+        }
+        .nav-item .shield-nav-icon.shield-on svg {
+            stroke: var(--success);
+            animation: shieldPulse 2s infinite;
+        }
+        .nav-item .shield-nav-icon.shield-off svg {
+            stroke: var(--error);
+        }
+        .setup-nav-item {
+            background: linear-gradient(135deg, rgba(74, 222, 128, 0.14), rgba(96, 165, 250, 0.08));
+            border: 1px solid rgba(74, 222, 128, 0.18);
+            margin-bottom: 8px;
+        }
+        .setup-nav-item:hover {
+            border-color: rgba(74, 222, 128, 0.32);
+        }
+        .setup-nav-item.active {
+            background: rgba(74, 222, 128, 0.18);
+            border-color: var(--accent);
+        }
+        .setup-nav-item .nav-icon {
+            color: var(--accent);
+        }
+        @keyframes shieldPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .version.up-to-date { color: #4ade80; }
+        .version.update-available { color: #f59e0b; }
+        .version.update-behind { color: #ef4444; }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+                    <span class="logo-text">Resonant<span class="accent">OS</span></span>
+                </div>
+                <span class="version" id="versionBadge">{{ resonantos_version }}</span>
+            </div>
+
+            <nav class="sidebar-nav">
+                {% for group_name, group_meta in module_group_order %}
+                {% if group_name in module_groups %}
+                {% if group_meta.get('label') %}
+                <div class="nav-section-label">{{ group_meta['label'] }}</div>
+                {% endif %}
+                {% for mod in module_groups[group_name] %}
+                {% set path_key = (mod.get('path') or '')|trim('/') %}
+                {% set aliases = mod.get('active_aliases') or [] %}
+                <a href="{{ mod.path }}" class="nav-item {{ mod.get('css_class', '') }} {% if active_page == mod.id or (path_key and active_page == path_key) or active_page in aliases %}active{% endif %}"
+                   {% if mod.get('html_id') %}id="{{ mod.html_id }}"{% endif %}
+                   {% if mod.get('external') %}target="_blank"{% endif %}
+                   {% if mod.get('onclick') %}onclick="{{ mod.onclick }}"{% endif %}
+                   title="{{ mod.name }}">
+                    <span class="nav-icon{% if mod.id == 'shield' %} shield-nav-icon{% endif %}"{% if mod.id == 'shield' %} id="shieldNavIcon"{% endif %}>{{ module_icon_svgs.get(mod.id, '')|safe }}</span>
+                    <span class="nav-label">{{ mod.name }}</span>
+                    {% if mod.get('extra_html') %}{{ mod.extra_html|safe }}{% endif %}
+                </a>
+                {% endfor %}
+                {% endif %}
+                {% endfor %}
+            </nav>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                    <span class="theme-icon" id="themeIcon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                    </span>
+                    <span class="theme-label">Dark Mode</span>
+                </button>
+                <a href="https://resonantos.com" target="_blank" rel="noopener noreferrer" class="powered-by">
+                    Powered by <strong>ResonantOS</strong>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <h1 class="page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+                <div class="header-actions">
+                    <!-- Daily Claim Icon -->
+                    <a href="javascript:void(0)" onclick="headerDailyClaim(event)" title="Daily Claim — +1 $RCT, +500 $RES" style="position:relative; display:flex; align-items:center; text-decoration:none; margin-right:8px; cursor:pointer;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#14F195" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+                        <span style="position:absolute;top:-2px;right:-4px;width:7px;height:7px;background:#14F195;border-radius:50;"></span>
+                    </a>
+                    <!-- Gateway Status -->
+                    <span class="status-indicator" id="connectionStatus" title="OpenClaw Gateway status">
+                        <span class="status-dot"></span>
+                        <span class="status-text">Gateway</span>
+                    </span>
+                    <button class="gw-restart-btn-header" id="gwRestartBtnHeader" onclick="confirmRestartGateway()" title="Restart Gateway">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                    </button>
+                </div>
+            </header>
+
+            <div class="content-area">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/dashboard.js"></script>
+    <script>
+        // Instant shield state restore from cache (runs synchronously)
+        (function() {
+            var cached = null;
+            try { cached = localStorage.getItem('shield-state'); } catch (e) {}
+            if (cached) {
+                var el = document.getElementById('shieldNavIcon');
+                if (el) el.classList.add(cached === 'on' ? 'shield-on' : 'shield-off');
+            }
+        })();
+
+        // Symbiotic Shield Status
+        async function updateShieldStatus() {
+            const navIcon = document.getElementById('shieldNavIcon');
+            const modeEl = document.getElementById('shieldMode');
+            const statusEl = document.getElementById('shieldStatus');
+
+            function setState(state, text, title) {
+                if (navIcon) {
+                    navIcon.classList.remove('shield-on', 'shield-off');
+                    navIcon.classList.add(state === 'active' ? 'shield-on' : 'shield-off');
+                }
+                if (modeEl) {
+                    modeEl.textContent = text;
+                    modeEl.style.color = state === 'active' ? 'var(--success)' : 'var(--error)';
+                }
+                if (statusEl) statusEl.title = title;
+                // Cache for instant restore on next page load
+                try { localStorage.setItem('shield-state', state === 'active' ? 'on' : 'off'); } catch (e) {}
+            }
+
+            try {
+                const response = await fetch('/api/shield/status');
+                const data = await response.json();
+
+                if (data.active) {
+                    setState('active', data.mode || 'active', `Symbiotic Shield: ${data.mode.toUpperCase()} mode\nAlerts: ${data.stats?.total_alerts || 0}`);
+                } else if (data.available) {
+                    setState('off', 'error', `Shield error: ${data.error || 'Unknown'}`);
+                } else {
+                    setState('off', 'off', 'Shield not available');
+                }
+            } catch (e) {
+                setState('off', 'offline', 'Could not reach Shield API');
+            }
+        }
+
+        // Logician Status
+        async function updateLogicianStatus() {
+            const el = document.getElementById('logicianStatus');
+            const modeEl = document.getElementById('logicianMode');
+            if (!el) return;
+            try {
+                const res = await fetch('/api/logician/status');
+                const data = await res.json();
+                const icon = el.querySelector('.nav-icon');
+                if (data.status === 'healthy') {
+                    el.style.opacity = '1';
+                    if (icon) icon.style.color = 'var(--success)';
+                    if (modeEl) { modeEl.textContent = '●'; modeEl.style.color = 'var(--success)'; modeEl.style.display = 'inline'; }
+                    el.title = 'Logician: healthy — last check ' + (data.lastCheck || 'unknown');
+                } else {
+                    el.style.opacity = '0.7';
+                    if (icon) icon.style.color = 'var(--error)';
+                    if (modeEl) { modeEl.textContent = '●'; modeEl.style.color = 'var(--error)'; modeEl.style.display = 'inline'; }
+                    el.title = 'Logician: ' + (data.status || 'unknown') + ' — ' + (data.lastError || data.error || '');
+                }
+            } catch (e) {
+                el.style.opacity = '0.5';
+                if (modeEl) { modeEl.textContent = '?'; modeEl.style.color = 'var(--warning)'; modeEl.style.display = 'inline'; }
+                el.title = 'Logician: unreachable';
+            }
+        }
+
+        // Version badge update status
+        async function updateVersionBadgeStatus() {
+            const badge = document.getElementById('versionBadge');
+            if (!badge) return;
+
+            function applyState(className, title) {
+                badge.classList.remove('up-to-date', 'update-available', 'update-behind');
+                badge.classList.add(className);
+                badge.title = title;
+            }
+
+            // Default to green/current when no status is available.
+            applyState('up-to-date', 'Up to date');
+
+            try {
+                const response = await fetch('/api/settings/update-config');
+                if (!response.ok) return;
+                const data = await response.json();
+                const result = data && typeof data === 'object' ? data.lastCheckResult : null;
+                if (!result || typeof result !== 'object') return;
+
+                const available = result.available === true;
+                const behindParsed = Number(result.behind);
+                const behind = Number.isFinite(behindParsed) ? behindParsed : 0;
+
+                if (!available) {
+                    applyState('up-to-date', 'Up to date');
+                } else if (behind >= 2) {
+                    applyState('update-behind', `${behind} updates behind`);
+                } else {
+                    applyState('update-available', '1 update available');
+                }
+            } catch (e) {
+                applyState('up-to-date', 'Up to date');
+            }
+        }
+
+        // Gateway Restart (with confirmation)
+        async function confirmRestartGateway() {
+            if (!confirm('Are you sure you want to restart the OpenClaw Gateway? This will briefly disconnect all channels.')) return;
+            const btn = document.getElementById('gwRestartBtnHeader');
+            if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+            try {
+                await fetch('/api/system/restart', { method: 'POST' });
+                setTimeout(() => { if(btn) { btn.disabled = false; btn.style.opacity = '1'; } }, 3000);
+                setTimeout(updateGatewayStatus, 5000);
+            } catch(e) {
+                if(btn) { btn.disabled = false; btn.style.opacity = '1'; }
+            }
+        }
+
+        // Gateway Status
+        async function updateGatewayStatus() {
+            const dot = document.querySelector('#connectionStatus .status-dot');
+            const text = document.querySelector('#connectionStatus .status-text');
+            try {
+                const res = await fetch('/api/gateway/status');
+                const data = await res.json();
+                // Treat as disconnected if lastTick is stale (>90s old)
+                const now = Date.now();
+                const stale = data.lastTick && (now - data.lastTick > 90000);
+                if (data.connected && !stale) {
+                    if (dot) { dot.style.background = 'var(--success)'; dot.style.animation = 'pulse 2s infinite'; }
+                    if (text) text.textContent = 'Gateway Connected';
+                } else {
+                    if (dot) { dot.style.background = 'var(--error)'; dot.style.animation = 'none'; }
+                    if (text) text.textContent = 'Gateway Offline';
+                }
+            } catch (e) {
+                if (dot) { dot.style.background = 'var(--error)'; dot.style.animation = 'none'; }
+                if (text) text.textContent = 'Gateway Offline';
+            }
+        }
+
+        // Daily Claim from header icon (no page reload)
+        async function headerDailyClaim(e) {
+            e.preventDefault();
+            // If on wallet page and dailyClaim() exists, use it directly
+            if (typeof dailyClaim === 'function') {
+                dailyClaim();
+                return;
+            }
+            // Otherwise navigate to wallet page
+            window.location.href = '/wallet#daily-claim';
+        }
+
+        // Initial load and periodic refresh
+        document.addEventListener('DOMContentLoaded', () => {
+            updateShieldStatus();
+            updateGatewayStatus();
+            updateLogicianStatus();
+            updateVersionBadgeStatus();
+            setInterval(updateShieldStatus, 30000);
+            setInterval(updateGatewayStatus, 10000);
+            setInterval(updateLogicianStatus, 60000);
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

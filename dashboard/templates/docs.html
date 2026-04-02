@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Documentation - ResonantOS Dashboard{% endblock %}
+{% block page_title %}Documentation{% endblock %}
+
+{% block content %}
+<div class="docs-hub">
+    <div class="docs-cards">
+        <a href="{{ gitbook_url }}" target="_blank" class="docs-card resonantos">
+            <div class="docs-card-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>
+            <div class="docs-card-body">
+                <h3>ResonantOS</h3>
+                <p>System architecture, agents, modules, and specifications.</p>
+            </div>
+            <div class="docs-card-arrow">↗</div>
+        </a>
+        <a href="https://docs.openclaw.ai" target="_blank" class="docs-card openclaw">
+            <div class="docs-card-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></div>
+            <div class="docs-card-body">
+                <h3>OpenClaw</h3>
+                <p>Platform documentation, configuration, skills, and API reference.</p>
+            </div>
+            <div class="docs-card-arrow">↗</div>
+        </a>
+    </div>
+</div>
+
+<style>
+.docs-hub {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 120px);
+    padding: 40px;
+}
+
+.docs-cards {
+    display: flex;
+    gap: 32px;
+    max-width: 800px;
+    width: 100%;
+}
+
+.docs-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 48px 32px;
+    background: var(--bg-secondary, #111);
+    border: 1px solid var(--border-color, #1a1a2e);
+    border-radius: 16px;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.25s ease;
+    position: relative;
+    text-align: center;
+}
+
+.docs-card:hover {
+    border-color: var(--accent-color, #00d4ff);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px rgba(0, 212, 255, 0.1);
+}
+
+.docs-card-icon {
+    font-size: 48px;
+    line-height: 1;
+}
+
+.docs-card-body h3 {
+    margin: 0 0 8px;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary, #e0e0e0);
+}
+
+.docs-card-body p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-secondary, #888);
+    line-height: 1.5;
+}
+
+.docs-card-arrow {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    font-size: 18px;
+    color: var(--text-secondary, #888);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.docs-card:hover .docs-card-arrow {
+    opacity: 1;
+    color: var(--accent-color, #00d4ff);
+}
+
+@media (max-width: 640px) {
+    .docs-cards {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}

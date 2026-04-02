@@ -1,0 +1,7 @@
+Cron: intraday-memory-log
+Schedule: 0 */3 * * * (every 3 hours)
+Timezone: Europe/Rome
+Agent: main (isolated session)
+Model: minimax/MiniMax-M2.5
+
+Message: Check if a memory log is due. Read ~/.openclaw/workspace/memory/heartbeat-state.json for lastMemoryLog timestamp and ~/.openclaw/workspace/memory/breadcrumbs.jsonl for accumulated entries. If breadcrumbs has 3+ entries AND lastMemoryLog is more than 2 hours ago, write a memory log following the template in memory/shared-log/0000-PREAMBLE.md. Save to memory/shared-log/MEMORY-LOG-YYYY-MM-DD-partN.md. Then update heartbeat-state.json lastMemoryLog and clear processed breadcrumbs. If conditions aren't met, do nothing.

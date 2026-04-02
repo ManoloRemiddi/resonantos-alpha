@@ -1,0 +1,593 @@
+---
+import "../styles/global.css";
+// ResonantOS DAO - The Resonant Economy
+---
+import "../styles/global.css";
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="viewport" content="width=device-width" />
+		<meta name="generator" content={Astro.generator} />
+		
+		<title>DAO - The Resonant Economy | ResonantOS</title>
+		<meta name="description" content="The Resonant Economy: A self-sustaining, human-first economic model for a future where AI, organizations, and individuals collaborate." />
+		
+		<!-- Tailwind CSS -->
+		<!-- CSS imported in frontmatter -->
+		
+		<!-- Fonts -->
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+	</head>
+	
+	<body class="bg-black text-zinc-100 antialiased overflow-x-hidden">
+		<!-- Animated Background Layers -->
+		<div id="background-container" class="fixed inset-0 z-0 overflow-hidden">
+			<div class="absolute inset-0 bg-gradient-to-br from-black via-zinc-950 to-black"></div>
+			
+			<!-- Moving gradient orbs -->
+			<div class="gradient-orb gradient-orb-1"></div>
+			<div class="gradient-orb gradient-orb-2"></div>
+			<div class="gradient-orb gradient-orb-3"></div>
+			<div class="gradient-orb gradient-orb-4"></div>
+			
+			<!-- Noise overlay -->
+			<div class="absolute inset-0 opacity-[0.015]" style="background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 256 256%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22/%3E%3C/svg%3E');"></div>
+		</div>
+
+		<!-- Navigation -->
+		<nav id="main-nav" class="fixed top-0 left-0 right-0 z-50 transition-all duration-500">
+			<div class="backdrop-blur-xl bg-black/70 border-b border-white/5">
+				<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+					<div class="flex items-center justify-between h-16">
+						<div class="flex items-center">
+							<a href="/" class="text-xl font-medium tracking-tight font-display hover:opacity-80 transition-opacity">Resonant<span class="text-emerald-400">OS</span></a>
+						</div>
+						<div class="hidden md:flex items-center gap-6">
+							<a href="/" class="text-sm text-zinc-400 hover:text-zinc-100 transition-colors">Home</a>
+							<a href="/whitepaper" class="text-sm text-zinc-400 hover:text-zinc-100 transition-colors">Whitepaper</a>
+							<a href="/dao" class="text-sm text-zinc-100 font-medium">DAO</a>
+							<a href="/symbiotic-license" class="text-sm text-zinc-400 hover:text-zinc-100 transition-colors">Symbiotic License</a>
+							<a href="https://resonantos.com/" target="_blank" rel="noopener noreferrer" class="text-sm text-zinc-400 hover:text-zinc-100 transition-colors">Website</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</nav>
+
+		<!-- Scroll Content Container -->
+		<div id="scroll-content" class="relative z-20">
+			<!-- Hero Spacer -->
+			<section class="h-[40vh] relative flex items-center justify-center">
+				<div class="text-center">
+					<h1 class="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-6 text-white">
+						The Resonant <span class="text-emerald-400">Economy</span>
+					</h1>
+					<p class="text-xl text-zinc-400">
+						A self-sustaining, human-first economic model for the age of AI
+					</p>
+				</div>
+			</section>
+
+			<!-- Abstract -->
+			<section id="abstract" class="content-section py-12">
+				<div class="glass-banner text-left">
+					<div class="banner-content prose-content">
+						<h2 class="section-title text-4xl sm:text-5xl lg:text-6xl font-bold mb-8 tracking-tight">Abstract</h2>
+						<div class="space-y-6 text-lg text-zinc-300 leading-relaxed">
+							<p>
+								The <span class="color-primary font-semibold">Resonant Economy</span> is a protocol and ecosystem designed to address a fundamental failure in the modern economy: the inability to recognize and reward the full spectrum of human and creative value.
+							</p>
+							<p>
+								This whitepaper outlines a self-sustaining, human-first economic model for a future where <span class="color-secondary">AI, organizations, businesses, and individuals</span> collaborate. Our architecture is deployed in two distinct phases.
+							</p>
+							<p>
+								<span class="color-accent-1 font-semibold">Phase 1 (The Contribution Economy)</span> builds a "Community of Communities," establishing a culture of recognition. It introduces a token (<span class="font-mono text-emerald-400">$RCT</span>) with a unique, phased psychology: it begins as a non-exchangeable "karma" token to build a culture of generosity.
+							</p>
+							<p>
+								<span class="color-accent-1 font-semibold">Phase 2 (The Financial Economy)</span> is launched only after critical mass is achieved. It evolves the Phase 1 tokens into financial assets and introduces a sophisticated, utility-driven token system (<span class="font-mono text-emerald-400">$R10</span>, <span class="font-mono text-emerald-400">$R12</span>, <span class="font-mono text-emerald-400">$R15</span>) designed for long-term, stable growth (targeting +10% APY).
+							</p>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- The Problem -->
+			<section id="problem" class="content-section py-12">
+				<div class="glass-banner text-left">
+					<div class="banner-content prose-content">
+						<h2 class="section-title text-4xl sm:text-5xl lg:text-6xl font-bold mb-8 tracking-tight">
+							The <span class="gradient-text">Problem</span>
+						</h2>
+						<h3 class="text-2xl font-semibold mb-6 color-secondary">The Unseen Labor of Creation</h3>
+						<div class="space-y-6 text-lg text-zinc-300 leading-relaxed">
+							<p>
+								The contemporary digital landscape forces creators into a paradigm of <span class="color-warning">metric-driven performance</span>. Value is narrowly defined by likes, views, and followers, leaving the most profound aspects of creative work—the years of practice, the intellectual risk of experimentation, the emotional labor of mentorship, the collaborative spirit—entirely unquantified and unrewarded.
+							</p>
+							<p>
+								This system places master craftspeople and builders in a precarious position, forcing them to act as <span class="color-secondary">marketers first and artists second</span>.
+							</p>
+							<p>
+								Furthermore, as society pushes us toward individualistic goals, even our communities become silos, fragmented by language, focus, or time zones. The Resonant Economy is engineered to resolve these conflicts by creating a system that <span class="color-primary font-semibold">sees, measures, and rewards</span> the deep, often invisible, work of contribution—and unites these silos into a single, cohesive economic framework.
+							</p>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- The Solution -->
+			<section id="solution" class="content-section py-12">
+				<div class="glass-banner text-left">
+					<div class="banner-content prose-content">
+						<h2 class="section-title text-4xl sm:text-5xl lg:text-6xl font-bold mb-8 tracking-tight">
+							The <span class="gradient-text">Solution</span>
+						</h2>
+						<h3 class="text-2xl font-semibold mb-6 color-secondary">A "Community of Communities"</h3>
+						<div class="space-y-6 text-lg text-zinc-300 leading-relaxed">
+							<p>
+								We are not creating value from thin air; we are building a system to <span class="color-primary">accurately reflect the value that is already being created</span>. The core philosophy is that contribution, in all its forms, is the primary driver of the ecosystem.
+							</p>
+							<p class="mb-8">The architecture is built upon three foundational pillars:</p>
+							
+							<div class="grid gap-6">
+								<div class="component-card">
+									<h4 class="text-lg font-semibold color-primary mb-2">A "Community of Communities" Framework</h4>
+									<p class="text-zinc-400">A top-layer DAO that unites disparate communities (e.g., AI Artisans, musicians), businesses, and solopreneurs, allowing them to share a single, robust economic backbone.</p>
+								</div>
+								
+								<div class="component-card">
+									<h4 class="text-lg font-semibold color-primary mb-2">A Phased, "Culture-First" Rollout</h4>
+									<p class="text-zinc-400">A deliberate two-phase strategy that builds the human culture first (Phase 1) before deploying the core financial infrastructure (Phase 2). This ensures the user base is aligned by vision, not short-term financial gain.</p>
+								</div>
+								
+								<div class="component-card">
+									<h4 class="text-lg font-semibold color-primary mb-2">"Contribution > Capital" Governance</h4>
+									<p class="text-zinc-400">A governance system where voting power is tied to an individual's proven contribution and time, not the number of tokens they hold. This makes the protocol immune to plutocratic or hostile financial takeover.</p>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- Phase 1 -->
+			<section id="phase1" class="content-section py-12">
+				<div class="glass-banner text-left">
+					<div class="banner-content prose-content">
+						<h2 class="section-title text-4xl sm:text-5xl lg:text-6xl font-bold mb-8 tracking-tight">
+							Phase 1: The <span class="gradient-text">Contribution Economy</span>
+						</h2>
+						<h3 class="text-2xl font-semibold mb-6 color-secondary">Culture First</h3>
+						<div class="space-y-6 text-lg text-zinc-300 leading-relaxed">
+							<p>
+								This phase is designed to build the community, establish a "common vision," and create an <span class="color-primary">"economy of recognizing contribution"</span>. It has its own dual-token system:
+							</p>
+							
+							<div class="grid gap-4 my-8">
+								<div class="emergent-card">
+									<h4 class="text-lg font-semibold color-accent-1 mb-2">$RCT (Resonant Contribution Token)</h4>
+									<p class="text-zinc-400">The top-layer "Community of Communities" token.</p>
+								</div>
+								<div class="emergent-card">
+									<h4 class="text-lg font-semibold color-accent-1 mb-2">$P*CT (Project Contribution Tokens)</h4>
+									<p class="text-zinc-400">Unique tokens created by each sub-community, project, business, or individual.</p>
+								</div>
+							</div>
+
+							<h4 class="text-xl font-semibold color-secondary mt-8 mb-4">The "Karma-to-Speculative" Evolution</h4>
+							<p>
+								The <span class="font-mono text-emerald-400">$RCT</span> token is architected with constant mechanics but an evolutionary psychology:
+							</p>
+							
+							<ul class="space-y-4 mt-4">
+								<li class="flex items-start gap-3">
+									<span class="color-primary font-bold">•</span>
+									<div>
+										<span class="font-semibold color-accent-1">Initial "Karma" Phase:</span>
+										<span class="text-zinc-400"> In Phase 1, $RCT has no financial value. There is intentionally no mechanism to exchange it for $R10 or dollars. It is used as a pure "gesture of recognition" to build a culture of generosity.</span>
+									</div>
+								</li>
+								<li class="flex items-start gap-3">
+									<span class="color-primary font-bold">•</span>
+									<div>
+										<span class="font-semibold color-accent-1">Future "Speculative" Phase:</span>
+										<span class="text-zinc-400"> In Phase 2, liquidity pools will be introduced, allowing $RCT to evolve into a speculative asset whose value is determined by the market.</span>
+									</div>
+								</li>
+							</ul>
+
+							<h4 class="text-xl font-semibold color-secondary mt-8 mb-4">The Contribution Model (The "Leaderboard" Engine)</h4>
+							<p>
+								A member's standing and influence are determined by their <span class="color-primary font-semibold">Contribution Level</span>, a dynamic score calculated from four categories:
+							</p>
+							
+							<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+								<div class="component-card text-center">
+									<p class="text-2xl font-bold color-primary">1.5x</p>
+									<p class="text-zinc-400">Connection & Support</p>
+								</div>
+								<div class="component-card text-center">
+									<p class="text-2xl font-bold color-primary">1.2x</p>
+									<p class="text-zinc-400">Exploration & Discovery</p>
+								</div>
+								<div class="component-card text-center">
+									<p class="text-2xl font-bold color-primary">1.0x</p>
+									<p class="text-zinc-400">Creation & Output</p>
+								</div>
+								<div class="component-card text-center">
+									<p class="text-2xl font-bold color-primary">0.8x</p>
+									<p class="text-zinc-400">Financial Contribution</p>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- Phase 2 -->
+			<section id="phase2" class="content-section py-12">
+				<div class="glass-banner text-left">
+					<div class="banner-content prose-content">
+						<h2 class="section-title text-4xl sm:text-5xl lg:text-6xl font-bold mb-8 tracking-tight">
+							Phase 2: The <span class="gradient-text">Financial Economy</span>
+						</h2>
+						<h3 class="text-2xl font-semibold mb-6 color-secondary">Finance Second</h3>
+						<div class="space-y-6 text-lg text-zinc-300 leading-relaxed">
+							<p>
+								Launched only after the Phase 1 community reaches critical mass, this is the core financial engine.
+							</p>
+
+							<h4 class="text-xl font-semibold color-secondary mt-8 mb-4">The Stable-Growth Tokens</h4>
+							
+							<div class="grid gap-4 my-6">
+								<div class="emergent-card">
+									<h4 class="text-lg font-semibold color-primary mb-2">$R10 — The Core Currency</h4>
+									<p class="text-zinc-400">The core semi-stable, value-accruing token, managed by an algorithmic protocol to follow a growth trajectory of <span class="color-primary font-bold">+10% APY</span>.</p>
+								</div>
+								<div class="emergent-card">
+									<h4 class="text-lg font-semibold color-primary mb-2">$R12 & $R15 — Locked Yield Tokens</h4>
+									<p class="text-zinc-400">Users can swap $R10 for higher-yield, locked tokens. $R12 offers +12% APY (12-day unlock); $R15 offers +15% APY (30-day unlock). High fees disincentivize day-trading, contributing to systemic stability.</p>
+								</div>
+							</div>
+
+							<h4 class="text-xl font-semibold color-secondary mt-8 mb-4">Daily Payouts & Incentives</h4>
+							<p>
+								<span class="font-mono text-emerald-400">$RCT</span> is printed or unlocked daily at a controlled, inflationary rate. This new supply rewards the <span class="color-primary font-semibold">Top 80%</span> of contributors on the Daily Leaderboard.
+							</p>
+							<p class="mt-4 text-zinc-400">
+								The pool is tiered (Top 20% earn more than the next 60%) to gamify contribution. The Bottom 20% earn nothing, reducing network noise and creating a powerful incentive to improve contribution quality.
+							</p>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- Economic Engine -->
+			<section id="engine" class="content-section py-12">
+				<div class="glass-banner text-left">
+					<div class="banner-content prose-content">
+						<h2 class="section-title text-4xl sm:text-5xl lg:text-6xl font-bold mb-8 tracking-tight">
+							The Economic <span class="gradient-text">Engine</span>
+						</h2>
+						<div class="space-y-6 text-lg text-zinc-300 leading-relaxed">
+							<p>
+								The long-term credibility of the ecosystem rests on the stability of the <span class="font-mono text-emerald-400">$R10</span> token. Our system is a <span class="color-primary font-semibold">"dual-engine" model</span>, combining defensive stability with productive growth.
+							</p>
+
+							<h3 class="text-2xl font-semibold color-secondary mt-8 mb-4">The $R10 Resilience Engine (Defensive Stability)</h3>
+							<p class="mb-6">This engine defends the $R10 price trajectory against attacks and volatility:</p>
+							
+							<div class="grid gap-4">
+								<div class="component-card">
+									<h4 class="font-semibold color-accent-1 mb-2">Concentrated Liquidity Pool</h4>
+									<p class="text-zinc-400 text-base">Makes the $R10 token inherently capital-intensive and difficult to de-peg.</p>
+								</div>
+								<div class="component-card">
+									<h4 class="font-semibold color-accent-1 mb-2">Algorithmic Minting</h4>
+									<p class="text-zinc-400 text-base">Absorbs massive buy pressure by automatically minting new $R10 to meet demand, capturing inbound capital for the Treasury.</p>
+								</div>
+								<div class="component-card">
+									<h4 class="font-semibold color-accent-1 mb-2">Panic Sell Protections</h4>
+									<p class="text-zinc-400 text-base">Account-Level Limits prevent "whale dumps." System-Level Queuing prevents "bank runs" by smoothing mass sell-offs over time.</p>
+								</div>
+								<div class="component-card">
+									<h4 class="font-semibold color-accent-1 mb-2">The Deflationary Engine</h4>
+									<p class="text-zinc-400 text-base">Transaction fees are permanently burned. A social lottery system burns a portion of tickets purchased.</p>
+								</div>
+							</div>
+
+							<h3 class="text-2xl font-semibold color-secondary mt-12 mb-4">The DAO Investment Fund (Productive Growth)</h3>
+							<p class="mb-6">The Treasury is not a passive vault; it is a productive <span class="color-primary">"algorithmic central bank"</span> that actively funds the economy:</p>
+							
+							<ul class="space-y-3">
+								<li class="flex items-start gap-3">
+									<span class="color-primary font-bold">→</span>
+									<span><span class="font-semibold">Invest in Community Projects:</span> Funding DAO-voted projects expected to generate >10% APY return.</span>
+								</li>
+								<li class="flex items-start gap-3">
+									<span class="color-primary font-bold">→</span>
+									<span><span class="font-semibold">Buy Bitcoin:</span> As a long-term, appreciating reserve asset.</span>
+								</li>
+								<li class="flex items-start gap-3">
+									<span class="color-primary font-bold">→</span>
+									<span><span class="font-semibold">Provide LP Liquidity:</span> To deepen the $R10's stability.</span>
+								</li>
+								<li class="flex items-start gap-3">
+									<span class="color-primary font-bold">→</span>
+									<span><span class="font-semibold">Buy Back $R10:</span> To apply direct buy-pressure and support the price.</span>
+								</li>
+							</ul>
+
+							<div class="emergent-card mt-8">
+								<h4 class="text-lg font-semibold color-primary mb-2">Universal Contribution Income (UCI)</h4>
+								<p class="text-zinc-400">A 20% tithe from the $R10 Lottery is ring-fenced to fund the UCI. This pool is distributed weekly to the top contributors, providing a stable, reliable income to the community's most valuable long-term contributors.</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- Honest AI Framework -->
+			<section id="honest-ai" class="content-section py-12">
+				<div class="glass-banner text-left">
+					<div class="banner-content prose-content">
+						<h2 class="section-title text-4xl sm:text-5xl lg:text-6xl font-bold mb-8 tracking-tight">
+							The "Honest AI" <span class="gradient-text">Framework</span>
+						</h2>
+						<div class="space-y-6 text-lg text-zinc-300 leading-relaxed">
+							<p>
+								The system is designed to be <span class="color-primary font-semibold">"AI-aware"</span> and incentivize honesty. We legalize AI contribution rather than banning it.
+							</p>
+							
+							<div class="grid gap-4 my-8">
+								<div class="component-card">
+									<h4 class="font-semibold color-accent-1 mb-2">Human Contribution</h4>
+									<p class="text-zinc-400">Capped at a low daily number (e.g., 5 contributions). Paid at the full "Human Rate."</p>
+								</div>
+								<div class="component-card">
+									<h4 class="font-semibold color-accent-1 mb-2">AI Contribution</h4>
+									<p class="text-zinc-400">Uncapped. Can make thousands of contributions. Paid at a "Lower AI Rate."</p>
+								</div>
+								<div class="emergent-card">
+									<h4 class="font-semibold color-primary mb-2">The "Honest AI" Incentive</h4>
+									<p class="text-zinc-400">If an account exceeds the "Human Cap," the system automatically re-classifies all contributions from that account for that day to the "Lower AI Rate". This creates a powerful financial incentive for users to be honest and self-declare their AI agents to run uncapped.</p>
+								</div>
+							</div>
+
+							<h4 class="text-xl font-semibold color-secondary mt-8 mb-4">Additional Safeguards</h4>
+							<ul class="space-y-3">
+								<li class="flex items-start gap-3">
+									<span class="color-primary font-bold">•</span>
+									<span><span class="font-semibold">Escrow & Moderation:</span> Significant contribution rewards may be held in escrow (e.g., 30 days) to be reviewed by the community and AI moderators before payout.</span>
+								</li>
+								<li class="flex items-start gap-3">
+									<span class="color-primary font-bold">•</span>
+									<span><span class="font-semibold">Leaderboard Decay:</span> The Lifetime Leaderboard score will have a slow, predictable decay (e.g., 10% per year) to ensure rewards continue to flow to active contributors.</span>
+								</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- Governance -->
+			<section id="governance" class="content-section py-12">
+				<div class="glass-banner text-left">
+					<div class="banner-content prose-content">
+						<h2 class="section-title text-4xl sm:text-5xl lg:text-6xl font-bold mb-8 tracking-tight">
+							<span class="gradient-text">Governance</span>
+						</h2>
+						<h3 class="text-2xl font-semibold mb-6 color-secondary">Contribution > Capital</h3>
+						<div class="space-y-6 text-lg text-zinc-300 leading-relaxed">
+							<p>
+								The protocol is designed to be a <span class="color-primary font-semibold">"human-first" digital nation</span>, immune to financial takeover.
+							</p>
+							
+							<div class="component-card my-8">
+								<h4 class="font-semibold color-warning mb-2">The Problem</h4>
+								<p class="text-zinc-400">Most DAOs use a "one token, one vote" model, which is plutocracy.</p>
+							</div>
+
+							<div class="emergent-card my-8">
+								<h4 class="font-semibold color-primary mb-2">The Solution</h4>
+								<p class="text-zinc-300">Voting power in the Resonant Economy is not tied to the number of $R10 tokens you hold. It is tied directly to your <span class="color-primary font-semibold">Contribution Level</span>—the non-financial score you earned during Phase 1 for your proven, long-term contributions to the ecosystem.</p>
+							</div>
+
+							<div class="component-card my-8">
+								<h4 class="font-semibold color-accent-1 mb-2">The Shield</h4>
+								<p class="text-zinc-400">This model severs the link between wealth and power. A newcomer cannot buy their way into control, regardless of their capital. Power is reserved for trusted, active human contributors. This requires a robust "Proof of Identity" solution to ensure "People vote, not robots".</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- Roadmap -->
+			<section id="roadmap" class="content-section py-12">
+				<div class="glass-banner text-left">
+					<div class="banner-content prose-content">
+						<h2 class="section-title text-4xl sm:text-5xl lg:text-6xl font-bold mb-8 tracking-tight">
+							Conceptual <span class="gradient-text">Roadmap</span>
+						</h2>
+						<div class="space-y-6 text-lg text-zinc-300 leading-relaxed">
+							<div class="grid gap-6">
+								<div class="emergent-card">
+									<h4 class="text-xl font-semibold color-primary mb-3">Phase 1: The Contribution Economy</h4>
+									<p class="text-zinc-400">Focus on building a large, philosophically aligned "Community of Communities". Launch the $RCT and $P*CT tokens in their "karma" phase to build the culture of recognition and the "Contribution Level" leaderboards.</p>
+								</div>
+								
+								<div class="emergent-card">
+									<h4 class="text-xl font-semibold color-primary mb-3">Phase 2: The Financial Economy</h4>
+									<p class="text-zinc-400">Once critical mass is achieved, launch the $R10/$R12/$R15 tokens, the Marketplace, the Stability Protocol, and the Productive Treasury. Evolve $RCT into a financial asset with the Daily Payout system.</p>
+								</div>
+								
+								<div class="emergent-card">
+									<h4 class="text-xl font-semibold color-primary mb-3">Phase 3: Full Decentralization</h4>
+									<p class="text-zinc-400">Cede all control to the DAO, which will be run entirely by the active contributors.</p>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- Call to Action -->
+			<section id="cta" class="content-section py-12">
+				<div class="glass-banner text-center">
+					<div class="banner-content">
+						<h2 class="text-4xl sm:text-5xl font-bold mb-6 tracking-tight gradient-text">Join the Resonant Economy</h2>
+						<p class="text-xl text-zinc-300 mb-8 max-w-2xl mx-auto">
+							Be part of a new economic model that recognizes and rewards the full spectrum of human value.
+						</p>
+						<a href="https://discord.gg/MRESQnf4R4" target="_blank" rel="noopener noreferrer" class="inline-block text-white font-medium px-8 py-4 rounded-full transition-all hover:scale-105" style="background-color: var(--color-primary);">
+							Join the Community
+						</a>
+					</div>
+				</div>
+			</section>
+
+			<!-- Final Statement -->
+			<section class="py-16 text-center">
+				<p class="text-xl text-zinc-400 mx-auto italic whitespace-nowrap">
+					Governed as a DAO. AI doesn't take human jobs—it builds a new economy <em>with</em> them.
+				</p>
+			</section>
+
+			<!-- Disclaimer -->
+			<section id="disclaimer" class="content-section py-12">
+				<div class="glass-banner text-left">
+					<div class="banner-content prose-content">
+						<h2 class="section-title text-2xl font-bold mb-4 tracking-tight text-zinc-500">Disclaimer</h2>
+						<p class="text-zinc-500 text-sm leading-relaxed">
+							This document is a conceptual blueprint and does not constitute an offer to sell or a solicitation of an offer to buy any security. The information herein is for informational purposes only. The proposed protocol is complex and involves significant risk. All aspects of this plan are subject to change.
+						</p>
+					</div>
+				</div>
+			</section>
+
+			<!-- Footer -->
+			<footer class="py-16 px-4 border-t border-white/5">
+				<div class="max-w-4xl mx-auto text-center">
+					<p class="text-xl font-medium mb-2 font-display">Resonant<span class="text-emerald-400">OS</span></p>
+					<p class="text-zinc-500 text-sm">Architecting Intelligence</p>
+					<p class="text-zinc-600 text-xs mt-4">© 2026 ResonantOS</p>
+				</div>
+			</footer>
+		</div>
+
+		<style>
+			/* Color Theme - Seasonal Transition */
+			:root {
+				--color-primary: #10b981;
+				--color-secondary: #d97706;
+				--color-accent-1: #34d399;
+				--color-accent-2: #92400e;
+				--color-warning: #ea580c;
+				--color-tertiary: #78350f;
+			}
+
+			.font-display {
+				font-family: 'DM Sans', system-ui, sans-serif;
+			}
+
+			.color-primary { color: var(--color-primary); }
+			.color-secondary { color: var(--color-secondary); }
+			.color-accent-1 { color: var(--color-accent-1); }
+			.color-accent-2 { color: var(--color-accent-2); }
+			.color-warning { color: var(--color-warning); }
+
+			.gradient-text {
+				background: linear-gradient(to right, var(--color-primary), var(--color-secondary));
+				-webkit-background-clip: text;
+				-webkit-text-fill-color: transparent;
+				background-clip: text;
+			}
+
+			/* Gradient Orbs */
+			.gradient-orb {
+				position: absolute;
+				border-radius: 50%;
+				filter: blur(80px);
+				opacity: 0.4;
+				will-change: transform, filter;
+			}
+
+			.gradient-orb-1 {
+				width: 600px;
+				height: 600px;
+				background: linear-gradient(135deg, #10b981, #34d399);
+				top: -200px;
+				left: -200px;
+			}
+
+			.gradient-orb-2 {
+				width: 500px;
+				height: 500px;
+				background: linear-gradient(135deg, #34d399, #6ee7b7);
+				bottom: -150px;
+				right: -150px;
+			}
+
+			.gradient-orb-3 {
+				width: 400px;
+				height: 400px;
+				background: linear-gradient(135deg, #2dd4bf, #10b981);
+				top: 50%;
+				left: 50%;
+			}
+
+			.gradient-orb-4 {
+				width: 450px;
+				height: 450px;
+				background: linear-gradient(135deg, #059669, #10b981);
+				bottom: 30%;
+				left: 10%;
+				opacity: 0.3;
+			}
+
+			/* Glass Banners */
+			.glass-banner {
+				background: rgba(0, 0, 0, 0.2);
+				backdrop-filter: blur(20px);
+				-webkit-backdrop-filter: blur(20px);
+				border-top: 1px solid rgba(255, 255, 255, 0.03);
+				border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+				width: 100%;
+				padding: 2.5rem 2rem;
+			}
+			
+			.glass-banner .banner-content {
+				max-width: 1000px;
+				margin: 0 auto;
+				text-align: center;
+			}
+			
+			.glass-banner.text-left .banner-content {
+				text-align: left;
+			}
+
+			.prose-content {
+				opacity: 1 !important;
+				filter: none !important;
+			}
+
+			/* Component Cards */
+			.component-card {
+				padding: 1.5rem;
+				background: rgba(212, 165, 116, 0.08);
+				border: 1px solid rgba(212, 165, 116, 0.25);
+				border-radius: 12px;
+			}
+
+			.emergent-card {
+				padding: 1.5rem;
+				background: linear-gradient(to bottom right, rgba(134, 166, 124, 0.1), rgba(212, 165, 116, 0.1));
+				border: 1px solid rgba(134, 166, 124, 0.25);
+				border-radius: 12px;
+			}
+		</style>
+	</body>
+</html>

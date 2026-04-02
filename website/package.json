@@ -1,0 +1,18 @@
+{
+  "name": "website",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.1.18",
+    "astro": "^5.17.1",
+    "gsap": "^3.14.2",
+    "lenis": "^1.3.17",
+    "tailwindcss": "^4.1.18"
+  }
+}

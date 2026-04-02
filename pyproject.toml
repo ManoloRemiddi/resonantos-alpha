@@ -1,0 +1,93 @@
+[project]
+name = "resonantos"
+version = "0.6.0"
+requires-python = ">=3.11"
+dependencies = [
+    "flask>=3.0",
+    "flask-cors>=4.0",
+    "requests>=2.31",
+    "websocket-client>=1.6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.11",
+    "pyright>=1.1",
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "hypothesis>=6.100",
+    "pre-commit>=4.0",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+src = ["dashboard"]
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "W",
+    "F",
+    "I",
+    "N",
+    "UP",
+    "B",
+    "S",
+    "C4",
+    "DTZ",
+    "T20",
+    "SIM",
+    "TCH",
+    "RUF",
+]
+ignore = [
+    "S101",
+    "S104",
+    "S603",
+    "S607",
+    "T201",
+    "E501",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S106"]
+"dashboard/server_v2.py" = ["ALL"]  # Legacy monolith — excluded until fully decomposed
+"dashboard/routes/bounties.py" = ["ALL"]  # Moved from monolith, lint-fix is a separate phase
+"dashboard/routes/agents.py" = ["ALL"]  # Moved from monolith, lint-fix is a separate phase
+"dashboard/routes/chatbots.py" = ["ALL"]  # Moved from monolith, lint-fix is a separate phase
+"dashboard/routes/docs.py" = ["ALL"]  # Moved from monolith, lint-fix is a separate phase
+"dashboard/routes/knowledge.py" = ["ALL"]  # Moved from monolith, lint-fix is a separate phase
+"dashboard/routes/logician.py" = ["ALL"]  # Moved from monolith, lint-fix is a separate phase
+"dashboard/routes/misc.py" = ["ALL"]  # Moved from monolith, lint-fix is a separate phase
+"dashboard/routes/pages.py" = ["ALL"]  # Moved from monolith, lint-fix is a separate phase
+"dashboard/routes/projects.py" = ["ALL"]  # Moved from monolith, lint-fix is a separate phase
+"dashboard/routes/protocols.py" = ["ALL"]  # Moved from monolith, lint-fix is a separate phase
+"dashboard/routes/rmemory.py" = ["ALL"]  # Moved from monolith, lint-fix is a separate phase
+"dashboard/routes/settings.py" = ["ALL"]  # Moved from monolith, lint-fix is a separate phase
+"dashboard/routes/settings_helpers.py" = ["ALL"]  # Moved from monolith, lint-fix is a separate phase
+"dashboard/routes/shield.py" = ["ALL"]  # Moved from monolith, lint-fix is a separate phase
+"dashboard/routes/shared.py" = ["ALL"]  # Moved from monolith, lint-fix is a separate phase
+"dashboard/routes/symbiotic.py" = ["ALL"]  # Moved from misc.py, lint-fix is a separate phase
+"dashboard/routes/system.py" = ["ALL"]  # Moved from misc.py, lint-fix is a separate phase
+"dashboard/routes/todo.py" = ["ALL"]  # Moved from monolith, lint-fix is a separate phase
+"dashboard/routes/tribes.py" = ["ALL"]  # Moved from monolith, lint-fix is a separate phase
+"dashboard/routes/wallet.py" = ["ALL"]  # Moved from monolith, lint-fix is a separate phase
+"dashboard/routes/wallet_helpers.py" = ["ALL"]  # Moved from monolith, lint-fix is a separate phase
+"dashboard/routes/token_savings_helpers.py" = ["ALL"]  # Support module for extracted token savings routes
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.pyright]
+pythonVersion = "3.11"
+typeCheckingMode = "basic"
+reportMissingImports = true
+reportMissingTypeStubs = false
+exclude = ["server_v2.py", "server.py", "server_v1_backup.py"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short --cov=dashboard --cov-report=term-missing"

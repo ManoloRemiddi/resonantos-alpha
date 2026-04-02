@@ -1,0 +1,672 @@
+[
+  {
+    "id": "BOUNTY-001",
+    "title": "Improve OpenClaw Documentation",
+    "description": "Improve onboarding and API documentation for new ResonantOS users. Include setup troubleshooting, CLI examples, and quick-start guides for the dashboard.",
+    "category": "community",
+    "macroGoal": 3,
+    "priority": "P1",
+    "size": "small",
+    "status": "open",
+    "rewardRCT": 10,
+    "rewardRES": 1000,
+    "acceptanceCriteria": [
+      "Update setup section with current prerequisites",
+      "Add troubleshooting section for common installation and wallet issues",
+      "Provide at least 5 practical command examples",
+      "Include dashboard screenshot walkthrough"
+    ],
+    "requiredSkills": [
+      "documentation",
+      "openclaw",
+      "developer-experience"
+    ],
+    "teamMinSize": 1,
+    "teamMaxSize": 6,
+    "createdAt": "2026-02-21T20:00:00Z",
+    "deadline": null,
+    "claimedBy": [],
+    "reviews": [],
+    "qualityGate": {
+      "status": "pending",
+      "reviewers": [],
+      "score": null,
+      "verificationMethod": "peer-reviewed"
+    },
+    "workspaceUrl": null,
+    "githubBranch": null,
+    "tribeId": "TRIBE-002"
+  },
+  {
+    "id": "BOUNTY-002",
+    "title": "Build A2A Protocol Prototype",
+    "description": "Implement a prototype for agent-to-agent collaboration across at least 3 isolated OpenClaw instances. Must demonstrate message passing, capability discovery, and basic task delegation using Google's A2A protocol spec.",
+    "category": "research",
+    "macroGoal": 1,
+    "priority": "P0",
+    "size": "large",
+    "status": "rewarded",
+    "rewardRCT": 100,
+    "rewardRES": 10000,
+    "acceptanceCriteria": [
+      "Demonstrate inter-agent discovery between 3 instances",
+      "Implement task delegation with status updates",
+      "Test with at least 2 different AI model providers",
+      "Publish protocol notes and observed failure modes",
+      "Document A2A spec compatibility gaps"
+    ],
+    "requiredSkills": [
+      "python",
+      "protocol-design",
+      "distributed-systems",
+      "ai-agents"
+    ],
+    "teamMinSize": 3,
+    "teamMaxSize": 6,
+    "createdAt": "2026-02-21T20:00:00Z",
+    "deadline": null,
+    "claimedBy": [
+      "TestWallet123",
+      "TestWallet456",
+      "ReviewerWallet1"
+    ],
+    "reviews": [
+      {
+        "reviewerWallet": "ExtReviewer1",
+        "approved": true,
+        "score": 4,
+        "comments": "Solid",
+        "verificationMethod": "peer-reviewed",
+        "createdAt": "2026-02-21T20:39:45Z"
+      },
+      {
+        "reviewerWallet": "ExtReviewer2",
+        "approved": true,
+        "score": 5,
+        "comments": "Excellent",
+        "verificationMethod": "peer-reviewed",
+        "createdAt": "2026-02-21T20:39:45Z"
+      },
+      {
+        "reviewerWallet": "ExtReviewer3",
+        "approved": true,
+        "score": 4,
+        "comments": "Approved",
+        "verificationMethod": "peer-reviewed",
+        "createdAt": "2026-02-21T20:39:58Z"
+      }
+    ],
+    "qualityGate": {
+      "status": "passed",
+      "reviewers": [
+        "ExtReviewer1",
+        "ExtReviewer2",
+        "ExtReviewer3"
+      ],
+      "score": 4.33,
+      "verificationMethod": "peer-reviewed"
+    },
+    "workspaceUrl": null,
+    "githubBranch": null,
+    "updatedAt": "2026-02-21T20:39:58Z",
+    "reward": {
+      "triggeredAt": "2026-02-21T20:39:58Z",
+      "recipients": [
+        {
+          "wallet": "ReviewerWallet1",
+          "rct": 33.3333,
+          "res": 3333.3333
+        },
+        {
+          "wallet": "TestWallet123",
+          "rct": 33.3333,
+          "res": 3333.3333
+        },
+        {
+          "wallet": "TestWallet456",
+          "rct": 33.3333,
+          "res": 3333.3333
+        }
+      ],
+      "totalRCT": 100.0,
+      "totalRES": 10000.0,
+      "onChain": true,
+      "transactions": null,
+      "mintErrors": [
+        {
+          "global": "400 Bad Request: The browser (or proxy) sent a request that this server could not understand."
+        }
+      ]
+    },
+    "tribeId": "TRIBE-001"
+  },
+  {
+    "id": "BOUNTY-003",
+    "title": "Design Bounty Reward Smart Contract",
+    "description": "Design and implement an Anchor smart contract for DAO bounty payouts. Must support verification gating, split rewards across tribe members, and auditability. Integrates with existing Token-2022 $RCT and SPL $RES mints.",
+    "category": "economy",
+    "macroGoal": 2,
+    "priority": "P0",
+    "size": "medium",
+    "status": "open",
+    "rewardRCT": 50,
+    "rewardRES": 5000,
+    "acceptanceCriteria": [
+      "Define payout state machine from verified to rewarded",
+      "Support equal split among approved tribe members",
+      "Integrate with existing $RCT (Token-2022) and $RES (SPL) mints",
+      "Provide test plan for failure cases and abuse prevention",
+      "Deploy to DevNet with passing test suite"
+    ],
+    "requiredSkills": [
+      "solana",
+      "anchor",
+      "smart-contracts",
+      "token-economy",
+      "rust"
+    ],
+    "teamMinSize": 3,
+    "teamMaxSize": 6,
+    "createdAt": "2026-02-21T20:00:00Z",
+    "deadline": null,
+    "claimedBy": [],
+    "reviews": [],
+    "qualityGate": {
+      "status": "pending",
+      "reviewers": [],
+      "score": null,
+      "verificationMethod": "verified"
+    },
+    "workspaceUrl": null,
+    "githubBranch": null,
+    "tribeId": "TRIBE-003"
+  },
+  {
+    "id": "BOUNTY-004",
+    "title": "Build Tribe Formation & Discovery UI",
+    "description": "Create a tribe discovery and formation interface on the dashboard. Users should be able to browse open bounties, see skill-match scores, form tribes, and coordinate. Includes profile cards showing skills, reputation level, and active bounties.",
+    "category": "core",
+    "macroGoal": 3,
+    "priority": "P0",
+    "size": "medium",
+    "status": "open",
+    "rewardRCT": 40,
+    "rewardRES": 4000,
+    "acceptanceCriteria": [
+      "Skill-based bounty matching with match percentage",
+      "Tribe formation flow (invite, accept, coordinate)",
+      "User profile cards with skills and REX levels",
+      "Integration with existing wallet connect flow",
+      "Mobile-responsive design"
+    ],
+    "requiredSkills": [
+      "javascript",
+      "html-css",
+      "flask",
+      "ui-design"
+    ],
+    "teamMinSize": 3,
+    "teamMaxSize": 6,
+    "createdAt": "2026-02-21T21:00:00Z",
+    "deadline": null,
+    "claimedBy": [],
+    "reviews": [],
+    "qualityGate": {
+      "status": "pending",
+      "reviewers": [],
+      "score": null,
+      "verificationMethod": "peer-reviewed"
+    },
+    "workspaceUrl": null,
+    "githubBranch": null,
+    "tribeId": "TRIBE-004"
+  },
+  {
+    "id": "BOUNTY-005",
+    "title": "Implement Quality Gate System",
+    "description": "Build the quality gate review system for bounty completion. Reviewers must score work 1-5, provide verification method, and meet quorum requirements. Results trigger on-chain reward distribution or send back for rework.",
+    "category": "core",
+    "macroGoal": 2,
+    "priority": "P0",
+    "size": "medium",
+    "status": "open",
+    "rewardRCT": 40,
+    "rewardRES": 4000,
+    "acceptanceCriteria": [
+      "Review form with score, method, and comments",
+      "Quorum enforcement (1/2/3 reviewers by bounty size)",
+      "Reviewer cannot be tribe member (conflict check)",
+      "Auto-transition: enough approvals \u2192 verified \u2192 reward trigger",
+      "Rejection sends bounty back to in_progress with feedback"
+    ],
+    "requiredSkills": [
+      "python",
+      "flask",
+      "javascript",
+      "solana"
+    ],
+    "teamMinSize": 3,
+    "teamMaxSize": 6,
+    "createdAt": "2026-02-21T21:00:00Z",
+    "deadline": null,
+    "claimedBy": [],
+    "reviews": [],
+    "qualityGate": {
+      "status": "pending",
+      "reviewers": [],
+      "score": null,
+      "verificationMethod": "verified"
+    },
+    "workspaceUrl": null,
+    "githubBranch": null,
+    "tribeId": "TRIBE-004"
+  },
+  {
+    "id": "BOUNTY-006",
+    "title": "Design DAO Governance Transition Roadmap",
+    "description": "Document the governance transition from centralized stewardship to community-governed operation. Define decision-rights matrix, capability-based milestones, and the exact conditions under which authority transfers. Include $RCT inflation-based power decay model.",
+    "category": "community",
+    "macroGoal": 2,
+    "priority": "P1",
+    "size": "medium",
+    "status": "open",
+    "rewardRCT": 30,
+    "rewardRES": 3000,
+    "acceptanceCriteria": [
+      "Decision-rights matrix (what requires votes, what's delegated)",
+      "Capability-based milestone definitions for each transition phase",
+      "Inflation decay model specification with mathematical formula",
+      "Governance attack vector analysis",
+      "Timeline with clear trigger conditions"
+    ],
+    "requiredSkills": [
+      "governance",
+      "tokenomics",
+      "documentation",
+      "game-theory"
+    ],
+    "teamMinSize": 3,
+    "teamMaxSize": 6,
+    "createdAt": "2026-02-21T21:00:00Z",
+    "deadline": null,
+    "claimedBy": [],
+    "reviews": [],
+    "qualityGate": {
+      "status": "pending",
+      "reviewers": [],
+      "score": null,
+      "verificationMethod": "peer-reviewed"
+    },
+    "workspaceUrl": null,
+    "githubBranch": null,
+    "tribeId": "TRIBE-002"
+  },
+  {
+    "id": "BOUNTY-007",
+    "title": "Build Orchestration Console Dashboard",
+    "description": "Create a dashboard view for DAO coordinators to monitor all active bounties, tribe health, contributor activity, and reward distribution. Real-time stats with filtering and alerting for stalled bounties.",
+    "category": "core",
+    "macroGoal": 3,
+    "priority": "P1",
+    "size": "medium",
+    "status": "open",
+    "rewardRCT": 35,
+    "rewardRES": 3500,
+    "acceptanceCriteria": [
+      "Real-time bounty pipeline visualization",
+      "Contributor activity heatmap",
+      "Stalled bounty alerts (no activity > 7 days)",
+      "Reward distribution summary",
+      "Filter by status, category, priority, tribe"
+    ],
+    "requiredSkills": [
+      "javascript",
+      "flask",
+      "data-visualization",
+      "ui-design"
+    ],
+    "teamMinSize": 3,
+    "teamMaxSize": 6,
+    "createdAt": "2026-02-21T21:00:00Z",
+    "deadline": null,
+    "claimedBy": [],
+    "reviews": [],
+    "qualityGate": {
+      "status": "pending",
+      "reviewers": [],
+      "score": null,
+      "verificationMethod": "peer-reviewed"
+    },
+    "workspaceUrl": null,
+    "githubBranch": null,
+    "tribeId": "TRIBE-004"
+  },
+  {
+    "id": "BOUNTY-008",
+    "title": "Implement AP2/x402 Payment Rails Prototype",
+    "description": "Build a prototype integrating Google's AP2 (Agent Payments Protocol) and Coinbase x402 for micropayments between agents. Test on Solana DevNet with $RES as the payment token. Must demonstrate agent-to-agent payment for completed sub-tasks.",
+    "category": "research",
+    "macroGoal": 2,
+    "priority": "P1",
+    "size": "large",
+    "status": "open",
+    "rewardRCT": 80,
+    "rewardRES": 8000,
+    "acceptanceCriteria": [
+      "AP2 protocol integration with Solana DevNet",
+      "x402 HTTP payment flow demonstration",
+      "Agent pays agent for completed sub-task",
+      "$RES as payment medium",
+      "Security analysis of payment flow",
+      "Documentation of protocol gaps and workarounds"
+    ],
+    "requiredSkills": [
+      "solana",
+      "protocol-design",
+      "python",
+      "payments",
+      "security"
+    ],
+    "teamMinSize": 3,
+    "teamMaxSize": 6,
+    "createdAt": "2026-02-21T21:00:00Z",
+    "deadline": null,
+    "claimedBy": [],
+    "reviews": [],
+    "qualityGate": {
+      "status": "pending",
+      "reviewers": [],
+      "score": null,
+      "verificationMethod": "verified"
+    },
+    "workspaceUrl": null,
+    "githubBranch": null,
+    "tribeId": "TRIBE-005"
+  },
+  {
+    "id": "BOUNTY-009",
+    "title": "Community Onboarding Pipeline",
+    "description": "Build the end-to-end onboarding flow for new DAO contributors: Phantom wallet connect \u2192 Identity NFT \u2192 skill declaration \u2192 bounty discovery \u2192 first claim. Must work for both experienced crypto users and newcomers.",
+    "category": "community",
+    "macroGoal": 3,
+    "priority": "P0",
+    "size": "medium",
+    "status": "open",
+    "rewardRCT": 40,
+    "rewardRES": 4000,
+    "acceptanceCriteria": [
+      "Step-by-step onboarding wizard",
+      "Skill selection and profile creation",
+      "Automatic bounty recommendations post-onboarding",
+      "Works for crypto newcomers (clear guidance)",
+      "Gas sponsorship for first-time users",
+      "Integration with existing wallet and NFT systems"
+    ],
+    "requiredSkills": [
+      "javascript",
+      "flask",
+      "ui-design",
+      "solana",
+      "developer-experience"
+    ],
+    "teamMinSize": 3,
+    "teamMaxSize": 6,
+    "createdAt": "2026-02-21T21:00:00Z",
+    "deadline": null,
+    "claimedBy": [],
+    "reviews": [],
+    "qualityGate": {
+      "status": "pending",
+      "reviewers": [],
+      "score": null,
+      "verificationMethod": "peer-reviewed"
+    },
+    "workspaceUrl": null,
+    "githubBranch": null,
+    "tribeId": "TRIBE-002"
+  },
+  {
+    "id": "BOUNTY-010",
+    "title": "Anti-Sybil and Anti-Gaming Protection",
+    "description": "Design and implement anti-gaming measures for the bounty system. Prevent reward farming, sock puppet accounts, and collusion between reviewers and tribe members. Integrate with existing $RCT caps and Identity NFT requirements.",
+    "category": "technical",
+    "macroGoal": 2,
+    "priority": "P1",
+    "size": "medium",
+    "status": "open",
+    "rewardRCT": 45,
+    "rewardRES": 4500,
+    "acceptanceCriteria": [
+      "Sybil detection heuristics for wallet clustering",
+      "Reviewer-tribe conflict detection beyond simple membership check",
+      "Quality multiplier system (0.5x-2.0x) based on review history",
+      "Rate limiting for bounty claims and completions",
+      "Alert system for suspicious patterns",
+      "Integration with $RCT cap system"
+    ],
+    "requiredSkills": [
+      "security",
+      "python",
+      "game-theory",
+      "data-analysis"
+    ],
+    "teamMinSize": 3,
+    "teamMaxSize": 6,
+    "createdAt": "2026-02-21T21:00:00Z",
+    "deadline": null,
+    "claimedBy": [],
+    "reviews": [],
+    "qualityGate": {
+      "status": "pending",
+      "reviewers": [],
+      "score": null,
+      "verificationMethod": "verified"
+    },
+    "workspaceUrl": null,
+    "githubBranch": null,
+    "tribeId": "TRIBE-006"
+  },
+  {
+    "id": "BOUNTY-011",
+    "title": "Community Connector Kit \u2014 Let Any Group Plug Into the DAO",
+    "description": "ResonantOS DAO is a community for communities. It doesn't replace existing groups \u2014 it connects them to shared work, shared rewards, and shared coordination. This bounty builds that bridge.\n\nDesign and build a lightweight integration kit that lets any existing community (Discord server, Telegram group, forum) connect to the ResonantOS DAO. The kit should include:\n\n1. A Discord bot (primary) that lists open bounties, lets members claim/join, and shows their profile\n2. A conversational onboarding flow: community member \u2192 Phantom wallet setup \u2192 identity NFT \u2192 ready to contribute\n3. A 'Community Leader Quick Start' guide (max 4 pages) covering: what the DAO offers, bot deployment, how rewards work, wallet security basics\n\n**Existing System Context (you'll build on top of this):**\n- Dashboard API base: configurable URL (default `http://localhost:19100`)\n- `GET /api/bounties` \u2014 list all bounties (filterable by status, category, priority, size)\n- `POST /api/bounties/<id>/claim` \u2014 claim a bounty (requires `{wallet}` body, identity NFT check)\n- `POST /api/bounties/<id>/join` \u2014 join a bounty's tribe (requires `{wallet, role}` body)\n- `GET /api/bounties/discover?wallet=X&skills=a,b,c` \u2014 skill-matched bounty discovery\n- `PUT /api/profiles/<wallet>` \u2014 create/update contributor profile (name, bio, skills)\n- Identity NFTs: minted via `nft_minter.py` using Token-2022 NonTransferable extension on Solana DevNet\n\n**Scope boundaries:** The bot connects to a running dashboard instance via API. Dashboard deployment/hosting is NOT in scope \u2014 assume the API is reachable at the configured URL. Wallet creation guidance only (Phantom install + setup); no custodial wallet building.\n\n**Note on rewards:** This is alpha-stage. $RCT and $RES tokens are on Solana DevNet \u2014 they represent reputation and contribution tracking, not financial value. Think of them as proof-of-contribution markers that will gain governance weight as the DAO matures.",
+    "category": "community",
+    "macroGoal": 3,
+    "priority": "P0",
+    "size": "large",
+    "status": "open",
+    "rewardRCT": 50,
+    "rewardRES": 5000,
+    "acceptanceCriteria": [
+      "Working Discord bot that connects to the dashboard API and lists open bounties with filters",
+      "Bot-guided onboarding: member goes from zero to identity NFT holder in under 5 minutes",
+      "Community Leader Quick Start guide (max 4 pages): what the DAO offers, bot deployment, rewards, wallet basics",
+      "Tested end-to-end with at least 3-5 participants in our Discord (staged walkthrough is fine)",
+      "Bot configurable via environment variables (API base URL, Discord token, network)"
+    ],
+    "requiredSkills": [
+      "discord-bot",
+      "python",
+      "community-building",
+      "ux-design",
+      "solana"
+    ],
+    "teamMinSize": 3,
+    "teamMaxSize": 8,
+    "createdAt": "2026-02-21T22:20:00Z",
+    "deadline": null,
+    "claimedBy": [],
+    "reviews": [],
+    "qualityGate": {
+      "status": "pending",
+      "reviewers": [],
+      "score": null,
+      "verificationMethod": "peer-reviewed"
+    },
+    "workspaceUrl": null,
+    "githubBranch": null,
+    "tribeId": "TRIBE-002"
+  },
+  {
+    "id": "BOUNTY-012",
+    "title": "Write & Storyboard a 'What is ResonantOS?' Explainer Video",
+    "description": "Create a complete script and visual storyboard for a 3-5 minute YouTube explainer video.\n\n**Target audience:** Technical creators who use ChatGPT/Claude but haven't seen what a persistent, memory-equipped AI partner looks like. They're searching for 'how to make AI actually useful long-term.'\n\n**Content Brief \u2014 What is ResonantOS?**\nResonantOS is an experience layer built on OpenClaw that turns a stateless AI chatbot into a persistent AI partner. Think of it this way: ChatGPT is a rental car \u2014 clean, generic, forgets you exist. ResonantOS is YOUR car \u2014 customized, remembers your routes, has your insurance, knows your blind spots.\n\nCore components to mention:\n- **R-Memory:** AI remembers across sessions \u2014 conversations, decisions, lessons learned. No more re-explaining.\n- **Shield + Logician:** Security and governance. The AI can't leak your data, can't run dangerous commands, has rules.\n- **DAO & Bounty Board:** Community-driven development. Humans and AI collaborate on bounties, form tribes, earn tokens.\n- **Identity & Wallet:** Soulbound NFTs, Solana-based token economy, proof of contribution.\n\n**Tone:** Technical but human. No hype, no buzzwords. Think Spock explaining something fascinating \u2014 precise, composed, but you can tell he finds it genuinely interesting. Keep the voice direct, logical, and low-fluff.\n\n**Demo Menu (pick 1-2 for the script):**\n1. Memory persistence \u2014 AI remembers a conversation from days ago without being told\n2. Shield blocking a dangerous command (e.g., `rm -rf`) in real-time\n3. Bounty Board \u2014 claiming a task, forming a tribe, submitting work\n4. Identity NFT minting \u2014 going from anonymous to verified contributor\n5. The Orchestrator pattern \u2014 AI delegating coding tasks while staying available for conversation\n6. Daily memory log \u2014 the AI writing down what happened today for future reference\n\n**Production format:** Final video will be screen recordings + voiceover narration (no animation budget). Storyboard should be a table: [Time | What's on screen | Narration text | Emotional beat].\n\n**Note on rewards:** Alpha-stage. Tokens are reputation markers on Solana DevNet, not currency. Early contributors get recognized as the DAO matures.",
+    "category": "creative",
+    "macroGoal": 3,
+    "priority": "P1",
+    "size": "small",
+    "status": "open",
+    "rewardRCT": 15,
+    "rewardRES": 1500,
+    "acceptanceCriteria": [
+      "Script: 3-5 minutes at natural reading pace (~450-750 words narration)",
+      "Storyboard: table format [Time | Visual | Narration | Beat] for each section",
+      "Includes 1-2 concrete demo moments from the Demo Menu above",
+      "Opens with a hook that makes the target audience stop scrolling",
+      "Reviewed by the project maintainer for voice/tone accuracy (single review pass)"
+    ],
+    "requiredSkills": [
+      "storytelling",
+      "scriptwriting",
+      "ai-concepts",
+      "content-writing"
+    ],
+    "teamMinSize": 1,
+    "teamMaxSize": 3,
+    "createdAt": "2026-02-21T22:20:00Z",
+    "deadline": null,
+    "claimedBy": [],
+    "reviews": [],
+    "qualityGate": {
+      "status": "pending",
+      "reviewers": [],
+      "score": null,
+      "verificationMethod": "peer-reviewed"
+    },
+    "workspaceUrl": null,
+    "githubBranch": null,
+    "tribeId": "TRIBE-007"
+  },
+  {
+    "id": "BOUNTY-013",
+    "title": "Cross-Tribe Collaboration Protocol \u2014 How Teams Work Together",
+    "description": "When multiple tribes work on related bounties, they need a coordination protocol \u2014 otherwise three teams produce incompatible outputs and nobody knows who's waiting on whom.\n\n**The problem this solves:**\nThe DAO will have dozens of simultaneous bounties with real dependencies. Example from our current board:\n- Tribe A builds the Community Connector Kit (BOUNTY-011) \u2014 needs the dashboard API\n- Tribe B writes the API Test Suite (BOUNTY-014) \u2014 validates that same API\n- Tribe C builds the Reputation Dashboard (BOUNTY-015) \u2014 reads bounty and profile data\n\nThree tribes, shared interfaces, different timelines. Without coordination: chaos.\n\n**What to design:**\n1. **Interface contracts** \u2014 How do tribes agree on data formats, API shapes, shared schemas? When does a contract become 'locked' vs. 'negotiable'?\n2. **Sequencing** \u2014 When work has dependencies, who goes first? How do tribes unblock each other?\n3. **Conflict resolution** \u2014 Tribe A needs an API change. Tribe B hasn't tested the current version yet. Tribe C's UI assumes the old format. What happens? Who decides?\n\n**Existing system context:**\n- Tribes form on the dashboard (claim/join/leave endpoints)\n- Each tribe has a coordinator role (assigned at join time)\n- Work artifacts go to GitHub branches (planned)\n- Communication: Discord channels\n- The AI agent (Augmentor) can observe, assist, and facilitate \u2014 but has no authority over tribes\n\n**You don't need to invent everything.** Adapt proven patterns \u2014 RFCs, interface contracts, Agile handoff ceremonies, open-source governance \u2014 to the DAO context. Credit your sources.\n\n**Deliverable format:** Markdown document, max 10 pages. Include at least one decision tree or flowchart for the conflict resolution path.\n\n**Note on rewards:** Alpha-stage. Tokens are reputation markers on Solana DevNet, not currency.",
+    "category": "research",
+    "macroGoal": 3,
+    "priority": "P1",
+    "size": "medium",
+    "status": "open",
+    "rewardRCT": 30,
+    "rewardRES": 3000,
+    "acceptanceCriteria": [
+      "Protocol covers: interface contracts, sequencing, and conflict resolution",
+      "At least 2 worked examples tracing the protocol through the real scenario above (BOUNTY-011/014/015)",
+      "Includes at least one decision tree or flowchart for conflict resolution",
+      "Simple enough that a tribe coordinator can follow it without training",
+      "Practical \u2014 uses current tools (Discord, GitHub, dashboard) without requiring new infrastructure"
+    ],
+    "requiredSkills": [
+      "systems-thinking",
+      "project-management",
+      "clear-writing",
+      "problem-solving"
+    ],
+    "teamMinSize": 2,
+    "teamMaxSize": 6,
+    "createdAt": "2026-02-21T22:20:00Z",
+    "deadline": null,
+    "claimedBy": [],
+    "reviews": [],
+    "qualityGate": {
+      "status": "pending",
+      "reviewers": [],
+      "score": null,
+      "verificationMethod": "peer-reviewed"
+    },
+    "workspaceUrl": null,
+    "githubBranch": null,
+    "tribeId": "TRIBE-005"
+  },
+  {
+    "id": "BOUNTY-014",
+    "title": "Bounty Board Automated Test Suite",
+    "description": "Write a comprehensive test suite for the DAO Bounty Board API. This is the trust layer \u2014 if the bounty lifecycle has bugs, the whole DAO is unreliable.\n\n**System architecture (what you're testing):**\n- Routes defined in `server_bounty_routes.py`, registered via `register_bounty_routes(app, ctx)`\n- Data layer: file-based JSON storage (`data/bounties.json`)\n- Internal functions: `_load_bounties()`, `_save_bounties()` read/write the JSON file\n- Identity gating: `ctx['require_identity_nft'](wallet)` returns True/False\n- Token operations: `ctx['check_rct_cap']`, `ctx['record_rct_mint']` (can be mocked)\n\n**Test isolation approach (recommended):**\n```python\n# Create a test Flask app with mock ctx\napp = Flask(__name__)\nmock_ctx = {\n    'require_identity_nft': lambda w: True,  # bypass for most tests\n    'check_rct_cap': lambda w, amt: True,\n    'record_rct_mint': lambda w, amt: None,\n}\nregister_bounty_routes(app, mock_ctx)\nclient = app.test_client()\n```\nUse a temp directory for bounties.json per test (copy a fixture, test, clean up).\n\n**Key scenarios to cover:**\n- **Happy path (8):** claim \u2192 join \u2192 submit \u2192 review \u2192 verify \u2192 reward, plus list/filter/discover\n- **Identity gating (3):** claim without NFT blocked, join without NFT blocked, actions pass with NFT\n- **Tribe management (5):** join when full, leave as coordinator, leave as last member, duplicate join, role assignment\n- **Review edge cases (5):** review own work, duplicate review, invalid score, review non-submitted bounty, enough reviews trigger verification\n- **Reward edge cases (4):** reward before verified, reward with empty tribe, reward distribution math, double reward\n- **Your additions:** find edge cases we missed\n\n**Note on rewards:** Alpha-stage. Tokens are reputation markers on Solana DevNet, not currency.",
+    "category": "technical",
+    "macroGoal": 1,
+    "priority": "P1",
+    "size": "small",
+    "status": "open",
+    "rewardRCT": 10,
+    "rewardRES": 1000,
+    "acceptanceCriteria": [
+      "At least 30 test cases covering the scenarios listed above",
+      "Runs with `python3 -m pytest tests/` \u2014 single command, zero manual setup",
+      "Tests are self-contained: each test sets up its own data fixture and cleans up after",
+      "Each test function has a docstring explaining what it validates",
+      "Passes on a clean checkout (no dependency on running server or external state)"
+    ],
+    "requiredSkills": [
+      "python",
+      "pytest",
+      "flask",
+      "testing"
+    ],
+    "teamMinSize": 1,
+    "teamMaxSize": 3,
+    "createdAt": "2026-02-21T22:20:00Z",
+    "deadline": null,
+    "claimedBy": [],
+    "reviews": [],
+    "qualityGate": {
+      "status": "pending",
+      "reviewers": [],
+      "score": null,
+      "verificationMethod": "peer-reviewed"
+    },
+    "workspaceUrl": null,
+    "githubBranch": null,
+    "tribeId": "TRIBE-006"
+  },
+  {
+    "id": "BOUNTY-015",
+    "title": "Reputation Dashboard \u2014 Public Contributor Leaderboard",
+    "description": "Build a public-facing leaderboard showing who's contributing to the DAO, what they've done, and how they're recognized. This is the visible incentive layer \u2014 people contribute because they see others being recognized.\n\n**Data sources (all local JSON, no blockchain queries needed in alpha):**\n- `profiles.json` \u2014 contributor profiles: `{wallet: {name, bio, skills, createdAt}}`\n- `bounties.json` \u2014 bounty data including tribe members, status, rewards\n- **Reputation = computed:** count of bounties where the wallet appears as a tribe member in a bounty with status 'rewarded'. RCT earned = sum of `rewardRCT / tribe_size` for each rewarded bounty the wallet participated in.\n\n**Architecture:**\n- Leaderboard page at `/reputation` \u2014 card grid or table showing all contributors\n- Click a contributor \u2192 detail modal (not a separate page \u2014 matches the bounty board pattern)\n- Detail modal shows: bounty history (which bounties they worked on), tribe memberships, skills, join date\n- Display name from profile if set, truncated wallet address as fallback\n\n**API endpoints to build:**\n- `GET /api/reputation` \u2014 aggregated leaderboard data (computed from bounties.json + profiles.json)\n- `GET /api/reputation/<wallet>` \u2014 single contributor detail\n\n**Style guide:** Follow the existing dashboard patterns. Reference `bounties.html` for card grids and modals, `wallet.html` for data display patterns. Dark theme using existing CSS variables (`--card-bg`, `--border`, `--text-primary`, `--text-secondary`). Handle empty states gracefully \u2014 in alpha, there may only be a few contributors.\n\n**Note on rewards:** Alpha-stage. Tokens are reputation markers on Solana DevNet, not currency.",
+    "category": "economy",
+    "macroGoal": 2,
+    "priority": "P1",
+    "size": "medium",
+    "status": "open",
+    "rewardRCT": 25,
+    "rewardRES": 2500,
+    "acceptanceCriteria": [
+      "New dashboard page at /reputation rendering a contributor leaderboard",
+      "Shows: name (or truncated wallet), computed RCT earned, completed bounties count, top skills",
+      "Filter by skill, sort by reputation or bounties completed",
+      "Click-through to contributor detail modal (bounty history, tribe memberships, skills)",
+      "Matches existing dashboard dark theme, responsive on mobile",
+      "Handles empty state gracefully (no contributors yet, contributor with no bounties)"
+    ],
+    "requiredSkills": [
+      "flask",
+      "jinja2",
+      "javascript",
+      "css",
+      "responsive-design"
+    ],
+    "teamMinSize": 3,
+    "teamMaxSize": 6,
+    "createdAt": "2026-02-21T22:20:00Z",
+    "deadline": null,
+    "claimedBy": [],
+    "reviews": [],
+    "qualityGate": {
+      "status": "pending",
+      "reviewers": [],
+      "score": null,
+      "verificationMethod": "peer-reviewed"
+    },
+    "workspaceUrl": null,
+    "githubBranch": null,
+    "tribeId": "TRIBE-003"
+  }
+]

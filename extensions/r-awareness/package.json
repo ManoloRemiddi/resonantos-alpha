@@ -1,0 +1,7 @@
+{
+  "name": "r-awareness",
+  "version": "3.0.0",
+  "description": "R-Awareness V3 — SSoT document injector for ResonantOS",
+  "main": "index.js",
+  "private": true
+}

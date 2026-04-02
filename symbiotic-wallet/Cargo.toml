@@ -1,0 +1,12 @@
+[workspace]
+members = ["programs/*"]
+resolver = "2"
+
+[workspace.dependencies]
+blake3 = "=1.5.5"
+
+[profile.release]
+overflow-checks = true
+lto = "fat"
+codegen-units = 1
+opt-level = "z"

@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Post-commit validation hook for the repository.
+# Runs ruff + pytest against the committed repository state and tags failures.
+
+set -euo pipefail
+
+if [ "${RESONANTOS_SKIP_POST_COMMIT:-0}" = "1" ]; then
+  exit 0
+fi
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+DASHBOARD_DIR="$REPO_ROOT/dashboard"
+PYTEST_BIN="$DASHBOARD_DIR/.venv/bin/pytest"
+RUFF_BIN="$DASHBOARD_DIR/.venv/bin/ruff"
+
+echo "[Hook] Running post-commit validation..."
+
+if [ ! -d "$DASHBOARD_DIR" ]; then
+  echo "[Hook] No dashboard directory found. Skipping."
+  exit 0
+fi
+
+if [ ! -x "$PYTEST_BIN" ] || [ ! -x "$RUFF_BIN" ]; then
+  echo "[Hook] Missing dashboard validation tools in $DASHBOARD_DIR/.venv/bin" >&2
+  exit 1
+fi
+
+cd "$DASHBOARD_DIR"
+
+echo "[Hook] Running test suite..."
+set +e
+TEST_OUTPUT="$("$PYTEST_BIN" tests/ -v 2>&1)"
+TEST_EXIT=$?
+echo "[Hook] Running ruff..."
+RUFF_OUTPUT="$("$RUFF_BIN" check . 2>&1)"
+RUFF_EXIT=$?
+set -e
+
+if [ "$TEST_EXIT" -ne 0 ] || [ "$RUFF_EXIT" -ne 0 ]; then
+  echo "[Hook] Validation issues found. Tagging commit [NEEDS-REVIEW]."
+  echo "[Hook] pytest exit: $TEST_EXIT"
+  printf '%s\n' "$TEST_OUTPUT"
+  echo "[Hook] ruff exit: $RUFF_EXIT"
+  printf '%s\n' "$RUFF_OUTPUT"
+
+  SUBJECT="$(git log -1 --format=%s)"
+  if [[ "$SUBJECT" != *"[NEEDS-REVIEW]"* ]]; then
+    RESONANTOS_SKIP_POST_COMMIT=1 git commit --amend --no-edit -m "$SUBJECT [NEEDS-REVIEW]" >/dev/null 2>&1 || true
+  fi
+fi
+
+echo "[Hook] Post-commit validation complete."

@@ -1,0 +1,588 @@
+{% extends "base.html" %}
+
+{% block title %}Coding Agent Monitor - ResonantOS Dashboard{% endblock %}
+{% block page_title %}Coding Agent Monitor{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+.main-header{display:none}
+.main-content,.content-area{background:#1a1a1a}
+.content-area{padding:0}
+
+.coding-agents-page{--bg-primary:#1a1a1a;--bg-secondary:#2a2a2a;--bg-tertiary:#333;--accent:#10b981;--accent-hover:#059669;--accent-muted:rgba(16,185,129,.15);--secondary:#d97706;--secondary-muted:rgba(217,119,6,.15);--text-primary:#e8e3d8;--text-secondary:#c4baa8;--text-muted:#8a8070;--success:#34d399;--info:#60a5fa;--warning:#fbbf24;--error:#f87171;--border:#3a3a3a;--radius:8px;--radius-lg:12px;--gradient-brand:linear-gradient(135deg,#10b981,#d97706);font-family:'DM Sans',system-ui,sans-serif;font-size:14px;line-height:1.5;color:var(--text-primary);background:var(--bg-primary);min-height:100vh}
+.coding-agents-page *,.coding-agents-page *::before,.coding-agents-page *::after{box-sizing:border-box;margin:0;padding:0}
+.coding-agents-page .mono{font-family:'JetBrains Mono',monospace}
+.coding-agents-page .page-header{padding:24px 32px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.coding-agents-page .header-left{display:flex;align-items:center;gap:16px}
+.coding-agents-page .logo-mark{width:40px;height:40px;border-radius:10px;background:var(--gradient-brand);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;box-shadow:0 0 20px rgba(16,185,129,.2)}
+.coding-agents-page .page-header h1{font-size:22px;font-weight:700;letter-spacing:-.01em}
+.coding-agents-page .brand{background:var(--gradient-brand);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.coding-agents-page .subtitle{color:var(--text-muted);font-size:12px;margin-top:1px}
+.coding-agents-page .header-right{display:flex;align-items:center;gap:16px}
+.coding-agents-page .live-indicator{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--accent);font-weight:500}
+.coding-agents-page .live-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:livePulse 2s ease-in-out infinite}
+@keyframes livePulse{0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.6)}50%{box-shadow:0 0 0 8px rgba(16,185,129,0)}}
+.coding-agents-page .tab-group{display:flex;gap:2px;background:var(--bg-secondary);border-radius:var(--radius);padding:3px}
+.coding-agents-page .tab{padding:6px 16px;border-radius:6px;font-size:13px;font-weight:500;color:var(--text-muted);cursor:default;border:none;background:none;transition:.15s}
+.coding-agents-page .tab.active{background:var(--accent-muted);color:var(--accent)}
+.coding-agents-page .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:20px 32px}
+.coding-agents-page .stat-card{background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 20px;transition:border-color .2s;position:relative;overflow:hidden}
+.coding-agents-page .stat-card:hover{border-color:rgba(16,185,129,.3)}
+.coding-agents-page .stat-card .label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.coding-agents-page .stat-card .value-row{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;min-height:56px}
+.coding-agents-page .stat-card .value{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:600}
+.coding-agents-page .stat-card .unit{font-size:13px;color:var(--text-muted);font-weight:400}
+.coding-agents-page .mini-chart{display:flex;align-items:flex-end;gap:2px;height:32px}
+.coding-agents-page .mini-bar{width:6px;border-radius:3px 3px 0 0;background:var(--accent);opacity:.6;transition:height .3s}
+.coding-agents-page .mini-bar:last-child{opacity:1}
+.coding-agents-page .gauge-bg{fill:none;stroke:var(--bg-tertiary);stroke-width:5}
+.coding-agents-page .gauge-fill{fill:none;stroke-width:5;stroke-linecap:round}
+.coding-agents-page .gauge-text{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;fill:var(--text-primary);text-anchor:middle;dominant-baseline:central}
+.coding-agents-page .progress-bar{height:6px;background:var(--bg-tertiary);border-radius:3px;overflow:hidden;margin-top:8px}
+.coding-agents-page .progress-fill{height:100%;border-radius:3px;transition:width 1s ease}
+.coding-agents-page .progress-fill.green{background:linear-gradient(90deg,var(--accent),var(--success))}
+.coding-agents-page .progress-fill.amber{background:linear-gradient(90deg,var(--secondary),var(--warning))}
+.coding-agents-page .progress-fill.red{background:linear-gradient(90deg,var(--error),#ef4444)}
+.coding-agents-page .tasks-container{padding:0 32px 32px}
+.coding-agents-page .tasks-label{font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.coding-agents-page .tasks-count{background:var(--accent-muted);color:var(--accent);padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.coding-agents-page .task-card{background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:16px;transition:border-color .2s,box-shadow .2s}
+.coding-agents-page .task-card:hover{border-color:rgba(16,185,129,.3);box-shadow:0 4px 24px rgba(0,0,0,.2)}
+.coding-agents-page .task-card.running{border-left:3px solid var(--accent)}
+.coding-agents-page .task-card.complete{border-left:3px solid var(--success)}
+.coding-agents-page .task-card.failed{border-left:3px solid var(--error)}
+.coding-agents-page .task-overview{padding:20px 24px;display:grid;grid-template-columns:1fr auto;gap:24px}
+.coding-agents-page .task-main{display:flex;flex-direction:column;gap:12px}
+.coding-agents-page .task-title-row{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.coding-agents-page .task-title{font-size:16px;font-weight:600}
+.coding-agents-page .status-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:3px 10px;border-radius:20px;white-space:nowrap}
+.coding-agents-page .status-badge.running{background:var(--accent-muted);color:var(--accent)}
+.coding-agents-page .status-badge.complete{background:rgba(52,211,153,.15);color:var(--success)}
+.coding-agents-page .status-badge.failed{background:rgba(248,113,113,.15);color:var(--error)}
+.coding-agents-page .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.coding-agents-page .status-dot.running{background:var(--accent);animation:pulse 1.5s ease-in-out infinite}
+.coding-agents-page .status-dot.complete{background:var(--success)}
+.coding-agents-page .status-dot.failed{background:var(--error)}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(16,185,129,.4)}50%{opacity:.7;box-shadow:0 0 0 6px rgba(16,185,129,0)}}
+.coding-agents-page .elapsed{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted)}
+.coding-agents-page .task-visual-meta{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.coding-agents-page .meta-item{background:var(--bg-tertiary);border-radius:var(--radius);padding:10px 12px;min-width:0;overflow:hidden}
+.coding-agents-page .meta-icon{font-size:16px;margin-bottom:4px}
+.coding-agents-page .meta-label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em}
+.coding-agents-page .meta-value{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.coding-agents-page .meta-sub{font-size:10px;color:var(--text-muted)}
+.coding-agents-page .task-activity{display:flex;align-items:center;gap:10px;padding:8px 14px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.15);border-radius:var(--radius);font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--text-secondary)}
+.coding-agents-page .activity-spinner{width:14px;height:14px;border:2px solid var(--accent-muted);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.coding-agents-page .task-gauges{display:flex;flex-direction:column;align-items:center;gap:12px;justify-content:center;min-width:100px;flex-shrink:0}
+.coding-agents-page .throughput-gauge{position:relative;width:80px;height:80px}
+.coding-agents-page .throughput-gauge svg{transform:rotate(-90deg)}
+.coding-agents-page .throughput-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.coding-agents-page .throughput-value{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:var(--secondary)}
+.coding-agents-page .throughput-unit{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em}
+.coding-agents-page .token-count{text-align:center}
+.coding-agents-page .tc-value{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600}
+.coding-agents-page .tc-label{font-size:10px;color:var(--text-muted);text-transform:uppercase}
+.coding-agents-page .timeline{display:flex;align-items:center;gap:0;padding:8px 0}
+.coding-agents-page .timeline-step{display:flex;flex-direction:column;align-items:center;flex:1;position:relative}
+.coding-agents-page .timeline-step::after{content:'';position:absolute;top:10px;left:50%;width:100%;height:2px;background:var(--border)}
+.coding-agents-page .timeline-step:last-child::after{display:none}
+.coding-agents-page .timeline-dot{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;z-index:1;border:2px solid var(--border)}
+.coding-agents-page .timeline-dot.done{background:var(--accent);border-color:var(--accent);color:#fff}
+.coding-agents-page .timeline-dot.active{background:var(--bg-primary);border-color:var(--secondary);color:var(--secondary);animation:stepPulse 1.5s infinite}
+.coding-agents-page .timeline-dot.pending{background:var(--bg-tertiary);border-color:var(--border);color:var(--text-muted)}
+.coding-agents-page .timeline-dot.error{background:var(--error);border-color:var(--error);color:#fff}
+@keyframes stepPulse{0%,100%{box-shadow:0 0 0 0 rgba(217,119,6,.4)}50%{box-shadow:0 0 0 5px rgba(217,119,6,0)}}
+.coding-agents-page .timeline-label{font-size:9px;color:var(--text-muted);margin-top:4px;text-align:center}
+.coding-agents-page .task-expand{border-top:1px solid var(--border)}
+.coding-agents-page details{border-top:1px solid rgba(58,58,58,.5)}
+.coding-agents-page details:first-child{border-top:none}
+.coding-agents-page details summary{padding:10px 24px;font-size:13px;font-weight:500;color:var(--text-secondary);cursor:pointer;user-select:none;list-style:none;display:flex;align-items:center;gap:8px}
+.coding-agents-page details summary::-webkit-details-marker{display:none}
+.coding-agents-page details summary .arrow{display:inline-block;transition:transform .15s;color:var(--text-muted);font-size:10px}
+.coding-agents-page details[open] summary .arrow{transform:rotate(90deg)}
+.coding-agents-page details summary:hover{color:var(--accent)}
+.coding-agents-page .summary-spacer{font-size:11px;color:var(--text-muted);margin-left:4px}
+.coding-agents-page .expand-content{padding:0 24px 16px}
+.coding-agents-page .task-md{background:var(--bg-tertiary);padding:12px 16px;border-radius:var(--radius);font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-secondary);line-height:1.6;white-space:pre-wrap}
+.coding-agents-page .file-list{list-style:none}
+.coding-agents-page .file-item{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid rgba(58,58,58,.3)}
+.coding-agents-page .file-item:last-child{border-bottom:none}
+.coding-agents-page .file-path{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-secondary);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.coding-agents-page .file-diff-bar{display:flex;gap:1px;height:10px}
+.coding-agents-page .block{width:8px;height:10px;border-radius:2px}
+.coding-agents-page .block.add{background:var(--success)}
+.coding-agents-page .block.del{background:var(--error)}
+.coding-agents-page .block.neutral{background:var(--border)}
+.coding-agents-page .file-diff-nums{font-family:'JetBrains Mono',monospace;font-size:11px;min-width:64px;text-align:right}
+.coding-agents-page .added{color:var(--success)}
+.coding-agents-page .removed{color:var(--error)}
+.coding-agents-page .agent-log{background:#0d0f0e;border-radius:var(--radius);padding:12px 16px;max-height:260px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.8}
+.coding-agents-page .log-entry{display:flex;gap:12px;align-items:flex-start}
+.coding-agents-page .log-time{color:var(--text-muted);min-width:40px;font-size:11px}
+.coding-agents-page .log-type-badge{min-width:56px;font-weight:600;text-transform:uppercase;font-size:9px;letter-spacing:.06em;padding:1px 6px;border-radius:3px;text-align:center}
+.coding-agents-page .log-type-badge.action{background:rgba(16,185,129,.15);color:var(--accent)}
+.coding-agents-page .log-type-badge.observe{background:rgba(96,165,250,.15);color:var(--info)}
+.coding-agents-page .log-type-badge.error{background:rgba(248,113,113,.15);color:var(--error)}
+.coding-agents-page .log-type-badge.think{background:rgba(217,119,6,.15);color:var(--secondary)}
+.coding-agents-page .log-msg{color:var(--text-secondary)}
+.coding-agents-page .quality-row{display:flex;gap:20px}
+.coding-agents-page .quality-gate{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--bg-tertiary);border-radius:var(--radius);flex:1}
+.coding-agents-page .gate-light{width:12px;height:12px;border-radius:50%}
+.coding-agents-page .gate-light.pass{background:var(--success);box-shadow:0 0 8px rgba(52,211,153,.5)}
+.coding-agents-page .gate-light.fail{background:var(--error);box-shadow:0 0 8px rgba(248,113,113,.5)}
+.coding-agents-page .gate-info{flex:1}
+.coding-agents-page .gate-name{font-size:13px;font-weight:500}
+.coding-agents-page .gate-detail{font-size:11px;color:var(--text-muted)}
+.coding-agents-page .error-banner{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;gap:10px;margin-top:8px}
+.coding-agents-page .error-icon{width:28px;height:28px;border-radius:50%;background:rgba(248,113,113,.15);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.coding-agents-page .error-text{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--error)}
+.coding-agents-page .state-card{background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px 28px;color:var(--text-secondary)}
+.coding-agents-page .state-card.error{border-color:rgba(248,113,113,.35);color:var(--error)}
+@media(max-width:1100px){.coding-agents-page .stats-row{gap:12px;padding:16px 24px}.coding-agents-page .stat-card .value{font-size:24px}.coding-agents-page .tasks-container{padding:0 24px 24px}}
+@media(max-width:900px){.coding-agents-page .stats-row{grid-template-columns:repeat(2,1fr)}.coding-agents-page .task-overview{grid-template-columns:1fr}.coding-agents-page .task-visual-meta{grid-template-columns:repeat(2,1fr)}.coding-agents-page .quality-row{flex-direction:column}.coding-agents-page .task-gauges{flex-direction:row;justify-content:flex-start;gap:20px;padding-top:4px}}
+@media(max-width:640px){.coding-agents-page .page-header{padding:16px 16px 16px;align-items:flex-start;flex-direction:column;gap:16px}.coding-agents-page .header-right{width:100%;justify-content:space-between}.coding-agents-page .stats-row{padding:16px;grid-template-columns:1fr}.coding-agents-page .tasks-container{padding:0 16px 24px}.coding-agents-page .task-overview{padding:18px}.coding-agents-page .task-visual-meta{grid-template-columns:1fr 1fr}.coding-agents-page details summary,.coding-agents-page .expand-content{padding-left:18px;padding-right:18px}.coding-agents-page .tab{padding:6px 12px}.coding-agents-page .task-title-row{align-items:flex-start;flex-direction:column}.coding-agents-page .log-entry{flex-wrap:wrap}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="coding-agents-page">
+    <header class="page-header">
+        <div class="header-left">
+            <div class="logo-mark">R</div>
+            <div>
+                <h1>Coding Agent <span class="brand">Monitor</span></h1>
+                <div class="subtitle">ResonantOS &times; OpenHands</div>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="live-indicator"><span class="live-dot"></span> Live</div>
+            <div class="tab-group">
+                <button class="tab active" type="button">Active</button>
+                <button class="tab" type="button">History</button>
+                <button class="tab" type="button">Compare</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="stats-row" id="statsRow">
+        <div class="state-card">Loading coding agent metrics...</div>
+    </div>
+
+    <div class="tasks-container">
+        <div class="tasks-label">
+            <span>Active Tasks</span>
+            <span class="tasks-count" id="activeTaskCount">0</span>
+        </div>
+        <div id="tasksList">
+            <div class="state-card">Loading coding agent tasks...</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const statsRow = document.getElementById('statsRow');
+    const tasksList = document.getElementById('tasksList');
+    const activeTaskCount = document.getElementById('activeTaskCount');
+    const refreshMs = 5000;
+    const throughputMax = 60;
+    let refreshHandle = null;
+    let openSections = new Set();
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function formatCompactNumber(value) {
+        if (!Number.isFinite(value)) return '0';
+        if (value >= 1000000) return (value / 1000000).toFixed(value % 1000000 === 0 ? 0 : 1) + 'M';
+        if (value >= 1000) return (value / 1000).toFixed(value % 1000 === 0 ? 0 : 1) + 'K';
+        return String(Math.round(value));
+    }
+
+    function formatNumber(value) {
+        return Number.isFinite(value) ? value.toLocaleString('en-US') : '0';
+    }
+
+    function formatElapsed(seconds) {
+        const total = Number.isFinite(seconds) ? Math.max(0, Math.round(seconds)) : 0;
+        const hours = Math.floor(total / 3600);
+        const minutes = Math.floor((total % 3600) / 60);
+        const secs = total % 60;
+        if (hours > 0) return `${hours}h ${minutes}m`;
+        if (minutes > 0) return `${minutes}m ${secs}s`;
+        return `${secs}s`;
+    }
+
+    function percent(part, whole) {
+        if (!whole) return 0;
+        return Math.max(0, Math.min(100, (part / whole) * 100));
+    }
+
+    function gaugeMarkup(value, stroke, text, circumference) {
+        const clamped = Math.max(0, Math.min(circumference, value));
+        return `
+            <svg width="56" height="56" viewBox="0 0 56 56">
+                <circle class="gauge-bg" cx="28" cy="28" r="22"></circle>
+                <circle class="gauge-fill" cx="28" cy="28" r="22" stroke="${stroke}" stroke-dasharray="${circumference.toFixed(1)}" stroke-dashoffset="${(circumference - clamped).toFixed(1)}" transform="rotate(-90 28 28)"></circle>
+                <text class="gauge-text" x="28" y="28"${stroke === 'var(--secondary)' ? ' style="fill:var(--secondary)"' : ''}>${escapeHtml(text)}</text>
+            </svg>
+        `;
+    }
+
+    function miniChartMarkup(heights, colorVar, lastColorVar) {
+        return `
+            <div class="mini-chart">
+                ${heights.map((height, index) => {
+                    const style = `height:${height}px${index === heights.length - 1 && lastColorVar ? `;background:${lastColorVar}` : colorVar ? `;background:${colorVar}` : ''}`;
+                    return `<div class="mini-bar" style="${style}"></div>`;
+                }).join('')}
+            </div>
+        `;
+    }
+
+    function sourceColor(source) {
+        const label = String(source || '').toLowerCase();
+        if (label.includes('local')) return 'var(--accent)';
+        if (label.includes('cloud')) return 'var(--secondary)';
+        if (label.includes('openai')) return 'var(--info)';
+        return 'var(--text-muted)';
+    }
+
+    function healthColor(health) {
+        if (health === 'blocked') return 'var(--error)';
+        if (health === 'recovered') return 'var(--warning)';
+        return 'var(--success)';
+    }
+
+    function healthLabel(task) {
+        if (task.health === 'blocked') return 'BLOCKED';
+        if (task.health === 'recovered') return task.health_detail || 'Recovered';
+        return 'All Clear';
+    }
+
+    function activityMarkup(task) {
+        if (!task.current_activity) return '';
+        return `<div class="task-activity"><div class="activity-spinner"></div>${escapeHtml(task.current_activity)}</div>`;
+    }
+
+    function timelineMarkup(task) {
+        const steps = Array.isArray(task.steps) ? task.steps : [];
+        return `
+            <div class="timeline">
+                ${steps.map((step, index) => {
+                    let state = 'pending';
+                    let label = String(index + 1);
+                    if (task.status === 'complete') {
+                        state = 'done';
+                        label = '&#10003;';
+                    } else if (task.status === 'failed') {
+                        if (index < task.current_step) {
+                            state = 'done';
+                            label = '&#10003;';
+                        } else if (index === task.current_step) {
+                            state = 'error';
+                            label = '&#10005;';
+                        }
+                    } else {
+                        if (index < task.current_step) {
+                            state = 'done';
+                            label = '&#10003;';
+                        } else if (index === task.current_step) {
+                            state = 'active';
+                            label = '&#10227;';
+                        }
+                    }
+                    return `<div class="timeline-step"><div class="timeline-dot ${state}">${label}</div><div class="timeline-label">${escapeHtml(step)}</div></div>`;
+                }).join('')}
+            </div>
+        `;
+    }
+
+    function diffBarMarkup(file) {
+        const addedBlocks = Math.min(10, Math.max(file.added > 0 ? 1 : 0, Math.round((file.added || 0) / 10)));
+        const removedBlocks = Math.min(10, Math.max(file.removed > 0 ? 1 : 0, Math.round((file.removed || 0) / 10)));
+        const targetBlocks = Math.max(addedBlocks + removedBlocks, file.added && file.removed ? 5 : 4);
+        const neutralBlocks = Math.max(0, targetBlocks - addedBlocks - removedBlocks);
+        return `
+            <div class="file-diff-bar">
+                ${Array.from({ length: addedBlocks }, () => '<div class="block add"></div>').join('')}
+                ${Array.from({ length: removedBlocks }, () => '<div class="block del"></div>').join('')}
+                ${Array.from({ length: neutralBlocks }, () => '<div class="block neutral"></div>').join('')}
+            </div>
+        `;
+    }
+
+    function sectionOpenAttr(taskId, sectionName) {
+        return openSections.has(`${taskId}:${sectionName}`) ? ' open' : '';
+    }
+
+    function fileSectionMarkup(task) {
+        const files = Array.isArray(task.files) ? task.files : [];
+        return `
+            <details data-key="${escapeHtml(task.id)}:files"${sectionOpenAttr(task.id, 'files')}>
+                <summary><span class="arrow">&#9656;</span> Files Changed <span class="summary-spacer">(${files.length} files)</span></summary>
+                <div class="expand-content">
+                    <ul class="file-list">
+                        ${files.map((file) => `
+                            <li class="file-item">
+                                <span class="file-path">${escapeHtml(file.path)}</span>
+                                ${diffBarMarkup(file)}
+                                <span class="file-diff-nums">
+                                    ${file.added ? `<span class="added">+${escapeHtml(file.added)}</span>` : ''}
+                                    ${file.removed ? ` <span class="removed">-${escapeHtml(file.removed)}</span>` : ''}
+                                </span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            </details>
+        `;
+    }
+
+    function logSectionMarkup(task) {
+        const entries = Array.isArray(task.log) ? task.log : [];
+        return `
+            <details data-key="${escapeHtml(task.id)}:log"${sectionOpenAttr(task.id, 'log')}>
+                <summary><span class="arrow">&#9656;</span> Agent Log <span class="summary-spacer">(${entries.length} entries)</span></summary>
+                <div class="expand-content">
+                    <div class="agent-log">
+                        ${entries.length ? entries.map((entry) => `
+                            <div class="log-entry">
+                                <span class="log-time">${escapeHtml(entry.time)}</span>
+                                <span class="log-type-badge ${escapeHtml(entry.type)}">${escapeHtml(entry.type)}</span>
+                                <span class="log-msg">${escapeHtml(entry.msg)}</span>
+                            </div>
+                        `).join('') : '<div class="log-entry"><span class="log-msg">No log entries captured.</span></div>'}
+                    </div>
+                </div>
+            </details>
+        `;
+    }
+
+    function qualitySectionMarkup(task) {
+        const gates = Array.isArray(task.quality_gates) ? task.quality_gates : [];
+        return `
+            <details data-key="${escapeHtml(task.id)}:quality"${sectionOpenAttr(task.id, 'quality')}>
+                <summary><span class="arrow">&#9656;</span> Quality Gates</summary>
+                <div class="expand-content">
+                    <div class="quality-row">
+                        ${gates.map((gate) => `
+                            <div class="quality-gate">
+                                <div class="gate-light ${escapeHtml(gate.status)}"></div>
+                                <div class="gate-info">
+                                    <div class="gate-name">${escapeHtml(gate.name)}</div>
+                                    <div class="gate-detail">${escapeHtml(gate.detail)}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </details>
+        `;
+    }
+
+    function detailsSectionMarkup(task) {
+        if (!task.details_md) return '';
+        return `
+            <details data-key="${escapeHtml(task.id)}:details"${sectionOpenAttr(task.id, 'details')}>
+                <summary><span class="arrow">&#9656;</span> Task Details</summary>
+                <div class="expand-content">
+                    <div class="task-md">${escapeHtml(task.details_md)}</div>
+                </div>
+            </details>
+        `;
+    }
+
+    function throughputGaugeMarkup(task) {
+        const circumference = 213.6;
+        const progress = Math.max(0, Math.min(1, (Number(task.tokens_per_second) || 0) / throughputMax));
+        const dashOffset = (circumference * (1 - progress)).toFixed(1);
+        const stroke = task.status === 'failed' ? 'var(--text-muted)' : 'var(--secondary)';
+        const valueStyle = task.status === 'failed' ? ' style="color:var(--text-muted)"' : '';
+        const tokenStyle = task.status === 'failed' ? ' style="color:var(--text-muted)"' : '';
+        const opacity = task.status === 'failed' ? ' opacity=".4"' : '';
+        return `
+            <div class="throughput-gauge">
+                <svg width="80" height="80" viewBox="0 0 80 80">
+                    <circle cx="40" cy="40" r="34" fill="none" stroke="var(--bg-tertiary)" stroke-width="6"></circle>
+                    <circle cx="40" cy="40" r="34" fill="none" stroke="${stroke}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${circumference}" stroke-dashoffset="${dashOffset}"${opacity}></circle>
+                </svg>
+                <div class="throughput-center">
+                    <div class="throughput-value"${valueStyle}>${escapeHtml(Number(task.tokens_per_second || 0).toFixed(1))}</div>
+                    <div class="throughput-unit">tok/s</div>
+                </div>
+            </div>
+            <div class="token-count">
+                <div class="tc-value"${tokenStyle}>${escapeHtml(formatNumber(task.tokens_used || 0))}</div>
+                <div class="tc-label">tokens</div>
+            </div>
+        `;
+    }
+
+    function taskMarkup(task) {
+        const actionsPercent = percent(task.actions_done || 0, task.actions_total || 0);
+        const actionsClass = task.status === 'failed' ? 'red' : 'green';
+        const errorMarkup = task.error ? `
+            <div class="error-banner">
+                <div class="error-icon">&#10005;</div>
+                <div class="error-text">${escapeHtml(task.error)}</div>
+            </div>
+        ` : '';
+        return `
+            <div class="task-card ${escapeHtml(task.status)}">
+                <div class="task-overview">
+                    <div class="task-main">
+                        <div class="task-title-row">
+                            <span class="task-title">${escapeHtml(task.title)}</span>
+                            <span class="status-badge ${escapeHtml(task.status)}"><span class="status-dot ${escapeHtml(task.status)}"></span> ${escapeHtml(task.status.charAt(0).toUpperCase() + task.status.slice(1))}</span>
+                            <span class="elapsed">${escapeHtml(formatElapsed(task.elapsed_seconds))}</span>
+                        </div>
+                        <div class="task-visual-meta">
+                            <div class="meta-item">
+                                <div class="meta-icon">&#129302;</div>
+                                <div class="meta-label">Model</div>
+                                <div class="meta-value">${escapeHtml(task.model)}</div>
+                                <div class="meta-sub" style="color:${sourceColor(task.model_source)}">&#9679; ${escapeHtml(task.model_source)}</div>
+                            </div>
+                            <div class="meta-item">
+                                <div class="meta-icon">&#128193;</div>
+                                <div class="meta-label">Files</div>
+                                <div class="meta-value">${escapeHtml(task.files_changed)} files</div>
+                                <div class="meta-sub">${escapeHtml(task.files_modified)} mod &middot; ${escapeHtml(task.files_new)} new</div>
+                            </div>
+                            <div class="meta-item">
+                                <div class="meta-icon">&#9889;</div>
+                                <div class="meta-label">Actions</div>
+                                <div class="meta-value">${escapeHtml(task.actions_done)} / ${task.status === 'running' ? '~' : ''}${escapeHtml(task.actions_total)}</div>
+                                <div class="progress-bar" style="margin-top:4px"><div class="progress-fill ${actionsClass}" style="width:${actionsPercent.toFixed(0)}%"></div></div>
+                            </div>
+                            <div class="meta-item">
+                                <div class="meta-icon">${task.health === 'blocked' ? '&#128683;' : task.health === 'recovered' ? '&#9888;&#65039;' : '&#128737;&#65039;'}</div>
+                                <div class="meta-label">Health</div>
+                                <div class="meta-value" style="color:${healthColor(task.health)}">${escapeHtml(healthLabel(task))}</div>
+                                <div class="meta-sub">${escapeHtml(task.health_detail || '')}</div>
+                            </div>
+                        </div>
+                        ${timelineMarkup(task)}
+                        ${activityMarkup(task)}
+                        ${errorMarkup}
+                    </div>
+                    <div class="task-gauges">
+                        ${throughputGaugeMarkup(task)}
+                    </div>
+                </div>
+                <div class="task-expand">
+                    ${detailsSectionMarkup(task)}
+                    ${fileSectionMarkup(task)}
+                    ${logSectionMarkup(task)}
+                    ${qualitySectionMarkup(task)}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderStats(stats) {
+        const activePct = percent(stats.agent_slots_used || 0, stats.agent_slots_total || 0);
+        const completedPct = percent(stats.completed_today || 0, stats.target_tasks_per_day || 0);
+        const tokenPct = percent(stats.total_tokens || 0, stats.daily_token_budget || 0);
+        const throughputPct = percent(stats.avg_throughput || 0, stats.peak_throughput || 0);
+        const circumference = 138.2;
+
+        statsRow.innerHTML = `
+            <div class="stat-card">
+                <div class="label">Active Tasks</div>
+                <div class="value-row">
+                    <div class="value">${escapeHtml(stats.active_tasks)}</div>
+                    ${gaugeMarkup(circumference * (activePct / 100), 'var(--accent)', `${Math.round(activePct)}%`, circumference)}
+                </div>
+                <div class="progress-bar"><div class="progress-fill green" style="width:${activePct.toFixed(0)}%"></div></div>
+                <div style="font-size:10px;color:var(--text-muted);margin-top:4px">${escapeHtml(stats.agent_slots_used)} of ${escapeHtml(stats.agent_slots_total)} agent slots in use</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Completed Today</div>
+                <div class="value-row">
+                    <div class="value">${escapeHtml(stats.completed_today)}</div>
+                    ${miniChartMarkup([8, 14, 10, 20, 16, 24, 32], '', 'var(--success)')}
+                </div>
+                <div class="progress-bar"><div class="progress-fill green" style="width:${completedPct.toFixed(0)}%"></div></div>
+                <div style="font-size:10px;color:var(--text-muted);margin-top:4px">Target: ${escapeHtml(stats.target_tasks_per_day)} tasks/day</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Total Tokens</div>
+                <div class="value-row">
+                    <div class="value">${escapeHtml(formatCompactNumber(stats.total_tokens || 0))}</div>
+                    ${miniChartMarkup([18, 12, 22, 15, 28, 20, 32], 'var(--secondary)', 'var(--warning)')}
+                </div>
+                <div class="progress-bar"><div class="progress-fill amber" style="width:${tokenPct.toFixed(0)}%"></div></div>
+                <div style="font-size:10px;color:var(--text-muted);margin-top:4px">Daily budget: ${escapeHtml(formatCompactNumber(stats.daily_token_budget || 0))} tokens</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Avg Throughput</div>
+                <div class="value-row">
+                    <div class="value">${escapeHtml(Number(stats.avg_throughput || 0).toFixed(1))} <span class="unit">t/s</span></div>
+                    ${gaugeMarkup(circumference * (throughputPct / 100), 'var(--secondary)', `${Math.round(throughputPct)}%`, circumference)}
+                </div>
+                <div class="progress-bar"><div class="progress-fill amber" style="width:${throughputPct.toFixed(0)}%"></div></div>
+                <div style="font-size:10px;color:var(--text-muted);margin-top:4px">Peak: ${escapeHtml(Number(stats.peak_throughput || 0).toFixed(1))} t/s today</div>
+            </div>
+        `;
+    }
+
+    function renderTasks(tasks) {
+        const activeCount = tasks.filter((task) => task.status === 'running').length;
+        activeTaskCount.textContent = String(activeCount);
+        tasksList.innerHTML = tasks.length ? tasks.map(taskMarkup).join('') : '<div class="state-card">No coding agent tasks available.</div>';
+        restoreOpenSections();
+    }
+
+    function captureOpenSections() {
+        openSections = new Set(
+            Array.from(document.querySelectorAll('.coding-agents-page details[open]'))
+                .map((detail) => detail.getAttribute('data-key'))
+                .filter(Boolean)
+        );
+    }
+
+    function restoreOpenSections() {
+        document.querySelectorAll('.coding-agents-page details').forEach((detail) => {
+            const key = detail.getAttribute('data-key');
+            detail.open = Boolean(key && openSections.has(key));
+        });
+    }
+
+    async function loadTasks() {
+        captureOpenSections();
+        try {
+            const response = await fetch('/api/coding-agents/tasks', { cache: 'no-store' });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            renderStats(data.stats || {});
+            renderTasks(Array.isArray(data.tasks) ? data.tasks : []);
+        } catch (error) {
+            statsRow.innerHTML = '<div class="state-card error">Failed to load coding agent metrics.</div>';
+            tasksList.innerHTML = `<div class="state-card error">Failed to load coding agent tasks: ${escapeHtml(error.message)}</div>`;
+            activeTaskCount.textContent = '0';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        loadTasks();
+        refreshHandle = window.setInterval(loadTasks, refreshMs);
+    });
+
+    window.addEventListener('beforeunload', function () {
+        if (refreshHandle) window.clearInterval(refreshHandle);
+    });
+})();
+</script>
+{% endblock %}

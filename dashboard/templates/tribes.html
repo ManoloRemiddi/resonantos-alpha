@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+{% block title %}Tribes — ResonantOS DAO{% endblock %}
+{% block page_title %}Tribes{% endblock %}
+
+{% block content %}
+<style>
+.tribes-toolbar {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:0.75rem;
+    flex-wrap:wrap;
+    margin-bottom:1rem;
+}
+.wallet-pill {
+    font-size:0.8rem;
+    color:var(--text-secondary,#999);
+    padding:0.4rem 0.8rem;
+    background:var(--card-bg,#1e1e2e);
+    border:1px solid var(--border,#333);
+    border-radius:20px;
+}
+.btn-primary {
+    background:#6C5CE7;
+    color:#fff;
+    border:none;
+    border-radius:6px;
+    padding:0.5rem 1rem;
+    font-size:0.85rem;
+    font-weight:600;
+    cursor:pointer;
+}
+.btn-primary:hover { background:#5b4bd5; }
+.tribes-layout {
+    display:grid;
+    grid-template-columns:minmax(280px, 1fr) minmax(320px, 1.2fr);
+    gap:1rem;
+}
+.tribe-list,
+.tribe-detail {
+    background:var(--card-bg,#1e1e2e);
+    border:1px solid var(--border,#333);
+    border-radius:10px;
+    padding:1rem;
+}
+.tribe-list h3,
+.tribe-detail h3 {
+    margin:0 0 0.75rem;
+    font-size:0.92rem;
+    color:var(--text-primary,#e0e0e0);
+}
+.tribe-grid {
+    display:grid;
+    gap:0.75rem;
+}
+.tribe-card {
+    border:1px solid var(--border,#333);
+    border-radius:8px;
+    padding:0.8rem;
+    cursor:pointer;
+    transition:border-color 0.2s;
+}
+.tribe-card:hover,
+.tribe-card.active {
+    border-color:#6C5CE7;
+}
+.tribe-title-row {
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:0.5rem;
+}
+.tribe-title {
+    margin:0;
+    font-size:0.9rem;
+    color:var(--text-primary,#e0e0e0);
+}
+.tribe-desc {
+    margin:0.35rem 0 0.6rem;
+    font-size:0.78rem;
+    color:var(--text-secondary,#999);
+    line-height:1.45;
+}
+.badges {
+    display:flex;
+    gap:0.35rem;
+    flex-wrap:wrap;
+}
+.badge {
+    font-size:0.72rem;
+    padding:0.15rem 0.45rem;
+    border-radius:4px;
+    color:var(--text-secondary,#999);
+    background:rgba(255,255,255,0.06);
+}
+.badge.cat-community { background:rgba(16,185,129,0.15); color:#34d399; }
+.badge.cat-research { background:rgba(59,130,246,0.15); color:#60a5fa; }
+.badge.cat-economy { background:rgba(245,158,11,0.15); color:#fbbf24; }
+.badge.cat-core { background:rgba(168,85,247,0.15); color:#c084fc; }
+.badge.cat-technical { background:rgba(239,68,68,0.15); color:#f87171; }
+.badge.cat-creative { background:rgba(236,72,153,0.15); color:#f472b6; }
+.member-list,
+.bounty-list {
+    margin:0;
+    padding-left:1rem;
+}
+.member-list li,
+.bounty-list li {
+    margin-bottom:0.4rem;
+    color:var(--text-secondary,#999);
+    font-size:0.8rem;
+}
+.bounty-list a {
+    color:#a78bfa;
+    text-decoration:none;
+}
+.bounty-list a:hover { text-decoration:underline; }
+.inline-meta {
+    font-size:0.76rem;
+    color:var(--text-secondary,#999);
+}
+.empty {
+    font-size:0.82rem;
+    color:var(--text-muted,#666);
+    border:1px dashed var(--border,#333);
+    border-radius:8px;
+    padding:1rem;
+    text-align:center;
+}
+@media (max-width: 900px) {
+    .tribes-layout { grid-template-columns:1fr; }
+}
+</style>
+
+<div class="tribes-toolbar">
+    <div>
+        <button class="btn-primary" onclick="connectWallet()">Connect Phantom</button>
+    </div>
+    <div class="wallet-pill" id="walletDisplay">Wallet: not connected</div>
+</div>
+
+<div class="tribes-layout">
+    <section class="tribe-list">
+        <h3>All Tribes</h3>
+        <div class="tribe-grid" id="tribeGrid">
+            <div class="empty">Loading tribes...</div>
+        </div>
+    </section>
+
+    <section class="tribe-detail">
+        <h3>Tribe Detail</h3>
+        <div id="tribeDetail" class="empty">Select a tribe to view members and bounties.</div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let tribes = [];
+let selectedTribeId = null;
+let connectedWallet = null;
+
+function esc(value) {
+    const d = document.createElement('div');
+    d.textContent = value == null ? '' : String(value);
+    return d.innerHTML;
+}
+
+function shortWallet(w) {
+    return w ? `${w.slice(0, 6)}...${w.slice(-4)}` : 'n/a';
+}
+
+function categoryClass(category) {
+    return `cat-${category || 'core'}`;
+}
+
+async function connectWallet() {
+    if (!window.solana || !window.solana.isPhantom) {
+        alert('Phantom wallet not found.');
+        return;
+    }
+    const resp = await window.solana.connect();
+    connectedWallet = resp.publicKey.toString();
+    document.getElementById('walletDisplay').textContent = `Wallet: ${shortWallet(connectedWallet)}`;
+}
+
+async function loadTribes() {
+    const res = await fetch('/api/tribes');
+    const data = await res.json();
+    tribes = data.tribes || [];
+    renderTribeCards();
+
+    const hashId = window.location.hash.replace('#', '').trim();
+    if (hashId) {
+        selectTribe(hashId);
+    } else if (tribes.length && !selectedTribeId) {
+        selectTribe(tribes[0].id, false);
+    }
+}
+
+function renderTribeCards() {
+    const grid = document.getElementById('tribeGrid');
+    if (!tribes.length) {
+        grid.innerHTML = '<div class="empty">No tribes found.</div>';
+        return;
+    }
+
+    grid.innerHTML = tribes.map((tribe) => `
+        <article class="tribe-card ${selectedTribeId === tribe.id ? 'active' : ''}" onclick="selectTribe('${tribe.id}')">
+            <div class="tribe-title-row">
+                <h4 class="tribe-title">${esc(tribe.name)}</h4>
+                <span class="badge ${categoryClass(tribe.category)}">${esc(tribe.category || 'core')}</span>
+            </div>
+            <p class="tribe-desc">${esc(tribe.description || 'No description')}</p>
+            <div class="badges">
+                <span class="badge">Members: ${Number(tribe.memberCount || 0)}</span>
+                <span class="badge">Active bounties: ${Number(tribe.activeBountyCount || 0)}</span>
+            </div>
+        </article>
+    `).join('');
+}
+
+async function selectTribe(tribeId, updateHash = true) {
+    selectedTribeId = tribeId;
+    renderTribeCards();
+    if (updateHash) {
+        window.location.hash = tribeId;
+    }
+
+    const detail = document.getElementById('tribeDetail');
+    detail.innerHTML = '<div class="empty">Loading tribe detail...</div>';
+
+    const res = await fetch(`/api/tribes/${tribeId}`);
+    if (!res.ok) {
+        detail.innerHTML = '<div class="empty">Unable to load tribe detail.</div>';
+        return;
+    }
+
+    const tribe = await res.json();
+    const members = tribe.members || [];
+    const bounties = tribe.bounties || [];
+
+    detail.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:0.6rem; flex-wrap:wrap; margin-bottom:0.7rem;">
+            <div>
+                <h4 style="margin:0; color:var(--text-primary,#e0e0e0);">${esc(tribe.name)}</h4>
+                <div class="inline-meta">${esc(tribe.description || '')}</div>
+            </div>
+            <button class="btn-primary" onclick="joinTribe('${tribe.id}')">Join Tribe</button>
+        </div>
+
+        <div class="badges" style="margin-bottom:0.9rem;">
+            <span class="badge ${categoryClass(tribe.category)}">${esc(tribe.category || 'core')}</span>
+            <span class="badge">Members: ${members.length}</span>
+            <span class="badge">Bounties: ${bounties.length}</span>
+            <span class="badge">Active: ${Number(tribe.activeBountyCount || 0)}</span>
+        </div>
+
+        <div style="margin-bottom:0.9rem;">
+            <div style="font-size:0.8rem; color:var(--text-primary,#e0e0e0); margin-bottom:0.45rem;">Members</div>
+            ${members.length ? `
+                <ul class="member-list">
+                    ${members.map((m) => `<li>${esc(shortWallet(m.wallet))}${m.role ? ` (${esc(m.role)})` : ''}</li>`).join('')}
+                </ul>
+            ` : '<div class="inline-meta">No members yet.</div>'}
+        </div>
+
+        <div>
+            <div style="font-size:0.8rem; color:var(--text-primary,#e0e0e0); margin-bottom:0.45rem;">Associated Bounties</div>
+            ${bounties.length ? `
+                <ul class="bounty-list">
+                    ${bounties.map((b) => `<li><a href="/bounties#${esc(b.id)}">${esc(b.id)} — ${esc(b.title)}</a> <span class="inline-meta">(${esc(b.status || 'open')})</span></li>`).join('')}
+                </ul>
+            ` : '<div class="inline-meta">No bounties assigned.</div>'}
+        </div>
+    `;
+}
+
+async function joinTribe(tribeId) {
+    if (!connectedWallet) {
+        alert('Connect wallet first.');
+        return;
+    }
+
+    const res = await fetch(`/api/tribes/${tribeId}/join`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({wallet: connectedWallet})
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        alert(data.error || 'Unable to join tribe.');
+        return;
+    }
+
+    await loadTribes();
+    await selectTribe(tribeId, false);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadTribes();
+});
+
+window.addEventListener('hashchange', () => {
+    const hashId = window.location.hash.replace('#', '').trim();
+    if (hashId) {
+        selectTribe(hashId, false);
+    }
+});
+</script>
+{% endblock %}

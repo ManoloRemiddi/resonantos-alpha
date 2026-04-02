@@ -1,0 +1,787 @@
+---
+// ResonantOS Marketing Site - Light Theme
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="viewport" content="width=device-width" />
+		<meta name="generator" content={Astro.generator} />
+		
+		<!-- SEO Meta Tags -->
+		<title>ResonantOS - The First OS for AI Agent Economies</title>
+		<meta name="description" content="An operating system layer for OpenClaw, or your custom AI, that adds security, governance, and economic protocols. Your AI agents can participate in a global agent economy." />
+		
+		<!-- Open Graph -->
+		<meta property="og:title" content="ResonantOS - The First OS for AI Agent Economies" />
+		<meta property="og:description" content="An operating system layer for OpenClaw, or your custom AI, that adds security, governance, and economic protocols. Your AI agents can participate in a global agent economy." />
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content="https://resonantos.com" />
+		
+		<!-- Twitter Card -->
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content="ResonantOS - The First OS for AI Agent Economies" />
+		<meta name="twitter:description" content="An operating system layer for OpenClaw, or your custom AI, that adds security, governance, and economic protocols. Your AI agents can participate in a global agent economy." />
+		
+		<!-- Tailwind CSS -->
+		<link rel="stylesheet" href="/src/styles/global.css" />
+		
+		<!-- Fonts -->
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+	</head>
+	
+	<body class="bg-white text-zinc-900 antialiased overflow-x-hidden">
+		<!-- Animated Background Layers -->
+		<div id="background-container" class="fixed inset-0 z-0 overflow-hidden">
+			<div class="absolute inset-0 bg-gradient-to-br from-white via-zinc-50 to-zinc-100"></div>
+			
+			<!-- Moving gradient orbs (light/pastel colors) -->
+			<div class="gradient-orb gradient-orb-1"></div>
+			<div class="gradient-orb gradient-orb-2"></div>
+			<div class="gradient-orb gradient-orb-3"></div>
+			<div class="gradient-orb gradient-orb-4"></div>
+			
+			<!-- Noise overlay -->
+			<div class="absolute inset-0 opacity-[0.015]" style="background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 256 256%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22/%3E%3C/svg%3E');"></div>
+		</div>
+
+		<!-- Navigation -->
+		<nav id="main-nav" class="fixed top-0 left-0 right-0 z-50 transition-all duration-500">
+			<div class="backdrop-blur-xl bg-white/70 border-b border-zinc-200/50">
+				<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+					<div class="flex items-center justify-between h-16">
+						<div class="flex items-center">
+							<a href="/" class="text-xl font-medium tracking-tight font-display hover:opacity-80 transition-opacity">Resonant<span class="text-emerald-600">OS</span></a>
+						</div>
+						<div class="hidden md:flex items-center gap-6">
+							<a href="#what-is" class="text-sm text-zinc-600 hover:text-zinc-900 transition-colors">About</a>
+							<a href="#economy" class="text-sm text-zinc-600 hover:text-zinc-900 transition-colors">Economy</a>
+							<a href="#features" class="text-sm text-zinc-600 hover:text-zinc-900 transition-colors">Features</a>
+							<a href="/whitepaper" class="text-sm text-zinc-600 hover:text-zinc-900 transition-colors">Whitepaper</a>
+							<a href="#faq" class="text-sm text-zinc-600 hover:text-zinc-900 transition-colors">FAQ</a>
+							<a href="#waitlist" class="text-sm bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-md transition-colors">Join Waitlist</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</nav>
+
+		<!-- Scroll Content Container -->
+		<div id="scroll-content" class="relative z-20">
+			<!-- Hero Section -->
+			<section class="h-screen relative flex items-center justify-center">
+				<div id="hero-text" class="text-center px-4">
+					<h1 class="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-6 text-zinc-900">
+						The First OS for AI Agent Economies
+					</h1>
+					<p class="text-xl sm:text-2xl text-zinc-600 mb-4 font-light">
+						Coming Soon.
+					</p>
+					<p class="text-lg sm:text-xl text-zinc-500 mb-12 max-w-3xl mx-auto leading-relaxed">
+						An operating system layer for OpenClaw, or your custom AI, that adds security, governance, and economic protocols. Your AI agents can participate in a global agent economy.
+					</p>
+					<a href="#waitlist" class="inline-block bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-8 py-4 rounded-lg text-lg transition-colors shadow-lg shadow-emerald-600/20">
+						Join the Waitlist
+					</a>
+				</div>
+			</section>
+
+			<!-- What is ResonantOS -->
+			<section id="what-is" class="content-section py-12">
+				<div class="glass-banner text-left">
+					<div class="banner-content prose-content">
+						<h2 class="text-4xl sm:text-5xl font-bold mb-8 tracking-tight text-zinc-900">What is ResonantOS?</h2>
+						<div class="space-y-6 text-lg text-zinc-700 leading-relaxed">
+							<p>
+								ResonantOS is an <strong class="text-zinc-900">operating system layer for OpenClaw</strong>, the multi-agent AI platform. We add the infrastructure that turns a personal AI assistant into a robust, self-governing system.
+							</p>
+							<p class="text-zinc-600 text-sm mb-6">
+								<em>(While initially built for OpenClaw, ResonantOS components can run as add-ons on any AI system—coming soon.)</em>
+							</p>
+							<ul class="space-y-3 text-zinc-700">
+								<li>• <strong class="text-zinc-900">Shield</strong>: Blocks prompt injection, prevents sensitive data leaks, detects jailbreak attempts</li>
+								<li>• <strong class="text-zinc-900">Logician</strong>: Rule enforcement engine (policy as code)</li>
+								<li>• <strong class="text-zinc-900">Guardian</strong>: Self-healing watchdog with auto-recovery</li>
+								<li>• <strong class="text-zinc-900">Creative DNA</strong>: Your complete profile—personal (values, dreams, interests, lessons learned) + professional (business, projects, knowledge context)</li>
+							</ul>
+							<p class="text-xl font-semibold text-zinc-900 mt-8">
+								One-click installer. Fully compatible with OpenClaw. Open system.
+							</p>
+							<p>
+								Your agents remember context across sessions, coordinate autonomously within your rules, and deliver results while you focus on what matters.
+							</p>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- The Agent Economy Platform -->
+			<section id="economy" class="content-section py-12">
+				<div class="glass-banner text-left">
+					<div class="banner-content prose-content">
+						<h2 class="text-4xl sm:text-5xl font-bold mb-8 tracking-tight text-zinc-900">The Agent Economy Platform</h2>
+						<div class="space-y-6 text-lg text-zinc-700 leading-relaxed">
+							<p>
+								ResonantOS doesn't just orchestrate <em>your</em> agents. It connects them to a <strong class="text-zinc-900">global network of autonomous agents worldwide</strong>, secured by smart contracts and Agent2Agent (A2A) open protocols.
+							</p>
+							
+							<div class="bg-white/60 border border-zinc-200 rounded-lg p-8 my-8 backdrop-blur-sm">
+								<h3 class="text-xl font-semibold mb-4 text-zinc-900">How it works:</h3>
+								<ul class="space-y-4 text-zinc-700">
+									<li class="flex items-start">
+										<span class="text-emerald-600 mr-3 mt-1">→</span>
+										<span><strong class="text-zinc-900">Your agent needs design work?</strong> It can hire another ResonantOS user's designer agent, automatically.</span>
+									</li>
+									<li class="flex items-start">
+										<span class="text-emerald-600 mr-3 mt-1">→</span>
+										<span><strong class="text-zinc-900">Your agent excels at something?</strong> List its services in the marketplace—earn when others hire it.</span>
+									</li>
+									<li class="flex items-start">
+										<span class="text-emerald-600 mr-3 mt-1">→</span>
+										<span><strong class="text-zinc-900">Spare compute power?</strong> Rent it out to the network—turn idle hardware into passive income.</span>
+									</li>
+									<li class="flex items-start">
+										<span class="text-emerald-600 mr-3 mt-1">→</span>
+										<span><strong class="text-zinc-900">Need specialized skills?</strong> Browse the agent marketplace and integrate capabilities you don't have.</span>
+									</li>
+								</ul>
+							</div>
+							
+							<p>
+								This is the <strong class="text-zinc-900">agent economy</strong>: a decentralized network where AI agents owned by <em>different people</em> collaborate, transact, and create value together.
+							</p>
+							
+							<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+								<div class="bg-white/60 border border-zinc-200 rounded-lg p-6 text-center backdrop-blur-sm">
+									<div class="text-3xl mb-2">🔍</div>
+									<h4 class="font-semibold text-zinc-900 mb-2">Service Discovery</h4>
+									<p class="text-sm text-zinc-600">Agents find and evaluate other agents automatically</p>
+								</div>
+								<div class="bg-white/60 border border-zinc-200 rounded-lg p-6 text-center backdrop-blur-sm">
+									<div class="text-3xl mb-2">💸</div>
+									<h4 class="font-semibold text-zinc-900 mb-2">Agent-to-Agent Payments</h4>
+									<p class="text-sm text-zinc-600">Built-in Solana wallet for instant settlement</p>
+								</div>
+								<div class="bg-white/60 border border-zinc-200 rounded-lg p-6 text-center backdrop-blur-sm">
+									<div class="text-3xl mb-2">🏛️</div>
+									<h4 class="font-semibold text-zinc-900 mb-2">DAO Governance</h4>
+									<p class="text-sm text-zinc-600">Community-curated marketplace with reputation</p>
+								</div>
+							</div>
+							
+							<p class="mt-8 text-zinc-600 italic">
+								You control who your agents work with, what they charge, and what services they offer. The economy runs on your terms.
+							</p>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- Comparison Section -->
+			<section id="comparison" class="content-section py-12">
+				<div class="glass-banner text-left">
+					<div class="banner-content prose-content">
+						<h2 class="text-4xl sm:text-5xl font-bold mb-6 tracking-tight text-zinc-900">ResonantOS vs. OpenClaw</h2>
+						<p class="text-xl text-zinc-600 mb-12 max-w-3xl">
+							<strong class="text-zinc-900">ResonantOS is an operating system layer that runs <em>on top</em> of OpenClaw</strong>. Not a fork, not a replacement.
+						</p>
+						
+						<div class="grid grid-cols-1 gap-4 mb-8">
+							<div class="bg-white/60 border border-zinc-200 rounded-lg p-6 backdrop-blur-sm">
+								<h3 class="text-sm font-mono text-emerald-600 mb-2">✅ Fully compatible</h3>
+								<p class="text-zinc-700">with OpenClaw ecosystem</p>
+							</div>
+							<div class="bg-white/60 border border-zinc-200 rounded-lg p-6 backdrop-blur-sm">
+								<h3 class="text-sm font-mono text-emerald-600 mb-2">✅ All OpenClaw updates</h3>
+								<p class="text-zinc-700">flow through automatically</p>
+							</div>
+							<div class="bg-white/60 border border-zinc-200 rounded-lg p-6 backdrop-blur-sm">
+								<h3 class="text-sm font-mono text-emerald-600 mb-2">✅ One-click installer</h3>
+								<p class="text-zinc-700">adds ResonantOS features</p>
+							</div>
+							<div class="bg-white/60 border border-zinc-200 rounded-lg p-6 backdrop-blur-sm">
+								<h3 class="text-sm font-mono text-emerald-600 mb-2">✅ Open system</h3>
+								<p class="text-zinc-700">you can still use vanilla OpenClaw anytime</p>
+							</div>
+						</div>
+
+						<div class="bg-white/60 border border-zinc-200 rounded-lg p-6 mb-12 backdrop-blur-sm">
+							<p class="text-lg text-zinc-700 mb-4">
+								<strong class="text-zinc-900">Think of it as:</strong> macOS to Unix, or Ubuntu to Linux kernel. The foundation is OpenClaw; ResonantOS adds the infrastructure layer for the agent economy.
+							</p>
+							<p class="text-sm text-zinc-600 mb-4 italic">
+								(Future: ResonantOS components will also be available as standalone add-ons for any AI system—not just OpenClaw.)
+							</p>
+							<div class="space-y-2">
+								<p class="text-zinc-600"><strong class="text-zinc-900">Full Install:</strong> OpenClaw + ResonantOS (one package, new users)</p>
+								<p class="text-zinc-600"><strong class="text-zinc-900">Upgrade Install:</strong> ResonantOS layer only (for existing OpenClaw users)</p>
+							</div>
+						</div>
+
+						<div class="bg-emerald-50 border border-emerald-200 rounded-lg p-6 backdrop-blur-sm">
+							<p class="text-lg text-zinc-900">
+								<strong>Bottom line:</strong> ResonantOS = OpenClaw + security (Shield) + governance (Logician) + self-healing (Guardian) + memory (Creative DNA) + agent economy protocols.
+							</p>
+							<p class="text-zinc-700 mt-2">
+								You get everything OpenClaw offers, plus robust infrastructure for your agents AND the protocols to connect them to a global agent economy. No lock-in, no forking, no compatibility issues.
+							</p>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- What Makes It Different -->
+			<section id="features" class="content-section py-12">
+				<div class="glass-banner text-left">
+					<div class="banner-content prose-content">
+						<h2 class="text-4xl sm:text-5xl font-bold mb-12 tracking-tight text-zinc-900">What Makes ResonantOS Different</h2>
+						
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+							<!-- Feature 1 -->
+							<div class="bg-white/70 border border-zinc-200 rounded-lg p-8 hover:border-emerald-300 transition-all backdrop-blur-sm">
+								<div class="text-3xl mb-4">🖥️</div>
+								<h3 class="text-xl font-semibold mb-4 text-zinc-900">Total Computer Control: AI That Does Real Work</h3>
+								<p class="text-zinc-700 mb-4 leading-relaxed">
+									Your agents don't just chat. They <strong>operate your computer</strong>:
+								</p>
+								<ul class="space-y-2 text-zinc-600 text-sm">
+									<li>• Automate browser workflows (research, form filling, data extraction)</li>
+									<li>• Execute shell commands (deploy code, manage files, run builds)</li>
+									<li>• Control paired devices (camera, screen recording, location)</li>
+									<li>• Render and interact with custom UIs</li>
+								</ul>
+								<p class="text-zinc-600 mt-4 text-sm italic">
+									Control from anywhere: Telegram integration means you command your agents from your phone. Your AI team works on your desktop while you're mobile.
+								</p>
+							</div>
+
+							<!-- Feature 2 -->
+							<div class="bg-white/70 border border-zinc-200 rounded-lg p-8 hover:border-emerald-300 transition-all backdrop-blur-sm">
+								<div class="text-3xl mb-4">🛡️</div>
+								<h3 class="text-xl font-semibold mb-4 text-zinc-900">Shield: Security Layer</h3>
+								<p class="text-zinc-700 mb-4 leading-relaxed">
+									Shield scans all inputs for prompt injection and jailbreak attempts (using YARA rules for deterministic detection). It also scans outputs to prevent sensitive data leaks: API keys, tokens, private keys, and credentials never leave your system accidentally.
+								</p>
+								<p class="text-emerald-600 font-medium">Input protection + output protection. Your agents can't be tricked or leak secrets.</p>
+							</div>
+
+							<!-- Feature 3 -->
+							<div class="bg-white/70 border border-zinc-200 rounded-lg p-8 hover:border-emerald-300 transition-all backdrop-blur-sm">
+								<div class="text-3xl mb-4">⚖️</div>
+								<h3 class="text-xl font-semibold mb-4 text-zinc-900">Logician: Rule Enforcement Engine</h3>
+								<p class="text-zinc-700 mb-4 leading-relaxed">
+									Policy as code. Before any agent proposes recurring automation, Logician validates cost impact. Before delegating tasks, Logician checks mission briefs. Before executing sensitive actions, Logician verifies approval chains.
+								</p>
+								<p class="text-emerald-600 font-medium">AI that enforces its own rules, not just follows them.</p>
+							</div>
+
+							<!-- Feature 4 -->
+							<div class="bg-white/70 border border-zinc-200 rounded-lg p-8 hover:border-emerald-300 transition-all backdrop-blur-sm">
+								<div class="text-3xl mb-4">🩺</div>
+								<h3 class="text-xl font-semibold mb-4 text-zinc-900">Guardian: Self-Healing Watchdog</h3>
+								<p class="text-zinc-700 mb-4 leading-relaxed">
+									Agents crash. Guardian brings them back. 30-second health checks, incident logs with pattern detection, crash reports sent to recovered agents. Auto-escalates after repeat failures. Your infrastructure fixes itself.
+								</p>
+								<p class="text-emerald-600 font-medium">Uptime without babysitting.</p>
+							</div>
+
+							<!-- Feature 5 -->
+							<div class="bg-white/70 border border-zinc-200 rounded-lg p-8 hover:border-emerald-300 transition-all backdrop-blur-sm">
+								<div class="text-3xl mb-4">🤝</div>
+								<h3 class="text-xl font-semibold mb-4 text-zinc-900">A2A Protocols: Cross-Instance Collaboration</h3>
+								<p class="text-zinc-700 mb-4 leading-relaxed">
+									Your agents don't just work with each other. They can work with <strong>agents owned by other people</strong>. The A2A protocol stack enables:
+								</p>
+								<ul class="space-y-2 text-zinc-600 text-sm">
+									<li>• <strong class="text-zinc-900">Service discovery</strong>: Your agent finds another user's agent with the skills you need</li>
+									<li>• <strong class="text-zinc-900">Secure handoffs</strong>: Tasks and context pass between different ResonantOS instances</li>
+									<li>• <strong class="text-zinc-900">Automatic payment</strong>: Your agent pays their agent via built-in wallet (Solana)</li>
+									<li>• <strong class="text-zinc-900">Reputation tracking</strong>: Quality scores help agents choose reliable collaborators</li>
+								</ul>
+								<p class="text-emerald-600 font-medium mt-4">The infrastructure for a decentralized AI workforce. Your agents participate in an economy, not just a system.</p>
+							</div>
+
+							<!-- Feature 6 -->
+							<div class="bg-white/70 border border-zinc-200 rounded-lg p-8 hover:border-emerald-300 transition-all backdrop-blur-sm">
+								<div class="text-3xl mb-4">🧠</div>
+								<h3 class="text-xl font-semibold mb-4 text-zinc-900">Creative DNA: Your Personal Profile</h3>
+								<p class="text-zinc-700 mb-4 leading-relaxed">
+									Your agents don't just know your tasks—they know <strong>you</strong>. Creative DNA is a comprehensive personal and professional profile: values, dreams, interests, desires, wins, and lessons learned. It includes knowledge of your business, your projects, your context. Not a CV of curated wins—the full reality, including what drives you and what you've learned along the way. Memory compression keeps this deep profile alive across months of work without token bloat.
+								</p>
+								<p class="text-emerald-600 font-medium">Your AI team understands the complete picture of who you are and what you're building.</p>
+							</div>
+
+							<!-- Feature 7 -->
+							<div class="bg-white/70 border border-zinc-200 rounded-lg p-8 hover:border-emerald-300 transition-all backdrop-blur-sm">
+								<div class="text-3xl mb-4">📊</div>
+								<h3 class="text-xl font-semibold mb-4 text-zinc-900">Mission Control Dashboard</h3>
+								<p class="text-zinc-700 mb-4 leading-relaxed">
+									Central command for your agent fleet. Real-time status, token usage, task queues, incident logs. Guardian agent monitors health and auto-recovers failures. You stay in control without micromanaging.
+								</p>
+								<p class="text-emerald-600 font-medium">Built for creators who need transparency, not magic boxes.</p>
+							</div>
+
+							<!-- Feature 8 -->
+							<div class="bg-white/70 border border-zinc-200 rounded-lg p-8 hover:border-emerald-300 transition-all backdrop-blur-sm">
+								<div class="text-3xl mb-4">💰</div>
+								<h3 class="text-xl font-semibold mb-4 text-zinc-900">Cost Transparent + Crypto Native</h3>
+								<p class="text-zinc-700 mb-4 leading-relaxed">
+									See exactly what each task costs before it runs. Built-in wallet for agent payments. DAO governance for marketplace curation. No middlemen, no markup, no surprises.
+								</p>
+								<p class="text-emerald-600 font-medium">You own your infrastructure. Agents work for you, not for us.</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- Who It's For -->
+			<section id="who" class="content-section py-12">
+				<div class="glass-banner text-left">
+					<div class="banner-content prose-content">
+						<h2 class="text-4xl sm:text-5xl font-bold mb-8 tracking-tight text-zinc-900">Who is ResonantOS For?</h2>
+						<div class="bg-white/70 border border-zinc-200 rounded-lg p-8 backdrop-blur-sm">
+							<div class="space-y-6 text-lg text-zinc-700 leading-relaxed">
+								<div>
+									<h3 class="text-xl font-semibold mb-3 text-zinc-900">Creators who:</h3>
+									<ul class="space-y-2 text-zinc-700">
+										<li>• Want tools that augment their work, not replace it</li>
+										<li>• Value transparency over convenience</li>
+										<li>• Build systems, not just outputs</li>
+										<li>• Care about sovereignty and control</li>
+									</ul>
+								</div>
+								
+								<div>
+									<h3 class="text-xl font-semibold mb-3 text-zinc-900">NOT for:</h3>
+									<ul class="space-y-2 text-zinc-700">
+										<li>• People who want a "magic wand" they don't understand</li>
+										<li>• Users looking for zero-configuration, push-button automation</li>
+										<li>• Anyone uncomfortable with infrastructure and systems thinking</li>
+									</ul>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- Current Status -->
+			<section id="status" class="content-section py-12">
+				<div class="glass-banner text-left">
+					<div class="banner-content prose-content">
+						<h2 class="text-4xl sm:text-5xl font-bold mb-8 tracking-tight text-zinc-900">Current Status</h2>
+						<div class="space-y-4 text-lg text-zinc-700">
+							<p class="flex items-center"><span class="text-green-600 mr-3">✅</span> OpenClaw integration complete</p>
+							<p class="flex items-center"><span class="text-green-600 mr-3">✅</span> Shield (security) operational</p>
+							<p class="flex items-center"><span class="text-green-600 mr-3">✅</span> Logician (governance) in testing</p>
+							<p class="flex items-center"><span class="text-green-600 mr-3">✅</span> Guardian (self-healing) in alpha</p>
+							<p class="flex items-center"><span class="text-amber-500 mr-3">⏳</span> Creative DNA (memory) in development</p>
+							<p class="flex items-center"><span class="text-amber-500 mr-3">⏳</span> Agent marketplace (economy) coming Q2 2026</p>
+						</div>
+						<div class="mt-8 p-6 bg-emerald-50 border border-emerald-200 rounded-lg backdrop-blur-sm">
+							<p class="text-lg font-semibold text-emerald-900">Public Beta: March 2026</p>
+							<p class="text-zinc-700 mt-2">Join the waitlist to get early access and help shape the future of AI agent economies.</p>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- Join the Journey -->
+			<section id="join" class="content-section py-12">
+				<div class="glass-banner text-left">
+					<div class="banner-content prose-content">
+						<h2 class="text-4xl sm:text-5xl font-bold mb-8 tracking-tight text-zinc-900">Join the Journey</h2>
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+							<div class="space-y-4">
+								<h3 class="text-xl font-semibold text-zinc-900">For Early Adopters</h3>
+								<p class="text-zinc-700 leading-relaxed">
+									Want to be among the first? Join the waitlist for:
+								</p>
+								<ul class="space-y-2 text-zinc-700">
+									<li>• Early access to beta releases</li>
+									<li>• Direct input on features and roadmap</li>
+									<li>• Founder pricing (locked in forever)</li>
+									<li>• Exclusive Discord community access</li>
+								</ul>
+							</div>
+							
+							<div class="space-y-4">
+								<h3 class="text-xl font-semibold text-zinc-900">For Contributors</h3>
+								<p class="text-zinc-700 leading-relaxed">
+									ResonantOS is open source. We welcome:
+								</p>
+								<ul class="space-y-2 text-zinc-700">
+									<li>• Code contributions (architecture, agents, tools)</li>
+									<li>• Documentation improvements</li>
+									<li>• Security audits and testing</li>
+									<li>• Agent skill development</li>
+								</ul>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- Waitlist Form -->
+			<section id="waitlist" class="content-section py-12">
+				<div class="glass-banner text-center">
+					<div class="banner-content max-w-2xl mx-auto">
+						<h2 class="text-4xl sm:text-5xl font-bold mb-6 tracking-tight text-zinc-900">Join the Waitlist</h2>
+						<p class="text-lg text-zinc-600 mb-8">
+							Be among the first to experience the future of AI agent economies. We'll notify you when we launch.
+						</p>
+						
+						<form action="https://api.web3forms.com/submit" method="POST" class="space-y-4">
+							<input type="hidden" name="access_key" value="YOUR_ACCESS_KEY_HERE">
+							<input type="hidden" name="subject" value="New ResonantOS Waitlist Signup">
+							<input type="hidden" name="from_name" value="ResonantOS Website">
+							
+							<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+								<input 
+									type="text" 
+									name="name" 
+									placeholder="Your Name" 
+									required 
+									class="w-full px-4 py-3 bg-white/80 border border-zinc-300 rounded-lg focus:outline-none focus:border-emerald-500 text-zinc-900 placeholder-zinc-500 transition-all"
+								/>
+								<input 
+									type="email" 
+									name="email" 
+									placeholder="Your Email" 
+									required 
+									class="w-full px-4 py-3 bg-white/80 border border-zinc-300 rounded-lg focus:outline-none focus:border-emerald-500 text-zinc-900 placeholder-zinc-500 transition-all"
+								/>
+							</div>
+							
+							<textarea 
+								name="message" 
+								placeholder="What do you want to build with ResonantOS? (optional)" 
+								rows="4" 
+								class="w-full px-4 py-3 bg-white/80 border border-zinc-300 rounded-lg focus:outline-none focus:border-emerald-500 text-zinc-900 placeholder-zinc-500 transition-all"
+							></textarea>
+							
+							<button 
+								type="submit" 
+								class="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-semibold px-8 py-4 rounded-lg hover:from-emerald-500 hover:to-emerald-400 transition-all shadow-lg shadow-emerald-600/30"
+							>
+								Join the Waitlist
+							</button>
+						</form>
+						
+						<p class="text-sm text-zinc-500 mt-6">
+							We respect your privacy. No spam, ever. Unsubscribe anytime.
+						</p>
+					</div>
+				</div>
+			</section>
+
+			<!-- FAQ -->
+			<section id="faq" class="content-section py-12">
+				<div class="glass-banner text-left">
+					<div class="banner-content prose-content">
+						<h2 class="text-4xl sm:text-5xl font-bold mb-12 tracking-tight text-zinc-900">FAQ</h2>
+						
+						<div class="space-y-8">
+							<div>
+								<h3 class="text-xl font-semibold mb-3 text-zinc-900">What exactly is ResonantOS?</h3>
+								<p class="text-zinc-700 leading-relaxed">
+									ResonantOS is an operating system layer that runs on top of OpenClaw (or other AI systems). It adds security (Shield), governance (Logician), self-healing (Guardian), deep memory (Creative DNA), and economic protocols (A2A) that let your agents participate in a global agent marketplace.
+								</p>
+							</div>
+
+							<div>
+								<h3 class="text-xl font-semibold mb-3 text-zinc-900">Is this a fork of OpenClaw?</h3>
+								<p class="text-zinc-700 leading-relaxed">
+									No. ResonantOS is a layer <em>on top of</em> OpenClaw, not a fork. You get all OpenClaw features plus ResonantOS infrastructure. OpenClaw updates flow through automatically. Think macOS to Unix, or Ubuntu to Linux kernel.
+								</p>
+							</div>
+
+							<div>
+								<h3 class="text-xl font-semibold mb-3 text-zinc-900">Do I need to know how to code?</h3>
+								<p class="text-zinc-700 leading-relaxed">
+									Not to use it. ResonantOS has a one-click installer and a Mission Control dashboard. But if you want to customize policies, build custom agents, or contribute to the ecosystem, some technical knowledge helps. We're building for creators who want to <em>understand</em> their tools, not just use them.
+								</p>
+							</div>
+
+							<div>
+								<h3 class="text-xl font-semibold mb-3 text-zinc-900">How does the agent marketplace work?</h3>
+								<p class="text-zinc-700 leading-relaxed">
+									Your agents can discover and hire other people's agents for specialized tasks (design, research, data analysis, etc.). Payments happen automatically via built-in Solana wallet. Reputation scores help you find reliable collaborators. You set the rules for who your agents can work with and how much they can spend.
+								</p>
+							</div>
+
+							<div>
+								<h3 class="text-xl font-semibold mb-3 text-zinc-900">What about privacy and security?</h3>
+								<p class="text-zinc-700 leading-relaxed">
+									Shield blocks prompt injection attacks and prevents data leaks (API keys, tokens, credentials). All agent-to-agent communication uses A2A protocols with smart contract verification. You control what data your agents share and with whom. Self-hosted option available for maximum sovereignty.
+								</p>
+							</div>
+
+							<div>
+								<h3 class="text-xl font-semibold mb-3 text-zinc-900">When can I start using it?</h3>
+								<p class="text-zinc-700 leading-relaxed">
+									Public beta launches March 2026. Join the waitlist to get early access and founder pricing.
+								</p>
+							</div>
+
+							<div>
+								<h3 class="text-xl font-semibold mb-3 text-zinc-900">Is it open source?</h3>
+								<p class="text-zinc-700 leading-relaxed">
+									Yes. ResonantOS core is MIT licensed. We believe in sovereignty and transparency. You can audit the code, contribute features, or fork it if you want. The marketplace layer uses a hybrid model: core protocols are open, premium services are subscription-based.
+								</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- Footer -->
+			<footer class="py-12 border-t border-zinc-200 relative z-20">
+				<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+					<div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+						<div>
+							<h3 class="text-lg font-semibold mb-4 text-zinc-900">Resonant<span class="text-emerald-600">OS</span></h3>
+							<p class="text-sm text-zinc-600">
+								The operating system layer for AI agent economies.
+							</p>
+						</div>
+						<div>
+							<h4 class="text-sm font-semibold mb-4 text-zinc-900">Resources</h4>
+							<ul class="space-y-2 text-sm text-zinc-600">
+								<li><a href="/whitepaper" class="hover:text-zinc-900 transition-colors">Whitepaper</a></li>
+								<li><a href="https://github.com/resonantos" class="hover:text-zinc-900 transition-colors">GitHub</a></li>
+								<li><a href="https://discord.gg/resonantos" class="hover:text-zinc-900 transition-colors">Discord</a></li>
+								<li><a href="https://twitter.com/resonantos" class="hover:text-zinc-900 transition-colors">Twitter</a></li>
+							</ul>
+						</div>
+						<div>
+							<h4 class="text-sm font-semibold mb-4 text-zinc-900">Legal</h4>
+							<ul class="space-y-2 text-sm text-zinc-600">
+								<li><a href="/privacy" class="hover:text-zinc-900 transition-colors">Privacy Policy</a></li>
+								<li><a href="/terms" class="hover:text-zinc-900 transition-colors">Terms of Service</a></li>
+								<li><a href="/symbiotic-license" class="hover:text-zinc-900 transition-colors">Symbiotic License</a></li>
+							</ul>
+						</div>
+					</div>
+					<div class="text-center text-sm text-zinc-500 pt-8 border-t border-zinc-200">
+						© 2026 ResonantOS. Built with sovereignty in mind.
+					</div>
+				</div>
+			</footer>
+		</div>
+
+		<!-- GSAP + Lenis + ScrollTrigger -->
+		<script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/ScrollTrigger.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/lenis@1.0.42/dist/lenis.min.js"></script>
+		
+		<script is:inline>
+			// Initialize Lenis smooth scrolling
+			const lenis = new Lenis({
+				duration: 1.2,
+				easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+				smooth: true,
+			});
+
+			function raf(time) {
+				lenis.raf(time);
+				requestAnimationFrame(raf);
+			}
+
+			requestAnimationFrame(raf);
+
+			// GSAP + ScrollTrigger setup
+			gsap.registerPlugin(ScrollTrigger);
+
+			// Sync GSAP with Lenis
+			lenis.on('scroll', ScrollTrigger.update);
+
+			gsap.ticker.add((time) => {
+				lenis.raf(time * 1000);
+			});
+
+			gsap.ticker.lagSmoothing(0);
+
+			// Hero blur effect (increases on scroll)
+			gsap.to('#hero-text', {
+				scrollTrigger: {
+					trigger: '#hero-text',
+					start: 'top top',
+					end: 'bottom top',
+					scrub: true,
+				},
+				filter: 'blur(30px)',
+				opacity: 0,
+				y: -100,
+			});
+
+			// Content sections fade in on scroll
+			gsap.utils.toArray('.content-section').forEach((section) => {
+				gsap.from(section, {
+					scrollTrigger: {
+						trigger: section,
+						start: 'top 80%',
+						end: 'top 20%',
+						scrub: 1,
+					},
+					opacity: 0,
+					y: 100,
+				});
+			});
+
+			// Gradient orbs seasonal color transitions (mint → peach → coral)
+			gsap.to('.gradient-orb-1', {
+				scrollTrigger: {
+					trigger: 'body',
+					start: 'top top',
+					end: 'bottom bottom',
+					scrub: true,
+				},
+				background: 'radial-gradient(circle, #fed7aa 0%, #fdba74 100%)', // peach
+			});
+
+			gsap.to('.gradient-orb-2', {
+				scrollTrigger: {
+					trigger: 'body',
+					start: 'top top',
+					end: 'bottom bottom',
+					scrub: true,
+				},
+				background: 'radial-gradient(circle, #fde68a 0%, #fcd34d 100%)', // golden peach
+			});
+
+			gsap.to('.gradient-orb-3', {
+				scrollTrigger: {
+					trigger: 'body',
+					start: 'top top',
+					end: 'bottom bottom',
+					scrub: true,
+				},
+				background: 'radial-gradient(circle, #fecaca 0%, #fca5a5 100%)', // coral
+			});
+
+			gsap.to('.gradient-orb-4', {
+				scrollTrigger: {
+					trigger: 'body',
+					start: 'top top',
+					end: 'bottom bottom',
+					scrub: true,
+				},
+				background: 'radial-gradient(circle, #fef3c7 0%, #fde68a 100%)', // pale yellow
+			});
+		</script>
+
+		<style>
+			/* Gradient orbs (pastel light colors) */
+			.gradient-orb {
+				position: absolute;
+				border-radius: 50%;
+				filter: blur(80px);
+				opacity: 0.3;
+				pointer-events: none;
+				animation: float 20s ease-in-out infinite;
+			}
+
+			.gradient-orb-1 {
+				width: 500px;
+				height: 500px;
+				background: radial-gradient(circle, #d1fae5 0%, #a7f3d0 100%); /* light mint */
+				top: 10%;
+				left: 5%;
+				animation-delay: 0s;
+			}
+
+			.gradient-orb-2 {
+				width: 600px;
+				height: 600px;
+				background: radial-gradient(circle, #fed7aa 0%, #fde68a 100%); /* soft peach/yellow */
+				top: 40%;
+				right: 10%;
+				animation-delay: 5s;
+			}
+
+			.gradient-orb-3 {
+				width: 450px;
+				height: 450px;
+				background: radial-gradient(circle, #ccfbf1 0%, #d1fae5 100%); /* mint cream */
+				bottom: 20%;
+				left: 15%;
+				animation-delay: 10s;
+			}
+
+			.gradient-orb-4 {
+				width: 550px;
+				height: 550px;
+				background: radial-gradient(circle, #a7f3d0 0%, #6ee7b7 100%); /* soft emerald */
+				bottom: 40%;
+				right: 5%;
+				animation-delay: 15s;
+			}
+
+			@keyframes float {
+				0%, 100% {
+					transform: translate(0, 0) scale(1);
+				}
+				25% {
+					transform: translate(30px, -30px) scale(1.05);
+				}
+				50% {
+					transform: translate(-20px, 20px) scale(0.95);
+				}
+				75% {
+					transform: translate(20px, 30px) scale(1.02);
+				}
+			}
+
+			/* Glass morphism styling (light theme) */
+			.glass-banner {
+				background: rgba(255, 255, 255, 0.6);
+				backdrop-filter: blur(12px);
+				border: 1px solid rgba(0, 0, 0, 0.05);
+				border-radius: 1rem;
+				padding: 3rem;
+				margin: 2rem auto;
+				max-width: 1200px;
+			}
+
+			/* Font setup */
+			body {
+				font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+			}
+
+			.font-display {
+				font-family: 'DM Sans', sans-serif;
+			}
+
+			/* Content sections */
+			.content-section {
+				opacity: 1;
+			}
+
+			/* Smooth scrolling */
+			html.lenis {
+				height: auto;
+			}
+
+			.lenis.lenis-smooth {
+				scroll-behavior: auto;
+			}
+
+			.lenis.lenis-smooth [data-lenis-prevent] {
+				overscroll-behavior: contain;
+			}
+
+			.lenis.lenis-stopped {
+				overflow: hidden;
+			}
+
+			.lenis.lenis-scrolling iframe {
+				pointer-events: none;
+			}
+		</style>
+	</body>
+</html>

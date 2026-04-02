@@ -1,0 +1,466 @@
+{% extends "base.html" %}
+
+{% block title %}Intelligence Hub - ResonantOS Dashboard{% endblock %}
+{% block page_title %}🔍 Intelligence Hub{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h2 class="card-title">Community & Market Intelligence</h2>
+            <p class="card-subtitle">Recent ecosystem scans, market insights, and strategic opportunities</p>
+        </div>
+        <div class="card-actions">
+            <input type="text" id="intelligenceSearch" placeholder="Search insights..." class="search-input">
+            <select id="typeFilter" onchange="filterIntelligence()">
+                <option value="">All Insights</option>
+                <option value="releases">🚀 Releases</option>
+                <option value="competitors">⚔️ Competitors</option>
+                <option value="opportunities">💡 Opportunities</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="card-content">
+        <div id="intelligenceLoadingSpinner" class="loading-spinner" style="display: none;">
+            <div class="spinner"></div>
+            <p>Loading intelligence data...</p>
+        </div>
+        
+        <div id="intelligenceContainer" style="display: none;">
+            <!-- Last Scan Header -->
+            <div class="scan-header">
+                <div class="scan-info">
+                    <h3>📊 Latest Scan Results</h3>
+                    <p id="scanDate">--</p>
+                </div>
+                <div class="scan-stats">
+                    <div class="stat">
+                        <span class="stat-label">Focus Areas</span>
+                        <span class="stat-value" id="focusAreas">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Key Findings</span>
+                        <span class="stat-value" id="keyFindings">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Opportunities</span>
+                        <span class="stat-value" id="opportunities">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Executive Summary -->
+            <div class="summary-section">
+                <h3 class="section-title">📋 Executive Summary</h3>
+                <div class="summary-content" id="executiveSummary"></div>
+            </div>
+            
+            <!-- Releases Section -->
+            <div class="intelligence-section">
+                <div class="section-header">
+                    <h3 class="section-title">🚀 Latest Releases</h3>
+                    <span class="section-count" id="releasesCount">0</span>
+                </div>
+                <div class="insights-list" id="releasesList"></div>
+            </div>
+            
+            <!-- Competitors Section -->
+            <div class="intelligence-section">
+                <div class="section-header">
+                    <h3 class="section-title">⚔️ Competitive Landscape</h3>
+                    <span class="section-count" id="competitorsCount">0</span>
+                </div>
+                <div class="insights-list" id="competitorsList"></div>
+            </div>
+            
+            <!-- Opportunities Section -->
+            <div class="intelligence-section">
+                <div class="section-header">
+                    <h3 class="section-title">💡 Strategic Opportunities</h3>
+                    <span class="section-count" id="opportunitiesCount">0</span>
+                </div>
+                <div class="insights-list" id="opportunitiesList"></div>
+            </div>
+            
+            <!-- Key Metrics Section -->
+            <div class="metrics-section">
+                <h3 class="section-title">📈 Market Metrics</h3>
+                <div class="metrics-grid" id="metricsGrid"></div>
+            </div>
+        </div>
+        
+        <div id="intelligenceEmpty" style="display: none;" class="empty-state">
+            <p>🔍 No intelligence data available yet</p>
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">Intelligence scans are generated periodically. Check back soon!</p>
+        </div>
+    </div>
+    
+    <div class="card-footer">
+        <p class="text-muted">Last scan: <span id="lastScan">--</span></p>
+        <a href="https://clawd.me" target="_blank" class="button-link">View Full Intelligence Archive</a>
+    </div>
+</div>
+
+<style>
+    .scan-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 24px;
+        padding: 20px;
+        background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        margin-bottom: 24px;
+    }
+    
+    .scan-info h3 {
+        margin: 0 0 8px 0;
+        font-size: 16px;
+        color: var(--text-primary);
+    }
+    
+    .scan-info p {
+        margin: 0;
+        font-size: 12px;
+        color: var(--text-secondary);
+    }
+    
+    .scan-stats {
+        display: flex;
+        gap: 24px;
+    }
+    
+    .stat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        text-align: center;
+    }
+    
+    .stat-label {
+        font-size: 12px;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .stat-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--primary);
+    }
+    
+    .summary-section {
+        padding: 20px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        margin-bottom: 24px;
+    }
+    
+    .summary-section h3 {
+        margin: 0 0 12px 0;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .summary-content {
+        font-size: 13px;
+        line-height: 1.6;
+        color: var(--text-secondary);
+    }
+    
+    .summary-content p {
+        margin: 0 0 8px 0;
+    }
+    
+    .intelligence-section {
+        margin-bottom: 32px;
+    }
+    
+    .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 0;
+        border-bottom: 2px solid var(--border);
+        margin-bottom: 16px;
+    }
+    
+    .section-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin: 0;
+        color: var(--text-primary);
+    }
+    
+    .section-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 28px;
+        height: 28px;
+        background: var(--bg-secondary);
+        border-radius: 14px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+    
+    .insights-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .insight-item {
+        padding: 16px;
+        background: var(--bg-secondary);
+        border-left: 3px solid var(--primary);
+        border-radius: var(--radius);
+        transition: all 0.2s;
+    }
+    
+    .insight-item:hover {
+        background: var(--bg-hover);
+        transform: translateX(4px);
+    }
+    
+    .insight-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0 0 8px 0;
+    }
+    
+    .insight-text {
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin: 0;
+        line-height: 1.5;
+    }
+    
+    .insight-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+        font-size: 11px;
+    }
+    
+    .insight-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        background: rgba(33, 150, 243, 0.1);
+        border-radius: 4px;
+        color: var(--primary);
+    }
+    
+    .metrics-section {
+        padding: 20px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        margin-top: 24px;
+    }
+    
+    .metrics-section h3 {
+        margin: 0 0 16px 0;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 16px;
+    }
+    
+    .metric-box {
+        padding: 12px;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        text-align: center;
+    }
+    
+    .metric-box-label {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+    }
+    
+    .metric-box-value {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--primary);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 48px 24px;
+        color: var(--text-secondary);
+        font-size: 14px;
+    }
+    
+    .search-input {
+        padding: 8px 12px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        color: var(--text-primary);
+        font-size: 14px;
+    }
+    
+    .search-input::placeholder {
+        color: var(--text-muted);
+    }
+    
+    .search-input:focus {
+        outline: none;
+        border-color: var(--primary);
+        background: var(--bg-tertiary);
+    }
+    
+    @media (max-width: 768px) {
+        .scan-header {
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .scan-stats {
+            width: 100%;
+            justify-content: space-around;
+        }
+        
+        .metrics-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+
+<script>
+    let allIntelligence = {};
+    
+    async function loadIntelligence() {
+        const spinner = document.getElementById('intelligenceLoadingSpinner');
+        const container = document.getElementById('intelligenceContainer');
+        spinner.style.display = 'flex';
+        
+        try {
+            const response = await fetch('/api/intelligence');
+            const data = await response.json();
+            
+            if (data.success) {
+                allIntelligence = data.intelligence;
+                renderIntelligence();
+                document.getElementById('lastScan').textContent = new Date(data.lastUpdated).toLocaleString();
+            }
+        } catch (err) {
+            console.error('Failed to load Intelligence:', err);
+            container.style.display = 'none';
+            spinner.style.display = 'none';
+            document.getElementById('intelligenceEmpty').style.display = 'block';
+        }
+    }
+    
+    function renderIntelligence() {
+        const container = document.getElementById('intelligenceContainer');
+        const empty = document.getElementById('intelligenceEmpty');
+        const spinner = document.getElementById('intelligenceLoadingSpinner');
+        
+        spinner.style.display = 'none';
+        
+        const hasData = allIntelligence && Object.keys(allIntelligence).length > 0;
+        
+        if (!hasData) {
+            container.style.display = 'none';
+            empty.style.display = 'block';
+            return;
+        }
+        
+        container.style.display = 'block';
+        empty.style.display = 'none';
+        
+        // Render Executive Summary
+        if (allIntelligence.summary) {
+            document.getElementById('executiveSummary').innerHTML = `<p>${escapeHtml(allIntelligence.summary)}</p>`;
+            document.getElementById('scanDate').textContent = allIntelligence.scanDate || 'Recent';
+        }
+        
+        // Render Releases
+        renderInsights('releases', allIntelligence.releases || [], document.getElementById('releasesList'), document.getElementById('releasesCount'));
+        
+        // Render Competitors
+        renderInsights('competitors', allIntelligence.competitors || [], document.getElementById('competitorsList'), document.getElementById('competitorsCount'));
+        
+        // Render Opportunities
+        renderInsights('opportunities', allIntelligence.opportunities || [], document.getElementById('opportunitiesList'), document.getElementById('opportunitiesCount'));
+        
+        // Render Metrics
+        if (allIntelligence.metrics) {
+            renderMetrics(allIntelligence.metrics);
+        }
+        
+        // Update stats
+        document.getElementById('focusAreas').textContent = allIntelligence.focusAreas || 0;
+        document.getElementById('keyFindings').textContent = allIntelligence.keyFindings || 0;
+        document.getElementById('opportunities').textContent = (allIntelligence.opportunities || []).length;
+    }
+    
+    function renderInsights(type, insights, containerEl, countEl) {
+        countEl.textContent = insights.length;
+        
+        if (insights.length === 0) {
+            containerEl.innerHTML = '<div style="color: var(--text-muted); padding: 16px; text-align: center; font-size: 12px;">No insights in this category</div>';
+            return;
+        }
+        
+        containerEl.innerHTML = insights.map(insight => `
+            <div class="insight-item">
+                <h4 class="insight-title">${escapeHtml(insight.title || insight.name || 'Untitled')}</h4>
+                <p class="insight-text">${escapeHtml(insight.description || insight.summary || '')}</p>
+                ${insight.tags ? `<div class="insight-meta">${insight.tags.map(tag => `<span class="insight-badge">${escapeHtml(tag)}</span>`).join('')}</div>` : ''}
+            </div>
+        `).join('');
+    }
+    
+    function renderMetrics(metrics) {
+        const grid = document.getElementById('metricsGrid');
+        grid.innerHTML = Object.entries(metrics).map(([key, value]) => `
+            <div class="metric-box">
+                <div class="metric-box-label">${escapeHtml(key)}</div>
+                <div class="metric-box-value">${escapeHtml(String(value))}</div>
+            </div>
+        `).join('');
+    }
+    
+    function filterIntelligence() {
+        const searchTerm = document.getElementById('intelligenceSearch').value.toLowerCase();
+        const typeFilter = document.getElementById('typeFilter').value;
+        
+        // Filter and re-render
+        renderIntelligence();
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Load on page load
+    document.addEventListener('DOMContentLoaded', loadIntelligence);
+    
+    // Refresh every 60 seconds
+    setInterval(loadIntelligence, 60000);
+</script>
+{% endblock %}

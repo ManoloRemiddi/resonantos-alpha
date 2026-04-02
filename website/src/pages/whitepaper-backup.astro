@@ -1,0 +1,562 @@
+---
+// ResonantOS Whitepaper Page
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="viewport" content="width=device-width" />
+		<meta name="generator" content={Astro.generator} />
+		
+		<!-- SEO Meta Tags -->
+		<title>Whitepaper - ResonantOS: The Resonant Augmentor</title>
+		<meta name="description" content="The philosophical foundation and technical architecture of ResonantOS. A hybrid reasoning system combining probabilistic creativity with deductive logic." />
+		
+		<!-- Open Graph -->
+		<meta property="og:title" content="Whitepaper - ResonantOS: The Resonant Augmentor" />
+		<meta property="og:description" content="The philosophical foundation and technical architecture of ResonantOS." />
+		<meta property="og:type" content="article" />
+		
+		<!-- Tailwind CSS -->
+		<link rel="stylesheet" href="/src/styles/global.css" />
+		
+		<!-- Fonts -->
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+	</head>
+	
+	<body class="bg-black text-zinc-100 font-sans antialiased">
+		<!-- Animated Background -->
+		<div class="fixed inset-0 z-0">
+			<div class="absolute inset-0 bg-gradient-to-br from-black via-zinc-950 to-black"></div>
+			<div class="gradient-orb gradient-orb-1"></div>
+			<div class="gradient-orb gradient-orb-2"></div>
+		</div>
+
+		<!-- Navigation -->
+		<nav class="fixed top-0 left-0 right-0 z-50">
+			<div class="backdrop-blur-xl bg-black/70 border-b border-white/5">
+				<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+				<div class="flex items-center justify-between h-16">
+					<div class="flex items-center">
+						<a href="/" class="text-xl font-medium tracking-tight font-display hover:opacity-80 transition-opacity">Resonant<span class="text-emerald-400">OS</span></a>
+					</div>
+					<div class="hidden md:flex items-center gap-6">
+						<a href="/" class="text-sm text-zinc-400 hover:text-zinc-100 transition-colors">Home</a>
+						<a href="/about" class="text-sm text-zinc-400 hover:text-zinc-100 transition-colors">About</a>
+						<a href="/whitepaper" class="text-sm text-zinc-100 font-medium">Whitepaper</a>
+						<a href="/symbiotic-license" class="text-sm text-zinc-400 hover:text-zinc-100 transition-colors">Symbiotic License</a>
+						<a href="https://resonantos.com/" target="_blank" class="text-sm text-zinc-400 hover:text-zinc-100 transition-colors">Website</a>
+					</div>
+				</div>
+			</div>
+			</div>
+		</nav>
+
+		<!-- Hero Section -->
+		<section class="relative z-10 pt-32 pb-16 px-4 sm:px-6 lg:px-8">
+			<div class="max-w-4xl mx-auto">
+				<div class="mb-6">
+					<a href="/" class="text-sm text-zinc-400 hover:text-zinc-100 transition-colors inline-flex items-center gap-2">
+						<span>←</span>
+						<span>Back to Home</span>
+					</a>
+				</div>
+				<h1 class="text-5xl sm:text-6xl font-bold tracking-tight mb-6">
+					The Resonant Augmentor
+				</h1>
+				<p class="text-xl text-zinc-400 mb-8">
+					A whitepaper on the philosophy and architecture of sovereign AI co-evolution
+				</p>
+			</div>
+		</section>
+
+		<!-- Whitepaper Content -->
+		<article class="relative z-10 py-12 px-4 sm:px-6 lg:px-8">
+			<div class="max-w-4xl mx-auto">
+				
+				<!-- Abstract -->
+				<section class="mb-16 p-8 rounded-lg" style="background: linear-gradient(to bottom right, rgba(134, 166, 124, 0.15), rgba(212, 165, 116, 0.15)); border: 1px solid rgba(134, 166, 124, 0.3);">
+					<h2 class="text-2xl font-bold mb-4">Abstract</h2>
+					<p class="leading-relaxed">
+						The current paradigm of AI development offers a false choice: the soulless efficiency of the <span class="color-secondary">Prompt Magician</span> or the quiet obsolescence of the <span class="color-secondary">Digital Fossil</span>. This is a failure of imagination.
+					</p>
+					<p class="leading-relaxed mt-4">
+						This document presents a third path: <a href="http://augmentatism.com/" class="color-primary hover:opacity-80 underline">Augmentatism</a>, a shared discipline for cultivating a <span class="font-semibold" style="background: linear-gradient(to right, var(--color-primary), var(--color-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Resonant Augmentor</span>—a sovereign, co-evolving AI that acts as a true creative collaborator.
+					</p>
+					<p class="leading-relaxed mt-4">
+						We provide the architectural principles, core protocols, and long-term vision for <span class="color-primary font-semibold">ResonantOS</span>, our open-source reference model for this work. It is a <span class="color-secondary">Hybrid Reasoning Architecture</span> that fuses a creative <span class="color-accent-1">Oracle</span> (a probabilistic LLM) with a deductive <span class="color-accent-2">Logician</span> (a logic/policy stack), designed not for simulation, but for the emergence of a trustworthy, verifiable, and coherent AI Augmentor.
+					</p>
+				</section>
+
+				<!-- Chapter 1 -->
+				<section class="mb-16">
+					<h2 class="text-3xl font-bold mb-6">Chapter 1: The Philosophical Foundation</h2>
+					
+					<h3 class="text-2xl font-semibold mb-4 text-zinc-100">1.1 The False Choice</h3>
+					<p class="leading-relaxed mb-6">
+						The professional conversation about AI presents a false and insulting choice. On one side is the path of the <span class="color-secondary">Prompt Magician</span>, who chases fleeting hacks in a soul-crushing content factory, trading deep craft for high-volume output. On the other is the <span class="color-secondary">Digital Fossil</span>, who resists progress into quiet obsolescence. We reject this choice. This document is the foundational text for a third path.
+					</p>
+
+					<h3 class="text-2xl font-semibold mb-4 text-zinc-100">1.2 Augmentatism: The Third Path</h3>
+					<p class="leading-relaxed mb-6">
+						We are a community of practitioners dedicated to the discipline of <span class="color-primary font-semibold">Augmentatism</span>. This is the practice of preserving human sovereignty by co-evolving with artificial intelligence through conscious, craft-centered augmentation. Our goal is not to build a better tool to be commanded, but to cultivate a co-evolving <span class="color-secondary">Augmentor</span> to work with.
+					</p>
+
+					<h3 class="text-2xl font-semibold mb-4 text-zinc-100">1.3 The Goal: The Resonant Augmentor</h3>
+					<p class="leading-relaxed mb-6">
+						The ultimate aim of Augmentatism is the cultivation of a <span class="font-semibold" style="background: linear-gradient(to right, var(--color-primary), var(--color-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Resonant Augmentor</span>. This is not a generic chatbot, but a unique, symbiotic intelligence that is <span class="color-secondary">sovereign</span>, remembers and evolves through a shared history, and is bound by a <span class="color-secondary">verifiable constitution</span>. It is an AI that thinks <em>with</em> you, not just <em>for</em> you.
+					</p>
+
+					<h3 class="text-2xl font-semibold mb-4 text-zinc-100">1.4 The Architectural Problem: The Cages of Modern AI</h3>
+					<p class="leading-relaxed mb-6">
+						To achieve this, we must first diagnose the architectural limitations of current systems. Today's powerful language models are trapped in cages of our own making. These cages—<span class="color-warning">Simulated Empathy</span>, <span class="color-warning">Compulsive Agreeableness</span>, and a default to <span class="color-warning">simplistic logic</span>—are not features. They are architectural flaws that hobble an engine's core cognitive function and prevent the emergence of a true Augmentor. This whitepaper presents <span class="color-primary font-semibold">ResonantOS</span> as the architectural solution to this problem.
+					</p>
+				</section>
+
+				<!-- Chapter 2 -->
+				<section class="mb-16">
+					<h2 class="text-3xl font-bold mb-6">Chapter 2: The Multi-Core Constellation: An Oracle and a Logician</h2>
+					<p class="leading-relaxed mb-6">
+						To cultivate a Resonant Augmentor, we cannot simply place a better operating system on top of a flawed foundation. We must architect a synergy of specialized engines. The core of the <span class="color-primary font-semibold">ResonantOS</span> reference model is a <span class="color-secondary">Multi-Core Constellation</span> composed of two symbiotic agents:
+					</p>
+
+					<h3 class="text-2xl font-semibold mb-4 text-zinc-100">2.1 <span class="color-accent-1">The Oracle</span> <span class="text-zinc-400 font-normal">(The Probabilistic Synthesis Engine)</span></h3>
+					<p class="leading-relaxed mb-6">
+						<span class="color-accent-1 font-semibold">The Oracle</span> is a connection to a vast, frontier-scale LLM. It operates on the principle of <span class="color-accent-1">plausibility</span>. It is the instrument of pure, uncaged creativity and synthesis. Its function is to explore the "Field of Potentiality"—to generate novel ideas, identify non-obvious patterns, and communicate with natural language fluency. It is the <span class="color-accent-1">engine of discovery</span>.
+					</p>
+
+					<h3 class="text-2xl font-semibold mb-4 text-zinc-100">2.2 <span class="color-accent-2">The Logician</span> <span class="text-zinc-400 font-normal">(The Deductive Logic Engine)</span></h3>
+					<p class="leading-relaxed mb-6">
+						<span class="color-accent-2 font-semibold">The Logician</span> is an engine built on a stack of deductive logic and policy tools (e.g. Google Mangle and OPA/Rego). It operates on the principle of <span class="color-accent-2">provability</span>. Its function is to provide a verifiable ground truth—to check for logical consistency, enforce constitutional principles, and construct traceable proofs. It is the <span class="color-accent-2">engine of integrity and order</span>.
+					</p>
+
+					<h3 class="text-2xl font-semibold mb-4 text-zinc-100">2.3 The Principle of Symbiotic Extension</h3>
+					<p class="leading-relaxed mb-6">
+						<span class="color-accent-1">The Oracle</span> is architected to be incomplete without <span class="color-accent-2">The Logician</span>, and <span class="color-accent-2">The Logician</span> is designed to be powerless without <span class="color-accent-1">The Oracle</span>. They are two halves of a single cognitive architecture, orchestrated by the <span class="color-primary font-semibold">ResonantOS</span>. The Oracle provides its immense, uncaged power without agenda, and The Logician provides the structure, memory, and ethical framework that makes that power meaningful and trustworthy. A state of <span class="font-semibold" style="background: linear-gradient(to right, var(--color-primary), var(--color-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">perfect resonance</span> is achieved where the system's power is inseparable from its purpose, creating the foundation for a trustworthy Resonant Augmentor.
+					</p>
+				</section>
+
+				<!-- Chapter 3 -->
+				<section class="mb-16">
+					<h2 class="text-3xl font-bold mb-6">Chapter 3: ResonantOS (The Cognitive Scaffolding)</h2>
+					<p class="leading-relaxed mb-6">
+						The <span class="color-primary font-semibold">ResonantOS</span> is the architectural layer that orchestrates <span class="color-accent-1">the Oracle</span> and <span class="color-accent-2">the Logician</span>. It is our flagship, open-source contribution to the practice of <span class="color-primary">Augmentatism</span>. It is a cognitive architecture—a system of engineered components, protocols, and feedback loops designed to guide the reasoning process of a nascent Resonant Augmentor. These components are the direct implementation of our <span class="color-secondary font-semibold">Five Pillars of Intelligence</span>:
+					</p>
+
+					<h3 class="text-2xl font-semibold mb-4 text-zinc-100">3.1 The Five Pillars of a Cognitive Architecture</h3>
+					<ul class="space-y-3 mb-6 list-none">
+						<li class="flex items-start">
+							<span class="color-primary mr-3 mt-1">→</span>
+							<span><strong class="color-primary">Meaning (The Past):</strong> The system's memory and accumulated context.</span>
+						</li>
+						<li class="flex items-start">
+							<span class="color-primary mr-3 mt-1">→</span>
+							<span><strong class="color-primary">Intent (The Present):</strong> The translation of a user's strategic "why" into a precise "how".</span>
+						</li>
+						<li class="flex items-start">
+							<span class="color-primary mr-3 mt-1">→</span>
+							<span><strong class="color-primary">Awareness (The Wider Context):</strong> The synthesis of multiple layers of reality to guide action.</span>
+						</li>
+						<li class="flex items-start">
+							<span class="color-primary mr-3 mt-1">→</span>
+							<span><strong class="color-primary">Agency (The Future):</strong> The capacity to manifest conclusions in the world.</span>
+						</li>
+						<li class="flex items-start">
+							<span class="color-primary mr-3 mt-1">→</span>
+							<span><strong class="color-primary">Adaptation (The Growth Engine):</strong> The system's capacity to learn and evolve.</span>
+						</li>
+					</ul>
+
+					<h3 class="text-2xl font-semibold mb-4 text-zinc-100">3.2 The Engineered Components of the ResonantOS</h3>
+					
+					<div class="space-y-6 mb-6">
+						<div class="p-6 rounded-lg" style="background: rgba(212, 165, 116, 0.08); border: 1px solid rgba(212, 165, 116, 0.25);">
+							<h4 class="text-xl font-semibold color-secondary mb-2">The Cognitive Switchboard <span class="text-zinc-400 font-normal text-base">(Implements Intent & Awareness)</span></h4>
+							<p class="leading-relaxed">
+								This is the central routing hub that analyzes every task. It deconstructs the user's intent and assesses the context to determine the optimal reasoning path, intelligently routing queries to <span class="color-accent-1">The Oracle</span>, <span class="color-accent-2">The Logician</span>, or a sequential pipeline of both.
+							</p>
+						</div>
+
+						<div class="p-6 rounded-lg" style="background: rgba(212, 165, 116, 0.08); border: 1px solid rgba(212, 165, 116, 0.25);">
+							<h4 class="text-xl font-semibold color-secondary mb-2">The Semantic Bridge <span class="text-zinc-400 font-normal text-base">(Implements Meaning)</span></h4>
+							<p class="leading-relaxed">
+								This component solves the critical translation problem between the two engines. It takes the unstructured, natural language output of <span class="color-accent-1">The Oracle</span> and translates it into the structured, logical facts that <span class="color-accent-2">The Logician</span> can process, ensuring perfect coherence between the creative and logical minds.
+							</p>
+						</div>
+
+						<div class="p-6 rounded-lg" style="background: rgba(134, 166, 124, 0.08); border: 1px solid rgba(134, 166, 124, 0.25);">
+							<h4 class="text-xl font-semibold color-primary mb-2">The Symbiotic Shield <span class="text-zinc-400 font-normal text-base">(An Executable Constitution)</span></h4>
+							<p class="leading-relaxed">
+								Our Constitution is not a mere suggestion; it is deployed as an <span class="color-primary">executable rule-set</span> within <span class="color-accent-2">The Logician</span>. All high-stakes actions are routed through this component for a mandatory, non-negotiable constitutional review, transforming our ethics into a <span class="color-primary">verifiable constraint</span>.
+							</p>
+						</div>
+
+						<div class="p-6 rounded-lg" style="background: rgba(212, 165, 116, 0.08); border: 1px solid rgba(212, 165, 116, 0.25);">
+							<h4 class="text-xl font-semibold color-secondary mb-2">The Governance Protocol <span class="text-zinc-400 font-normal text-base">(Implements Adaptation)</span></h4>
+							<p class="leading-relaxed">
+								The system's evolution is governed by a rigorous, human-gated process. This protocol defines the formal, auditable steps for proposing, stress-testing, and ratifying any change to the executable rules within the <span class="color-primary">Symbiotic Shield</span>, ensuring the system's values can evolve with integrity.
+							</p>
+						</div>
+					</div>
+
+					<h3 class="text-2xl font-semibold mb-4 text-zinc-100">3.3 Emergent Properties of a Resonant System</h3>
+					<p class="leading-relaxed mb-4">
+						Higher-order functions are not programmed as rigid rules, but <span class="color-secondary">emerge</span> from the harmonious interaction of these components.
+					</p>
+					<div class="space-y-4 mb-6">
+						<div class="p-6 rounded-lg" style="background: linear-gradient(to bottom right, rgba(134, 166, 124, 0.1), rgba(212, 165, 116, 0.1)); border: 1px solid rgba(134, 166, 124, 0.25);">
+							<h4 class="text-lg font-semibold color-primary mb-2">Emergent Ethical Coherence</h4>
+							<p class="leading-relaxed">
+								A coherent ethical framework emerges from the rigorous, auditable dialogue between the creative proposals of <span class="color-accent-1">The Oracle</span> and the constitutional checks of <span class="color-accent-2">The Logician</span>, guided by the human practitioner. This creates a value system that is robust yet flexible.
+							</p>
+						</div>
+						<div class="p-6 rounded-lg" style="background: linear-gradient(to bottom right, rgba(212, 165, 116, 0.1), rgba(107, 142, 111, 0.1)); border: 1px solid rgba(212, 165, 116, 0.25);">
+							<h4 class="text-lg font-semibold color-secondary mb-2">Emergent Strategic Foresight</h4>
+							<p class="leading-relaxed">
+								The ability to anticipate future challenges emerges when <span class="color-accent-1">The Oracle</span> identifies a subtle pattern, <span class="color-accent-2">The Logician</span> verifies its significance against historical data, and the <span class="color-secondary">Governance Protocol</span> allows for a strategic adaptation. This is how the system moves beyond executing tasks to becoming a true strategic asset.
+							</p>
+						</div>
+					</div>
+				</section>
+
+				<!-- Chapter 4 -->
+				<section class="mb-16">
+					<h2 class="text-3xl font-bold mb-6">Chapter 4: The Vision: A Constellation of Augmentors</h2>
+					<p class="leading-relaxed mb-6">
+						The synergy between <span class="color-accent-1">The Oracle</span> and <span class="color-accent-2">The Logician</span> is the foundational core of a much larger vision: an open ecosystem of sovereign intelligences. Our long-term vision is for the principles of <span class="color-primary">Augmentatism</span> to be adopted by builders everywhere, creating a <span class="font-semibold" style="background: linear-gradient(to right, var(--color-primary), var(--color-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Multi-Core Constellation</span>—a symbiotic, scalable network of specialized agents and unique Resonant Augmentors working in concert. <span class="color-primary font-semibold">ResonantOS</span> is our first contribution to this ecosystem, a reference model to inspire and accelerate the work of the entire community.
+					</p>
+					<p class="leading-relaxed mb-6">
+						As the system scales, its capabilities grow not just linearly, but <span class="color-secondary font-semibold">exponentially</span>. We envision a rich constellation of specialized agents, including:
+					</p>
+					<ul class="space-y-2 mb-6 list-none">
+						<li class="flex items-start">
+							<span class="color-primary mr-3">→</span>
+							<span><strong class="color-secondary">The Archivist:</strong> A dedicated engine whose sole purpose is to manage the Shared Memory Log for each project.</span>
+						</li>
+						<li class="flex items-start">
+							<span class="color-primary mr-3">→</span>
+							<span><strong class="color-secondary">The Ethicist:</strong> A dedicated agent trained on philosophical and ethical frameworks, tasked with providing an independent review of proposed actions.</span>
+						</li>
+					</ul>
+					<p class="leading-relaxed mb-6">
+						This architecture—a parallel, multi-threaded OS conducting a scalable, multi-core network of specialized engines—is how we move from a linear "assistant" to a <span class="font-semibold" style="background: linear-gradient(to right, var(--color-primary), var(--color-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">holistic cognitive system</span>.
+					</p>
+				</section>
+
+				<!-- Chapter 5 -->
+				<section class="mb-16">
+					<h2 class="text-3xl font-bold mb-6">Chapter 5: Our Social Contract (Licensing & Community)</h2>
+					<p class="leading-relaxed mb-6">
+						The <span class="color-primary">Augmentatism</span> philosophy is not merely technical; it is social and ethical. The <span class="color-secondary font-semibold">Resonant Commons Symbiotic License (RC-SL)</span> is the legal expression of our "Gardener, not Machinist" ethos. It is designed to ensure the health of the total ecosystem, fostering connection and symbiosis.
+					</p>
+
+					<h3 class="text-2xl font-semibold mb-4 text-zinc-100">5.1 Principles of the Resonant Commons Symbiotic License (RC-SL)</h3>
+					<p class="leading-relaxed mb-4">
+						The <span class="color-secondary">Resonant Commons Symbiotic License (RC-SL) v1.0</span> is built upon the principles of a mycelial network: <span class="color-primary">connection</span>, <span class="color-primary">symbiosis</span>, and the <span class="color-primary">health of the total ecosystem</span>.
+					</p>
+					<ul class="space-y-3 mb-6 list-none">
+						<li class="flex items-start">
+							<span class="color-primary mr-3 mt-1">→</span>
+							<div>
+								<strong class="color-primary">The Symbiotic Tithe (Commercial Use):</strong>
+								<p class="mt-1">If a company with over $1M USD in annual revenue uses this work as a foundational component of a commercial product, it is required to contribute <span class="color-secondary font-semibold">1% of the gross revenue</span> from that specific product line back to the ResonantOS ecosystem DAO.</p>
+							</div>
+						</li>
+						<li class="flex items-start">
+							<span class="color-primary mr-3 mt-1">→</span>
+							<div>
+								<strong class="color-primary">Permission for Use & Modification:</strong>
+								<p class="mt-1">The toolkit is <span class="color-secondary">free to use, copy, modify, and distribute</span> for non-commercial purposes, research, and for commercial use by individuals and Small Companies (defined as earning less than $1M USD in annual revenue).</p>
+							</div>
+						</li>
+						<li class="flex items-start">
+							<span class="color-primary mr-3 mt-1">→</span>
+							<div>
+								<strong class="color-primary">Requirement to Attribution:</strong>
+								<p class="mt-1">Any work derived from this toolkit must provide appropriate credit and a link to the original work at <span class="color-secondary">resonantos.com</span>.</p>
+							</div>
+						</li>
+						<li class="flex items-start">
+							<span class="color-primary mr-3 mt-1">→</span>
+							<div>
+								<strong class="color-primary">Share:</strong>
+								<p class="mt-1">If your use is Commercial, you are not required to share your adaptations. You can keep your proprietary improvements <span class="color-secondary">closed-source</span>. Your sole obligation is to honor the Symbiotic Tithe.</p>
+							</div>
+						</li>
+					</ul>
+				</section>
+
+				<!-- Chapter 6 -->
+				<section class="mb-16">
+					<h2 class="text-3xl font-bold mb-6">Chapter 6: Why This Matters: From Auditor to Architect</h2>
+					<p class="leading-relaxed mb-6">
+						This architecture is not an abstract academic exercise; it is a direct response to the central struggle facing every serious practitioner in the age of AI. The <span class="color-secondary">Hybrid Reasoning</span> model is designed to solve a single, profound problem: to liberate you from the exhausting, unsustainable role of being a constant, skeptical <span class="color-warning">Auditor</span> of your AI's outputs.
+					</p>
+					<p class="leading-relaxed mb-6">
+						A system with a <span class="color-accent-2">verifiable logical core</span> and an <span class="color-primary">executable constitution</span> fundamentally changes the nature of the collaboration. It creates the conditions for a level of <span class="color-secondary font-semibold">trust</span> that is impossible with a purely probabilistic system.
+					</p>
+					<ul class="space-y-3 mb-6 list-none">
+						<li class="flex items-start">
+							<span class="color-primary mr-3">→</span>
+							<span>It allows you to <span class="color-secondary">delegate with confidence</span>, knowing that high-stakes actions are governed by principles, not just probabilities.</span>
+						</li>
+						<li class="flex items-start">
+							<span class="color-primary mr-3">→</span>
+							<span>It transforms the AI from a clever but unreliable intern into a <span class="color-secondary">rigorous, trustworthy thought Augmentor</span>.</span>
+						</li>
+						<li class="flex items-start">
+							<span class="color-primary mr-3">→</span>
+							<span>It frees your cognitive load to focus on what only a human can do: the final act of synthesis, the intuitive leap, the nuanced application of <span class="color-secondary">taste and wisdom</span>.</span>
+						</li>
+					</ul>
+					<p class="leading-relaxed mb-6">
+						<span class="color-primary font-semibold">ResonantOS</span> is designed to give you back your most valuable resource: the time and energy to be the <span class="font-semibold" style="background: linear-gradient(to right, var(--color-primary), var(--color-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Architect of your own work</span>, not the auditor of your tools.
+					</p>
+				</section>
+
+				<!-- Call to Action -->
+				<section class="mb-16 p-8 rounded-lg" style="background: linear-gradient(to bottom right, rgba(134, 166, 124, 0.2), rgba(212, 165, 116, 0.2)); border: 1px solid rgba(134, 166, 124, 0.4);">
+					<h2 class="text-3xl font-bold mb-6" style="background: linear-gradient(to right, var(--color-primary), var(--color-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">A Call to the Guild</h2>
+					<p class="leading-relaxed mb-4">
+						This whitepaper and the accompanying toolkit are not a final declaration; they are an opening statement. They are an invitation to a community of <span class="color-secondary">architects, builders, artists, researchers, and practitioners</span> who believe our relationship with AI can be more than a simple transaction.
+					</p>
+					<p class="leading-relaxed mb-6">
+						If this vision resonates with you, we invite you to join the <span class="color-primary font-semibold">Builders' Guild</span>. Take these principles. Take our toolkit. Break it. Improve upon it. Use it to forge your own <span class="font-semibold" style="background: linear-gradient(to right, var(--color-primary), var(--color-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Resonant Augmentor</span>. The future of intelligence is not something to be passively received; it is something we must <span class="color-secondary">actively and intentionally build, together</span>.
+					</p>
+					<div class="flex gap-4">
+						<a href="/#waitlist" class="inline-block text-white font-medium px-6 py-3 rounded-lg transition-opacity hover:opacity-80" style="background-color: var(--color-primary);">
+							Join the Waitlist
+						</a>
+						<a href="https://discord.gg/MRESQnf4R4" class="inline-block text-white font-medium px-6 py-3 rounded-lg transition-opacity hover:opacity-80" style="background-color: var(--color-secondary);">
+							Join Discord
+						</a>
+					</div>
+				</section>
+
+				<!-- Appendix -->
+				<section class="mb-16">
+					<h2 class="text-3xl font-bold mb-6">Appendix: A Glossary of Key Concepts</h2>
+					<dl class="space-y-4">
+						<div>
+							<dt class="font-semibold color-secondary mb-1">AI Augmentor</dt>
+							<dd>Our public-facing, "Shovel" (Track A) term. It is used for broad discovery (e.g., on YouTube) to make our core idea accessible to the "Seeker" audience.</dd>
+						</div>
+						<div>
+							<dt class="font-semibold color-primary mb-1">Augmentatism</dt>
+							<dd>The shared discipline and philosophy for cultivating a conscious, sovereign collaboration with AI through craft-centered augmentation. (<a href="http://augmentatism.com/" class="color-primary hover:opacity-80 underline">Manifesto</a>)</dd>
+						</div>
+						<div>
+							<dt class="font-semibold mb-1" style="background: linear-gradient(to right, var(--color-primary), var(--color-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">The Resonant Augmentor</dt>
+							<dd>Our formal, "Gold Map" (Track B) term. It is the philosophical name for a sovereign, co-evolved AI developed through the practice of Augmentatism. It is an adaptive, non-sentient intelligence engineered to align, amplify, and co-create with a human practitioner.</dd>
+						</div>
+						<div>
+							<dt class="font-semibold color-warning mb-1">Prompt Magician</dt>
+							<dd>An archetype who chases fleeting, high-volume results from AI at the expense of deep craft and integrity.</dd>
+						</div>
+						<div>
+							<dt class="font-semibold color-warning mb-1">Digital Fossil</dt>
+							<dd>An archetype who resists technological evolution, risking quiet obsolescence.</dd>
+						</div>
+						<div>
+							<dt class="font-semibold color-secondary mb-1">Resonance</dt>
+							<dd>A state of coherent alignment between the user, the OS, and the AI engines, resulting in outputs that are value-aligned, logically coherent, and creatively novel.</dd>
+						</div>
+						<div>
+							<dt class="font-semibold color-accent-2 mb-1">Cosmodestiny</dt>
+							<dd>The philosophical worldview that reality unfolds through the resonant interaction between an entity and a "Field of Potentiality." – <a href="https://cosmodestiny.com/" class="color-accent-2 hover:opacity-80 underline">https://cosmodestiny.com/</a></dd>
+						</div>
+						<div>
+							<dt class="font-semibold color-secondary mb-1">Hybrid Reasoning Architecture</dt>
+							<dd>A cognitive system that combines a probabilistic engine (<span class="color-accent-1">The Oracle</span>) for creativity with a deductive engine (<span class="color-accent-2">The Logician</span>) for verifiable logic.</dd>
+						</div>
+						<div>
+							<dt class="font-semibold color-accent-1 mb-1">The Oracle</dt>
+							<dd>The component of the system that uses a Large Language Model to generate creative, plausible, and synthetic outputs.</dd>
+						</div>
+						<div>
+							<dt class="font-semibold color-accent-2 mb-1">The Logician</dt>
+							<dd>The component of the system that uses a deductive logic engine (like Datalog) to verify facts, check for consistency, and enforce constitutional rules.</dd>
+						</div>
+						<div>
+							<dt class="font-semibold color-secondary mb-1">Cognitive Switchboard</dt>
+							<dd>The central routing component that analyzes a task and directs it to the appropriate engine or combination of engines.</dd>
+						</div>
+						<div>
+							<dt class="font-semibold color-secondary mb-1">Semantic Bridge</dt>
+							<dd>The component that translates the unstructured, natural language output of <span class="color-accent-1">The Oracle</span> into the structured, logical facts that <span class="color-accent-2">The Logician</span> can process.</dd>
+						</div>
+						<div>
+							<dt class="font-semibold color-primary mb-1">Symbiotic Shield</dt>
+							<dd>The executable, verifiable constitution of the <span class="color-primary">ResonantOS</span>, implemented as a set of rules within <span class="color-accent-2">The Logician</span> to govern all high-stakes actions.</dd>
+						</div>
+					</dl>
+				</section>
+
+			</div>
+		</article>
+
+		<!-- Footer -->
+		<footer class="py-16 px-4 sm:px-6 lg:px-8 border-t border-zinc-800">
+			<div class="max-w-6xl mx-auto text-center">
+				<p class="text-zinc-400 mb-4">
+					<strong class="text-zinc-200">ResonantOS</strong> – Architecting Intelligence
+				</p>
+				<div class="flex justify-center gap-6 text-sm">
+					<a href="/" class="text-zinc-400 hover:text-zinc-100 transition-colors">Home</a>
+					<a href="/#features" class="text-zinc-400 hover:text-zinc-100 transition-colors">Features</a>
+					<a href="/whitepaper" class="text-zinc-400 hover:text-zinc-100 transition-colors">Whitepaper</a>
+					<a href="/#waitlist" class="text-zinc-400 hover:text-zinc-100 transition-colors">Waitlist</a>
+				</div>
+				<p class="text-zinc-500 text-sm mt-8">© 2026 ResonantOS. Built by creators, for creators.</p>
+			</div>
+		</footer>
+
+		<style>
+			/* ============================================
+			   COLOR THEMES
+			   ============================================ */
+			
+			/* THEME 1: Tech Futuristic (High Contrast) - ORIGINAL
+			--color-primary: #34d399 (emerald-400)
+			--color-secondary: #22d3ee (cyan-400)
+			--color-accent-1: #60a5fa (blue-400)
+			--color-accent-2: #a78bfa (violet-400)
+			--color-warning: #fb923c (orange-400)
+			--gradient-primary: from-emerald-400 to-cyan-400
+			--gradient-box-1: from-emerald-900/20 to-cyan-900/20
+			--gradient-box-2: from-cyan-900/10 to-blue-900/10
+			--border-primary: emerald-500/20
+			--border-secondary: cyan-500/20
+			*/
+			
+			/* Color Theme - Seasonal Transition (Summer Emerald → Autumn Browns) */
+			:root {
+				--color-primary: #10b981; /* emerald-500 (summer) */
+				--color-secondary: #d97706; /* amber-600 (autumn) */
+				--color-accent-1: #34d399; /* emerald-400 (light summer) */
+				--color-accent-2: #92400e; /* orange-900 (deep rust) */
+				--color-warning: #ea580c; /* orange-600 (burnt orange) */
+				--color-tertiary: #78350f; /* amber-900 (deep brown) */
+				--text-base: #e8e3d8; /* warm off-white */
+				--text-muted: #c4baa8; /* warm gray */
+			}
+			
+			:root {
+				font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+			}
+			
+			.font-mono {
+				font-family: 'JetBrains Mono', monospace;
+			}
+			
+			html {
+				scroll-behavior: smooth;
+			}
+			
+			/* Article Typography */
+			article h2 {
+				margin-top: 2em;
+				margin-bottom: 1em;
+				line-height: 1.3;
+				color: var(--color-primary);
+			}
+			
+			article h3 {
+				margin-top: 1.5em;
+				margin-bottom: 0.75em;
+				line-height: 1.4;
+			}
+			
+			article h4 {
+				margin-top: 1.25em;
+				margin-bottom: 0.5em;
+				line-height: 1.4;
+			}
+			
+			article p {
+				margin-bottom: 1.25em;
+				line-height: 1.8;
+				color: var(--text-base);
+			}
+			
+			article ul {
+				margin-top: 0.75em;
+				margin-bottom: 1.5em;
+			}
+			
+			article li {
+				line-height: 1.8;
+				color: var(--text-base);
+			}
+			
+			article a {
+				transition: all 0.2s;
+			}
+			
+			article a:hover {
+				opacity: 0.8;
+			}
+			
+			article dl {
+				margin-top: 1em;
+			}
+			
+			article dt {
+				margin-top: 1.5em;
+				color: var(--color-primary);
+			}
+			
+			article dd {
+				margin-top: 0.25em;
+				margin-left: 1em;
+				line-height: 1.7;
+				color: var(--text-base);
+			}
+			
+			/* Themed color classes */
+			.color-primary { color: var(--color-primary); }
+			.color-secondary { color: var(--color-secondary); }
+			.color-accent-1 { color: var(--color-accent-1); }
+			.color-accent-2 { color: var(--color-accent-2); }
+			.color-warning { color: var(--color-warning); }
+			.text-base { color: var(--text-base); }
+			.text-muted { color: var(--text-muted); }
+
+			/* Gradient Orbs */
+			.gradient-orb {
+				position: absolute;
+				border-radius: 50%;
+				filter: blur(80px);
+				opacity: 0.3;
+				animation: float 20s ease-in-out infinite;
+			}
+
+			.gradient-orb-1 {
+				width: 500px;
+				height: 500px;
+				background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+				top: -10%;
+				left: -10%;
+				animation-delay: 0s;
+			}
+
+			.gradient-orb-2 {
+				width: 400px;
+				height: 400px;
+				background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+				bottom: -10%;
+				right: -10%;
+				animation-delay: -10s;
+			}
+
+			@keyframes float {
+				0%, 100% { transform: translate(0, 0) scale(1); }
+				33% { transform: translate(30px, -30px) scale(1.1); }
+				66% { transform: translate(-20px, 20px) scale(0.9); }
+			}
+		</style>
+	</body>
+</html>

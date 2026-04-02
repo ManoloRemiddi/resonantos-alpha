@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.resonantos.token-rotation</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>${HOME}/clawd/projects/resonantos/security/rotate_gateway_token.sh</string>
+    </array>
+    
+    <key>StartCalendarInterval</key>
+    <array>
+        <!-- 00:00 -->
+        <dict>
+            <key>Hour</key>
+            <integer>0</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+        <!-- 04:00 -->
+        <dict>
+            <key>Hour</key>
+            <integer>4</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+        <!-- 08:00 -->
+        <dict>
+            <key>Hour</key>
+            <integer>8</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+        <!-- 12:00 -->
+        <dict>
+            <key>Hour</key>
+            <integer>12</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+        <!-- 16:00 -->
+        <dict>
+            <key>Hour</key>
+            <integer>16</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+        <!-- 20:00 -->
+        <dict>
+            <key>Hour</key>
+            <integer>20</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+    </array>
+    
+    <key>StandardOutPath</key>
+    <string>${HOME}/Library/Logs/resonantos/token_rotation.log</string>
+    
+    <key>StandardErrorPath</key>
+    <string>${HOME}/Library/Logs/resonantos/token_rotation.log</string>
+    
+    <key>RunAtLoad</key>
+    <false/>
+    
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+    
+    <key>Nice</key>
+    <integer>10</integer>
+    
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

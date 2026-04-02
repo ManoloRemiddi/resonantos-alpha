@@ -1,0 +1,15 @@
+{
+  "TestWallet123": {
+    "wallet": "TestWallet123",
+    "createdAt": "2026-02-21T21:00:16Z",
+    "skills": [
+      "python",
+      "solana",
+      "openclaw"
+    ],
+    "bio": "Builder",
+    "displayName": "",
+    "bountyHistory": [],
+    "updatedAt": "2026-02-21T21:00:16Z"
+  }
+}

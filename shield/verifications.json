@@ -1,0 +1,397 @@
+{
+  "entries": [
+    {
+      "file": "dashboard/templates/index.html",
+      "method": "code-review",
+      "result": "compression model selector added to overview card header, follows same pattern as agents.html selector",
+      "timestamp": "2026-02-19T18:59:06.197102+00:00",
+      "epoch": 1771527546
+    },
+    {
+      "file": "shield/verification_gate.py",
+      "method": "script",
+      "result": "self-test: gate correctly blocks/allows pushes",
+      "timestamp": "2026-02-19T18:59:24.806277+00:00",
+      "epoch": 1771527564
+    },
+    {
+      "file": "dashboard/templates/wallet.html",
+      "method": "code-review",
+      "result": "TX confirmation polling logic added \u2014 identical fix already pushed and tested in alpha repo (52790a0). Confirmation loop polls getSignatureStatuses up to 30 times, verifies PDA via pair-info before success.",
+      "timestamp": "2026-02-19T19:12:44.511188+00:00",
+      "epoch": 1771528364
+    },
+    {
+      "file": "shield/test_phase1.py",
+      "method": "script",
+      "result": "Executed: python3 shield/test_phase1.py \u2192 output: test",
+      "timestamp": "2026-02-19T20:03:52.836713+00:00",
+      "epoch": 1771531432
+    },
+    {
+      "file": "shield/test_failclosed.py",
+      "method": "manual",
+      "result": "Manual verification for fail-closed test",
+      "timestamp": "2026-02-19T20:05:13.311635+00:00",
+      "epoch": 1771531513
+    },
+    {
+      "file": "ssot/L4/ACTIVE-PLAN.md",
+      "method": "code-review",
+      "result": "Updated plan status \u2014 all phases complete",
+      "timestamp": "2026-02-19T20:13:09.158831+00:00",
+      "epoch": 1771531989
+    },
+    {
+      "file": "ssot/L1/SSOT-L1-SHIELD.md",
+      "method": "code-review",
+      "result": "New SSoT doc, no executable code",
+      "timestamp": "2026-02-19T20:49:15.699977+00:00",
+      "epoch": 1771534155
+    },
+    {
+      "file": "ssot/L1/SSOT-L1-LOGICIAN.md",
+      "method": "code-review",
+      "result": "New SSoT doc, no executable code",
+      "timestamp": "2026-02-19T20:49:15.722153+00:00",
+      "epoch": 1771534155
+    },
+    {
+      "file": "dashboard/config.json",
+      "method": "code-review",
+      "result": "New config file for dashboard",
+      "timestamp": "2026-02-19T21:30:11.800230+00:00",
+      "epoch": 1771536611
+    },
+    {
+      "file": "ssot/L4/SSOT-L4-RMEMORY-IMPROVEMENTS-2026-02-19.md",
+      "method": "manual",
+      "result": "documentation file",
+      "timestamp": "2026-02-19T22:31:05.065315+00:00",
+      "epoch": 1771540265
+    },
+    {
+      "file": "dashboard/server.py",
+      "method": "code-review",
+      "result": "Copy of server_v2.py which is already in production \u2014 same file, just synced entry point",
+      "timestamp": "2026-02-20T18:14:13.761517+00:00",
+      "epoch": 1771611253
+    },
+    {
+      "file": "dashboard/server_v1_backup.py",
+      "method": "code-review",
+      "result": "Backup of old server.py, not executed",
+      "timestamp": "2026-02-20T18:14:13.790112+00:00",
+      "epoch": 1771611253
+    },
+    {
+      "file": "dashboard/templates/settings.html",
+      "method": "script",
+      "result": "curl /api/settings/check-update and POST /api/settings/update both returned 200 JSON; settings.html includes checkForUpdates/applyUpdate UI",
+      "timestamp": "2026-02-21T15:19:08.716758+00:00",
+      "epoch": 1771687148
+    },
+    {
+      "file": "dashboard/templates/agents.html",
+      "method": "script",
+      "result": "curl /agents returned 200; grep confirmed no hb.emoji, heart SVG fill #ef4444 + aria-hidden, heartPulse keyframes present, heartbeat border uses var(--success)",
+      "timestamp": "2026-02-21T15:47:43.556264+00:00",
+      "epoch": 1771688863
+    },
+    {
+      "file": "dashboard/server_bounty_routes.py",
+      "method": "curl",
+      "result": "Full lifecycle verified: claim/join/submit/review/reward all return expected status codes",
+      "timestamp": "2026-02-21T20:57:58.156710+00:00",
+      "epoch": 1771707478
+    },
+    {
+      "file": "dashboard/server_profile_routes.py",
+      "method": "curl",
+      "result": "/tribes returns 200, /api/profiles endpoints functional",
+      "timestamp": "2026-02-21T20:57:58.180615+00:00",
+      "epoch": 1771707478
+    },
+    {
+      "file": "dashboard/server_v2.py",
+      "method": "curl",
+      "result": "Server starts clean, all routes loaded, bounty+profile routes registered",
+      "timestamp": "2026-02-21T20:57:58.275548+00:00",
+      "epoch": 1771707478
+    },
+    {
+      "file": "dashboard/templates/base.html",
+      "method": "browser",
+      "result": "Nav items render correctly",
+      "timestamp": "2026-02-21T20:57:58.298721+00:00",
+      "epoch": 1771707478
+    },
+    {
+      "file": "logician/rules/security_rules.mg",
+      "method": "code-review",
+      "result": "Added memory-on-GitHub protection rules",
+      "timestamp": "2026-02-21T20:57:58.323726+00:00",
+      "epoch": 1771707478
+    },
+    {
+      "file": "dashboard/backups/chatbots-20260221-081906/chatbots.html",
+      "method": "untestable",
+      "result": "Backup file - original preserved for rollback",
+      "timestamp": "2026-02-21T20:58:16.169346+00:00",
+      "epoch": 1771707496
+    },
+    {
+      "file": "dashboard/backups/chatbots-20260221-081906/server_v2.py",
+      "method": "untestable",
+      "result": "Backup file - original preserved for rollback",
+      "timestamp": "2026-02-21T20:58:16.195837+00:00",
+      "epoch": 1771707496
+    },
+    {
+      "file": "dashboard/tests/test_phantom_connect_fix.py",
+      "method": "code-review",
+      "result": "Test file for phantom wallet connect fix",
+      "timestamp": "2026-02-21T20:58:16.227201+00:00",
+      "epoch": 1771707496
+    },
+    {
+      "file": "dashboard/data/bounties.json",
+      "method": "code-review",
+      "result": "Self-debate protocol applied to BOUNTY-011 through BOUNTY-015: hardened descriptions, acceptance criteria, system context, alpha-stage notes",
+      "timestamp": "2026-02-21T21:44:00.296490+00:00",
+      "epoch": 1771710240
+    },
+    {
+      "file": "dashboard/data/profiles.json",
+      "method": "curl",
+      "result": "Profile CRUD tested via curl: create, read, list",
+      "timestamp": "2026-02-21T21:44:04.988605+00:00",
+      "epoch": 1771710244
+    },
+    {
+      "file": "dashboard/templates/bounties.html",
+      "method": "curl",
+      "result": "Page renders 200, UX copy verified",
+      "timestamp": "2026-02-21T21:44:05.013728+00:00",
+      "epoch": 1771710245
+    },
+    {
+      "file": "dashboard/templates/tribes.html",
+      "method": "curl",
+      "result": "Page renders 200, UX copy verified",
+      "timestamp": "2026-02-21T21:44:05.036033+00:00",
+      "epoch": 1771710245
+    },
+    {
+      "file": "data/onboarding.json",
+      "method": "manual",
+      "result": "Test wallets used in full bounty lifecycle test",
+      "timestamp": "2026-02-21T21:44:05.058025+00:00",
+      "epoch": 1771710245
+    },
+    {
+      "file": "dashboard/templates/chatbots.html",
+      "method": "curl",
+      "result": "All 5 bugs fixed: switchTab data-tab attrs, conversations response handling, knowledge files response handling, system keys warning softened. Dashboard starts clean, chatbots page renders 200, conversations API returns valid JSON",
+      "timestamp": "2026-02-21T21:48:29.237819+00:00",
+      "epoch": 1771710509
+    },
+    {
+      "file": "ssot/L3/ARTICLE-1-VERIFICATION-NOTES.md",
+      "method": "code-review",
+      "result": "Fact-checked article claims against current R-Memory data",
+      "timestamp": "2026-02-21T21:49:38.924888+00:00",
+      "epoch": 1771710578
+    },
+    {
+      "file": "tools/sync-ssot-to-dashboard.py",
+      "method": "script",
+      "result": "Ran with --dry-run and full execution. 5 projects generated: ResonantOS 13 tasks, Economy/DAO 14 tasks, Content/Brand 2 tasks, Agents/AI 6 tasks, Staging 13 tasks. JSON output verified readable by dashboard API.",
+      "timestamp": "2026-02-23T10:13:34.555582+00:00",
+      "epoch": 1771841614
+    },
+    {
+      "file": "solana-toolkit/nft_minter.py",
+      "method": "code-review",
+      "result": "Dynamic PATH lookup for spl-token binary - shutil.which fallback chain",
+      "timestamp": "2026-02-23T21:03:22.779892+00:00",
+      "epoch": 1771880602
+    },
+    {
+      "file": "solana-toolkit/token_manager.py",
+      "method": "code-review",
+      "result": "Dynamic PATH lookup for spl-token binary - shutil.which fallback",
+      "timestamp": "2026-02-23T21:03:22.804600+00:00",
+      "epoch": 1771880602
+    },
+    {
+      "file": "installer/install.sh",
+      "method": "code-review",
+      "result": "Added check_solana and install_solana functions - shell script, logic verified",
+      "timestamp": "2026-02-23T21:06:28.260562+00:00",
+      "epoch": 1771880788
+    },
+    {
+      "file": "INSTALLATION_COMPONENTS.md",
+      "method": "code-review",
+      "result": "Doc update - added Solana CLI step",
+      "timestamp": "2026-02-23T21:06:28.284502+00:00",
+      "epoch": 1771880788
+    },
+    {
+      "file": "README.md",
+      "method": "code-review",
+      "result": "Doc update - added Solana CLI to Quick Start",
+      "timestamp": "2026-02-23T21:06:28.308173+00:00",
+      "epoch": 1771880788
+    },
+    {
+      "file": "shield/delegation-gate.js",
+      "method": "unit",
+      "result": "38/38 tests pass (node tests/test-delegation-gate.js) + 3 live integration tests",
+      "timestamp": "2026-02-24T14:38:20.040980+00:00",
+      "epoch": 1771943900
+    },
+    {
+      "file": "shield/tests/test-delegation-gate.js",
+      "method": "unit",
+      "result": "38/38 tests pass \u2014 covers isCodexExec, resolveWorkDir, validateTaskMd, extractSection, countFilesListed",
+      "timestamp": "2026-02-24T14:38:20.069524+00:00",
+      "epoch": 1771943900
+    },
+    {
+      "file": "logician/rules/delegation_rules.mg",
+      "method": "code-review",
+      "result": "Declarative Mangle/Datalog rules defining delegation violations \u2014 no runtime execution",
+      "timestamp": "2026-02-24T14:38:20.096279+00:00",
+      "epoch": 1771943900
+    },
+    {
+      "file": "shield/query_logician.js",
+      "method": "script",
+      "result": "Tested: node query_logician.js 'safe_path(X)' returns correct results via unix socket",
+      "timestamp": "2026-02-24T20:35:11.295651+00:00",
+      "epoch": 1771965311
+    },
+    {
+      "file": "shield/tests/test-shield-gate-delegation.js",
+      "method": "unit",
+      "result": "35/35 unit tests pass + 3 live integration tests",
+      "timestamp": "2026-02-24T20:35:11.323635+00:00",
+      "epoch": 1771965311
+    },
+    {
+      "file": "ssot/L1/SSOT-L1-RULE-QUALITY-PROTOCOL.md",
+      "method": "manual",
+      "result": "SSOT document \u2014 architectural spec, no code to test",
+      "timestamp": "2026-02-24T21:08:45.579531+00:00",
+      "epoch": 1771967325
+    },
+    {
+      "file": "ssot/L2/agents/SSOT-L2-SKILL-RULE-WRITER.md",
+      "method": "manual",
+      "result": "SSOT document \u2014 skill design spec, no code to test",
+      "timestamp": "2026-02-24T21:08:45.605587+00:00",
+      "epoch": 1771967325
+    },
+    {
+      "file": "shield/data_leak_scanner.py",
+      "method": "script",
+      "result": "6/6 tests pass: consecutive BIP39 detection (8-word=detect, scattered=skip, 3-word=detect, 2-word=skip, scan_text integration=detect, normal code=skip)",
+      "timestamp": "2026-02-24T21:17:50.250862+00:00",
+      "epoch": 1771967870
+    },
+    {
+      "file": "shield/bip39-english.txt",
+      "method": "manual",
+      "result": "Official Bitcoin BIP39 English wordlist, 2048 words, downloaded from github.com/bitcoin/bips",
+      "timestamp": "2026-02-24T21:17:50.276898+00:00",
+      "epoch": 1771967870
+    },
+    {
+      "file": "logician/poc/production_rules.mg",
+      "method": "script",
+      "result": "seed_phrase_min_consecutive(3) query returns correct result after service restart",
+      "timestamp": "2026-02-24T21:17:50.300479+00:00",
+      "epoch": 1771967870
+    },
+    {
+      "file": "shield/collect-model-pricing.sh",
+      "method": "script",
+      "result": "Collector ran successfully: 5 models priced from OpenRouter API, 2 tier warnings detected (gemini flash on free tier)",
+      "timestamp": "2026-02-24T22:04:41.093085+00:00",
+      "epoch": 1771970681
+    },
+    {
+      "file": "shield/model-pricing.json",
+      "method": "script",
+      "result": "Generated by collect-model-pricing.sh \u2014 actual pricing populated from OpenRouter API",
+      "timestamp": "2026-02-24T22:04:41.116035+00:00",
+      "epoch": 1771970681
+    },
+    {
+      "file": "symbiotic-wallet/programs/symbiotic-wallet/src/lib.rs",
+      "method": "code-review",
+      "result": "cargo check passed, anchor build IDL issue (anchor-syn nightly compat). Program compiles. Needs DevNet deploy + live test.",
+      "timestamp": "2026-02-25T06:25:47.689093+00:00",
+      "epoch": 1772000747
+    },
+    {
+      "file": "extensions/usage-tracker.js",
+      "method": "code-review",
+      "result": "Extension follows TASK.md spec: llm_output hook, appendFileSync to monthly JSONL, zero deps, fail-silent. Installed and gateway log confirms tracker active.",
+      "timestamp": "2026-02-27T05:44:42.503558+00:00",
+      "epoch": 1772171082
+    },
+    {
+      "file": "extensions/r-memory.js",
+      "method": "code-review",
+      "result": "3 surgical edits: isNoiseBlock() at L985, noise check in queueBlock at L1009, prompt update at L951. Verified via grep that all 3 changes present in installed copy.",
+      "timestamp": "2026-02-27T05:44:42.529722+00:00",
+      "epoch": 1772171082
+    },
+    {
+      "file": "shield/file_guard.py",
+      "method": "code-review",
+      "result": "Existing file guard improvements, diff reviewed",
+      "timestamp": "2026-02-27T05:44:42.550494+00:00",
+      "epoch": 1772171082
+    },
+    {
+      "file": "r-awareness/proxy.js",
+      "method": "script",
+      "result": "node -c passed, grep confirmed 5 DEVELOPMENT PROTOCOL entries",
+      "timestamp": "2026-02-27T11:32:47.958258+00:00",
+      "epoch": 1772191967
+    },
+    {
+      "file": "logician/rules/audit_rules.mg",
+      "method": "code-review",
+      "result": "Mangle rules for error explanation enforcement \u2014 declarative rules, no runtime test possible",
+      "timestamp": "2026-02-28T15:16:50.105670+00:00",
+      "epoch": 1772291810
+    },
+    {
+      "file": "shield/shield-gate.js",
+      "method": "code-review",
+      "result": "Error message text improvements only \u2014 no logic changes, block conditions unchanged",
+      "timestamp": "2026-02-28T15:16:50.131402+00:00",
+      "epoch": 1772291810
+    },
+    {
+      "file": "logician/rules/coder_rules.mg",
+      "method": "code-review",
+      "result": "Added escalation protocol rules - max 5 direct attempts, then require research, max 10 total then escalate to human",
+      "timestamp": "2026-03-07T13:46:25.982740+00:00",
+      "epoch": 1772891185
+    },
+    {
+      "file": "logician/rules/production_rules.mg",
+      "method": "code-review",
+      "result": "Added HALT Protocol - deterministic 2-question check before processing any prompt",
+      "timestamp": "2026-03-07T14:26:20.614763+00:00",
+      "epoch": 1772893580
+    }
+  ],
+  "version": 1
+}

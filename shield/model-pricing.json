@@ -1,0 +1,109 @@
+{
+  "_meta": {
+    "description": "Model pricing data for cost enforcement. Updated by collect-model-pricing.sh",
+    "last_updated": "2026-02-24T22:03:51Z",
+    "source": "https://openrouter.ai/api/v1/models (public, no auth needed)",
+    "models_found": 5,
+    "models_tracked": 8
+  },
+  "tiers": {
+    "free": {
+      "max_input_per_1m": 0,
+      "max_output_per_1m": 0,
+      "models": [
+        "google/gemini-2.5-flash",
+        "openai-codex/*"
+      ]
+    },
+    "cheap": {
+      "max_input_per_1m": 1.0,
+      "max_output_per_1m": 5.0,
+      "models": [
+        "anthropic/claude-haiku-4-5",
+        "openai/gpt-4o-mini"
+      ]
+    },
+    "moderate": {
+      "max_input_per_1m": 5.0,
+      "max_output_per_1m": 25.0,
+      "models": [
+        "anthropic/claude-sonnet-4-5",
+        "openai/gpt-4o"
+      ]
+    },
+    "expensive": {
+      "max_input_per_1m": 50.0,
+      "max_output_per_1m": 200.0,
+      "models": [
+        "anthropic/claude-opus-4-6",
+        "openai/o3",
+        "openai/gpt-5"
+      ]
+    }
+  },
+  "task_policy": {
+    "heartbeat": {
+      "max_tier": "free",
+      "reason": "Routine check, no reasoning needed"
+    },
+    "compression": {
+      "max_tier": "cheap",
+      "reason": "Structured text transformation"
+    },
+    "background": {
+      "max_tier": "cheap",
+      "reason": "Background tasks should be cost-efficient"
+    },
+    "narrative": {
+      "max_tier": "expensive",
+      "reason": "Quality matters for working memory (Opus is free via subscription)"
+    },
+    "architecture": {
+      "max_tier": "expensive",
+      "reason": "Complex reasoning justifies cost"
+    },
+    "planning": {
+      "max_tier": "expensive",
+      "reason": "Strategic decisions need best model"
+    },
+    "coding": {
+      "max_tier": "moderate",
+      "reason": "Codex is free; fallback is moderate tier"
+    },
+    "research": {
+      "max_tier": "moderate",
+      "reason": "Perplexity handles deep research separately"
+    }
+  },
+  "actual_pricing": {
+    "openai/gpt-5": {
+      "input_per_1m": 1.25,
+      "output_per_1m": 10.0,
+      "context_length": 400000
+    },
+    "google/gemini-2.5-flash": {
+      "input_per_1m": 0.3,
+      "output_per_1m": 2.5,
+      "context_length": 1048576
+    },
+    "openai/o3": {
+      "input_per_1m": 2.0,
+      "output_per_1m": 8.0,
+      "context_length": 200000
+    },
+    "openai/gpt-4o-mini": {
+      "input_per_1m": 0.15,
+      "output_per_1m": 0.6,
+      "context_length": 128000
+    },
+    "openai/gpt-4o": {
+      "input_per_1m": 2.5,
+      "output_per_1m": 10.0,
+      "context_length": 128000
+    }
+  },
+  "_warnings": [
+    "google/gemini-2.5-flash exceeds free tier limits: $0.3/1M in, $2.5/1M out (max: $0/0)",
+    "google/gemini-2.5-flash exceeds free tier limits: $0.3/1M in, $2.5/1M out (max: $0/0)"
+  ]
+}

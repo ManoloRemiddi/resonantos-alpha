@@ -1,0 +1,674 @@
+{% extends "base.html" %}
+
+{% block title %}Logician Rules - ResonantOS Dashboard{% endblock %}
+{% block page_title %}Logician Rules{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Rules Page Styles */
+    .rules-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+    
+    .rules-summary {
+        display: flex;
+        gap: 24px;
+    }
+    
+    .summary-stat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 12px 20px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+    }
+    
+    .summary-stat .value {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--accent);
+    }
+    
+    .summary-stat .label {
+        font-size: 12px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .rules-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .rule-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        transition: all 0.2s;
+    }
+    
+    .rule-card:hover {
+        border-color: var(--border-light);
+    }
+    
+    .rule-card.disabled {
+        opacity: 0.6;
+    }
+    
+    .rule-card.locked {
+        border-left: 3px solid var(--warning);
+    }
+    
+    .rule-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 20px;
+        cursor: pointer;
+    }
+    
+    .rule-icon {
+        font-size: 28px;
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-tertiary);
+        border-radius: var(--radius);
+    }
+    
+    .rule-info {
+        flex: 1;
+    }
+    
+    .rule-name {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 4px;
+        font-family: 'SF Mono', Monaco, Consolas, monospace;
+    }
+    
+    .rule-description {
+        font-size: 13px;
+        color: var(--text-secondary);
+    }
+    
+    .rule-stats {
+        display: flex;
+        gap: 16px;
+        margin-right: 16px;
+    }
+    
+    .rule-stat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 8px 12px;
+        background: var(--bg-tertiary);
+        border-radius: var(--radius);
+        min-width: 60px;
+    }
+    
+    .rule-stat .count {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .rule-stat .type {
+        font-size: 10px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+    }
+    
+    .rule-toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .toggle-label {
+        font-size: 12px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .locked-badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: rgba(251, 191, 36, 0.2);
+        color: var(--warning);
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    
+    /* Toggle Switch */
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 48px;
+        height: 26px;
+    }
+    
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    
+    .switch .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: var(--bg-tertiary);
+        transition: 0.3s;
+        border-radius: 26px;
+        border: 1px solid var(--border);
+    }
+    
+    .switch .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: var(--text-muted);
+        transition: 0.3s;
+        border-radius: 50%;
+    }
+    
+    .switch input:checked + .slider {
+        background-color: var(--accent);
+        border-color: var(--accent);
+    }
+    
+    .switch input:checked + .slider:before {
+        transform: translateX(22px);
+        background-color: #fff;
+    }
+    
+    .switch input:disabled + .slider {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+    
+    /* Expandable Content */
+    .rule-expand-toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 20px;
+        border-top: 1px solid var(--border);
+        cursor: pointer;
+        color: var(--text-secondary);
+        font-size: 13px;
+        transition: all 0.2s;
+    }
+    
+    .rule-expand-toggle:hover {
+        background: var(--bg-hover);
+        color: var(--text-primary);
+    }
+    
+    .rule-expand-toggle .arrow {
+        transition: transform 0.2s;
+    }
+    
+    .rule-card.expanded .rule-expand-toggle .arrow {
+        transform: rotate(90deg);
+    }
+    
+    .rule-content {
+        display: none;
+        padding: 20px;
+        border-top: 1px solid var(--border);
+        background: var(--bg-tertiary);
+    }
+    
+    .rule-card.expanded .rule-content {
+        display: block;
+    }
+    
+    .rule-sections {
+        margin-bottom: 16px;
+    }
+    
+    .rule-sections h4 {
+        font-size: 12px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+    
+    .section-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .section-tag {
+        padding: 4px 10px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        font-size: 12px;
+        color: var(--text-secondary);
+    }
+    
+    .rule-raw {
+        margin-top: 16px;
+    }
+    
+    .rule-raw h4 {
+        font-size: 12px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+    
+    .code-preview {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 16px;
+        max-height: 300px;
+        overflow-y: auto;
+        font-family: 'SF Mono', Monaco, Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        color: var(--text-secondary);
+    }
+    
+    .code-preview .comment {
+        color: var(--text-muted);
+    }
+    
+    .code-preview .keyword {
+        color: var(--accent);
+    }
+    
+    /* Loading State */
+    .rules-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 60px;
+        color: var(--text-muted);
+    }
+    
+    .rules-loading .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid var(--border);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 16px;
+    }
+    
+    /* Toast for notifications */
+    .toast-container {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 1000;
+    }
+    
+    .toast {
+        padding: 12px 20px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-lg);
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        animation: slideIn 0.3s ease;
+    }
+    
+    .toast.success {
+        border-color: var(--success);
+    }
+    
+    .toast.error {
+        border-color: var(--error);
+    }
+    
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-intro">
+    <h2>Logician Rules Management</h2>
+    <p>Control which rule files are active in the Logician reasoning engine. Some rules are locked for security and cannot be disabled.</p>
+</div>
+
+<div class="rules-header">
+    <div class="rules-summary" id="rulesSummary">
+        <div class="summary-stat">
+            <span class="value" id="totalRules">-</span>
+            <span class="label">Rule Files</span>
+        </div>
+        <div class="summary-stat">
+            <span class="value" id="enabledRules">-</span>
+            <span class="label">Enabled</span>
+        </div>
+        <div class="summary-stat">
+            <span class="value" id="lockedRules">-</span>
+            <span class="label">Locked</span>
+        </div>
+    </div>
+    <button class="refresh-btn" onclick="loadRules()">
+        <span>↻</span> Refresh
+    </button>
+</div>
+
+<div class="rules-list" id="rulesList">
+    <div class="rules-loading">
+        <div class="spinner"></div>
+        <span>Loading rules...</span>
+    </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Rules data cache
+let rulesData = [];
+let expandedRules = new Set(); // Track which rules are expanded
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadRules();
+});
+
+async function loadRules() {
+    const container = document.getElementById('rulesList');
+    container.innerHTML = `
+        <div class="rules-loading">
+            <div class="spinner"></div>
+            <span>Loading rules...</span>
+        </div>
+    `;
+    
+    try {
+        const response = await fetch('/api/logician/rules');
+        const data = await response.json();
+        
+        if (data.error) {
+            container.innerHTML = `<div class="error-state">⚠️ ${data.error}</div>`;
+            return;
+        }
+        
+        rulesData = data.rules;
+        renderRules(data.rules);
+        updateSummary(data.rules);
+        
+    } catch (error) {
+        container.innerHTML = `<div class="error-state">⚠️ Failed to load rules: ${error.message}</div>`;
+    }
+}
+
+function updateSummary(rules) {
+    document.getElementById('totalRules').textContent = rules.length;
+    document.getElementById('enabledRules').textContent = rules.filter(r => r.enabled).length;
+    document.getElementById('lockedRules').textContent = rules.filter(r => r.locked).length;
+}
+
+function renderRules(rules) {
+    const container = document.getElementById('rulesList');
+    
+    if (rules.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <span class="placeholder-icon">📭</span>
+                <p>No rule files found</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = rules.map(rule => {
+        const safeId = rule.filename.replaceAll('.', '-');
+        return `
+        <div class="rule-card ${rule.enabled ? '' : 'disabled'} ${rule.locked ? 'locked' : ''}" 
+             id="rule-${safeId}"
+             data-filename="${rule.filename}">
+            <div class="rule-header" onclick="toggleExpand('${rule.filename}')">
+                <div class="rule-icon">${rule.icon}</div>
+                <div class="rule-info">
+                    <div class="rule-name">${rule.filename}</div>
+                    <div class="rule-description">${rule.description}</div>
+                </div>
+                <div class="rule-stats">
+                    <div class="rule-stat">
+                        <span class="count">${rule.rules}</span>
+                        <span class="type">Rules</span>
+                    </div>
+                    <div class="rule-stat">
+                        <span class="count">${rule.facts}</span>
+                        <span class="type">Facts</span>
+                    </div>
+                </div>
+                <div class="rule-toggle" onclick="event.stopPropagation()">
+                    ${rule.locked ? `
+                        <div class="locked-badge">
+                            <span>🔒</span>
+                            <span>LOCKED</span>
+                        </div>
+                    ` : `
+                        <label class="switch">
+                            <input type="checkbox" 
+                                   ${rule.enabled ? 'checked' : ''} 
+                                   onchange="toggleRule('${rule.filename}', this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                        <span class="toggle-label">${rule.enabled ? 'ON' : 'OFF'}</span>
+                    `}
+                </div>
+            </div>
+            <div class="rule-expand-toggle" onclick="toggleExpand('${rule.filename}')">
+                <span class="arrow">▶</span>
+                <span>View Details</span>
+            </div>
+            <div class="rule-content" id="content-${safeId}">
+                ${rule.sections && rule.sections.length > 0 ? `
+                    <div class="rule-sections">
+                        <h4>Sections</h4>
+                        <div class="section-tags">
+                            ${rule.sections.map(s => `<span class="section-tag">${s}</span>`).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                <div class="rule-raw">
+                    <h4>Raw Content</h4>
+                    <div class="code-preview" id="code-${safeId}">
+                        Loading...
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;}).join('');
+    
+    // Restore expanded state after re-render
+    expandedRules.forEach(filename => {
+        const safeId = filename.replaceAll('.', '-');
+        const card = document.getElementById(`rule-${safeId}`);
+        const codeEl = document.getElementById(`code-${safeId}`);
+        if (card && codeEl) {
+            card.classList.add('expanded');
+            // Re-load content if it was expanded
+            if (codeEl.textContent.trim() === 'Loading...') {
+                loadRuleContent(filename, codeEl);
+            }
+        }
+    });
+}
+
+function toggleExpand(filename) {
+    const safeId = filename.replaceAll('.', '-');
+    const cardId = `rule-${safeId}`;
+    const card = document.getElementById(cardId);
+    const codeId = `code-${safeId}`;
+    const codeEl = document.getElementById(codeId);
+    
+    if (!card || !codeEl) {
+        console.error('Elements not found:', { cardId, codeId });
+        return;
+    }
+    
+    const wasExpanded = card.classList.contains('expanded');
+    card.classList.toggle('expanded');
+    
+    // Track expanded state
+    if (card.classList.contains('expanded')) {
+        expandedRules.add(filename);
+        // Load content if expanding and not already loaded
+        if (codeEl.textContent.trim() === 'Loading...') {
+            loadRuleContent(filename, codeEl);
+        }
+    } else {
+        expandedRules.delete(filename);
+    }
+}
+
+async function loadRuleContent(filename, codeEl) {
+    try {
+        const response = await fetch(`/api/logician/rules/${filename}`);
+        const data = await response.json();
+        
+        if (data.error) {
+            codeEl.textContent = `Error: ${data.error}`;
+            return;
+        }
+        
+        // Syntax highlight the content
+        codeEl.innerHTML = highlightSyntax(data.content);
+        
+    } catch (error) {
+        codeEl.textContent = `Failed to load: ${error.message}`;
+    }
+}
+
+function highlightSyntax(content) {
+    // Basic syntax highlighting for Prolog/Mangle
+    return content
+        .split('\n')
+        .map(line => {
+            // Comments
+            if (line.trim().startsWith('%')) {
+                return `<span class="comment">${escapeHtml(line)}</span>`;
+            }
+            // Highlight keywords
+            let highlighted = escapeHtml(line);
+            highlighted = highlighted.replace(/\b(forbidden_action|is_private_key|is_recovery_phrase|block_input|allowed|denied)\b/g, 
+                '<span class="keyword">$1</span>');
+            return highlighted;
+        })
+        .join('\n');
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+async function toggleRule(filename, enabled) {
+    try {
+        const response = await fetch(`/api/logician/rules/${filename}/toggle`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled })
+        });
+        
+        const data = await response.json();
+        
+        if (data.error) {
+            showToast(data.error, 'error');
+            // Revert the toggle
+            loadRules();
+            return;
+        }
+        
+        // Update UI
+        const cardId = `rule-${filename.replace('.', '-')}`;
+        const card = document.getElementById(cardId);
+        const toggleLabel = card.querySelector('.toggle-label');
+        
+        if (enabled) {
+            card.classList.remove('disabled');
+            if (toggleLabel) toggleLabel.textContent = 'ON';
+        } else {
+            card.classList.add('disabled');
+            if (toggleLabel) toggleLabel.textContent = 'OFF';
+        }
+        
+        // Update summary
+        const rule = rulesData.find(r => r.filename === filename);
+        if (rule) rule.enabled = enabled;
+        updateSummary(rulesData);
+        
+        showToast(`${filename} ${enabled ? 'enabled' : 'disabled'}`, 'success');
+        
+    } catch (error) {
+        showToast(`Failed to toggle: ${error.message}`, 'error');
+        loadRules();
+    }
+}
+
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <span>${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span>
+        <span>${message}</span>
+    `;
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Hook into global refresh
+function refreshData() {
+    loadRules();
+}
+</script>
+{% endblock %}
