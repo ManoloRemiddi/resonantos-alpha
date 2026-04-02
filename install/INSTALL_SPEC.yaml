@@ -53,11 +53,16 @@ repoRuntimeBoundary:
     - live service state and pid files
 
 currentExecutionMode:
-  mode: manual-guided
+  mode: wizard-guided-preinstall + manual execution
   canonicalInstaller:
-    status: missing
-    path: null
-    note: No one-shot installer script is committed yet; follow the manual sequence below.
+    status: present-preinstall-only
+    path: installer/v3/installer-entry.js
+    note: The vendored installer wizard is now committed, but it currently stops before the full mutation/install phase.
+  convenienceEntrypoints:
+    - path: scripts/run-installer-v3.sh
+      purpose: recommended Linux/macOS launcher
+    - path: installer/v3/package.json
+      purpose: direct npm start entry inside the installer folder
 
 resonantOSComponents:
   dashboard:
@@ -91,6 +96,7 @@ resonantOSComponents:
 manualInstallSequence:
   - Validate prerequisites and confirm OpenClaw is already healthy.
   - Read INSTALL.md for human-facing context and branch caveats.
+  - Run the pre-install wizard (`scripts/run-installer-v3.sh` or `node installer/v3/installer-entry.js`) to generate a confirmed target/handoff.
   - Install or sync repo plugins into the target OpenClaw runtime.
   - Patch OpenClaw config to enable required ResonantOS plugins and settings.
   - Build and start Logician using repo-local scripts.
@@ -115,7 +121,7 @@ stopConditions:
   - Health checks fail after service restarts.
 
 knownGaps:
-  - No canonical one-shot installer script is committed yet.
+  - The committed installer wizard is pre-install only; the full mutation/install execution phase is still not encoded end-to-end.
   - Fresh plugin install and enablement flow is not fully encoded in repo scripts.
   - Workspace template set is partial compared with older installer expectations.
   - LCM remains optional and is not bundled as a repo-local ResonantOS plugin.

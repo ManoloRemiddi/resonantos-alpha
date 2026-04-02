@@ -1,0 +1,8 @@
+{
+  "name": "resonantos-installer-detector-v3",
+  "private": true,
+  "scripts": {
+    "start": "node installer-entry.js",
+    "test": "node --test test/*.test.js"
+  }
+}

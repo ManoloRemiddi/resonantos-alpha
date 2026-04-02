@@ -1,0 +1,70 @@
+{
+  "instanceClusters": [
+    {
+      "dedupeKey": "workspace_port|/tmp/workspaces/alpha|24510",
+      "instanceName": "Alpha",
+      "identityNameExtracted": "Alpha",
+      "openclawConfigPath": "/tmp/resonant-alpha/config/openclaw.json",
+      "workspacePath": "/tmp/workspaces/alpha",
+      "candidateFamilyKey": "/tmp/resonant-alpha",
+      "dashboardPort": 24510,
+      "wsUrl": "ws://127.0.0.1:24510/ws",
+      "exists": true,
+      "confidence": "attach-ready",
+      "runtimeType": "manual_process",
+      "runtimeConfidence": "high",
+      "actionabilityScore": 320,
+      "candidateBackupLike": false,
+      "candidateCanonicalLike": true,
+      "configCandidateCount": 3,
+      "dedupeCluster": {
+        "health": { "live": true, "statusCode": 200, "statusText": "OK", "endpoint": "http://127.0.0.1:24510/health" },
+        "port": 24510
+      }
+    },
+    {
+      "dedupeKey": "workspace_only|/tmp/workspaces/bravo",
+      "instanceName": "Bravo",
+      "identityNameExtracted": "Bravo",
+      "openclawConfigPath": "/tmp/resonant-bravo/config/openclaw.json",
+      "workspacePath": "/tmp/workspaces/bravo",
+      "candidateFamilyKey": "/tmp/resonant-bravo",
+      "dashboardPort": 24511,
+      "wsUrl": null,
+      "exists": true,
+      "confidence": "attach-ready",
+      "runtimeType": "windows_user",
+      "runtimeConfidence": "medium",
+      "actionabilityScore": 210,
+      "candidateBackupLike": false,
+      "candidateCanonicalLike": true,
+      "configCandidateCount": 1,
+      "dedupeCluster": {
+        "health": { "live": false, "statusCode": 503, "statusText": "HTTP 503", "endpoint": "http://127.0.0.1:24511/health" },
+        "port": 24511
+      }
+    },
+    {
+      "dedupeKey": "family_only|/tmp/possible-charlie",
+      "instanceName": null,
+      "identityNameExtracted": null,
+      "openclawConfigPath": "/tmp/possible-charlie/.openclaw/openclaw.json",
+      "workspacePath": null,
+      "candidateFamilyKey": "/tmp/possible-charlie",
+      "dashboardPort": null,
+      "wsUrl": null,
+      "exists": true,
+      "confidence": "partial",
+      "runtimeType": "unknown",
+      "runtimeConfidence": "low",
+      "actionabilityScore": 60,
+      "candidateBackupLike": false,
+      "candidateCanonicalLike": false,
+      "configCandidateCount": 1,
+      "dedupeCluster": {
+        "health": null,
+        "port": null
+      }
+    }
+  ]
+}

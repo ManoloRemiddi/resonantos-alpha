@@ -4,6 +4,27 @@
 >
 > If you are an OpenClaw agent or an operator guiding one, read `install/INSTALL_SPEC.yaml` before executing installation work. Treat that YAML file as the canonical install contract for this branch, and use this document as the human-facing guide.
 
+## Experimental installer wizard
+
+This branch now includes the vendored installer wizard under `installer/v3/`.
+
+Recommended Linux/macOS entrypoint:
+
+```bash
+./scripts/run-installer-v3.sh
+```
+
+What it currently does:
+- detects existing OpenClaw / ResonantOS targets
+- supports recovery-first and new-install selection
+- collects onboarding choices and writes a deterministic handoff
+- ends on a final review page
+
+What it does **not** do yet:
+- perform the full mutation/install phase end-to-end
+
+So for this branch, treat the wizard as the **pre-install confirmation and handoff layer**, and treat `install/INSTALL_SPEC.yaml` as the canonical contract for the actual install flow.
+
 ## Prerequisites
 
 - [OpenClaw](https://docs.openclaw.ai) installed and running
