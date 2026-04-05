@@ -630,7 +630,7 @@ try {
   // Will be checked at call time
 }
 
-function checkDelegation(command, execWorkdir) {
+function checkDelegation(command, execWorkdir, ctx) {
   if (!delegationGate) {
     return {
       block: true,
@@ -644,7 +644,7 @@ function checkDelegation(command, execWorkdir) {
 
   // --- Layer 1.5 Enhancement: Query Logician for delegation rules ---
   // Check if this agent/task is allowed to delegate per Logician rules
-  const delegator = "main"; // Assuming main orchestrator
+  const delegator = ctx?.agentId || "main";
   const taskType = delegationGate.inferTaskType ? delegationGate.inferTaskType(command) : "unknown";
   if (taskType !== "unknown") {
     const logicianResult = queryLogician(`must_delegate_to(${delegator}, ${taskType}, Target).`);
@@ -1174,7 +1174,7 @@ module.exports = function shieldGateExtension(api) {
           }
 
           // --- Layer 1.5: Delegation Gate (codex exec only) ---
-          const delegationResult = checkDelegation(command, params?.workdir);
+          const delegationResult = checkDelegation(command, params?.workdir, ctx);
           if (delegationResult.block) {
             log("BLOCK", `Delegation Gate blocked ${toolName}`, { command: command.slice(0, 100) });
             return { block: true, blockReason: delegationResult.blockReason };
@@ -1220,7 +1220,10 @@ module.exports = function shieldGateExtension(api) {
         const filePath = params?.file_path || params?.path || "";
         const isMemoryFile = /MEMORY\.md$/i.test(filePath) || /memory\/\d{4}-\d{2}-\d{2}\.md$/i.test(filePath);
         if (isMemoryFile) {
-          const MEMORY_TRUSTED_AGENTS = ["main", "resonant-voice", "content-voice", "researcher", "voice"];
+          const MEMORY_TRUSTED_AGENTS = (process.env.RESONANTOS_MEMORY_TRUSTED_AGENTS || "main")
+            .split(",")
+            .map((value) => value.trim())
+            .filter(Boolean);
           const agentId = ctx?.agentId || "";
           if (!MEMORY_TRUSTED_AGENTS.includes(agentId)) {
             log("BLOCK", "Context Isolation Gate", { tool: toolName, file: filePath.slice(-40), agentId });
@@ -1260,26 +1263,21 @@ module.exports = function shieldGateExtension(api) {
           }
         }
 
-        const sessionKey = String(ctx?.sessionKey || "");
-        if (sessionKey.startsWith("agent:researcher:")) {
-          log("ALLOW", "Network Allowlist Gate", { url: rawUrl, domain, reason: "researcher_bypass" });
-        } else {
-          let allowed = false;
-          for (const pattern of NETWORK_ALLOWED_DOMAINS) {
-            if (pattern.test(domain)) {
-              allowed = true;
-              log("ALLOW", "Network Allowlist Gate", { url: rawUrl, domain, pattern: pattern.source });
-              break;
-            }
+        let allowed = false;
+        for (const pattern of NETWORK_ALLOWED_DOMAINS) {
+          if (pattern.test(domain)) {
+            allowed = true;
+            log("ALLOW", "Network Allowlist Gate", { url: rawUrl, domain, pattern: pattern.source });
+            break;
           }
+        }
 
-          if (!allowed) {
-            log("BLOCK", "Network Allowlist Gate", { url: rawUrl, domain, reason: "not_in_allowlist" });
-            return {
-              block: true,
-              blockReason: `🌐 [Network Allowlist Gate] Blocked web_fetch to "${domain}" — domain not in allowlist. If this domain is legitimate, update the allowlist before retrying.` + ERROR_EXPLAIN_INSTRUCTION
-            };
-          }
+        if (!allowed) {
+          log("BLOCK", "Network Allowlist Gate", { url: rawUrl, domain, reason: "not_in_allowlist" });
+          return {
+            block: true,
+            blockReason: `🌐 [Network Allowlist Gate] Blocked web_fetch to "${domain}" — domain not in allowlist. If this domain is legitimate, update the allowlist before retrying.` + ERROR_EXPLAIN_INSTRUCTION
+          };
         }
       }
 
@@ -1586,33 +1584,33 @@ module.exports = function shieldGateExtension(api) {
         const TOOL_MAP = { exec: "exec", write: "file_write", edit: "file_write", web_search: "brave_api", web_fetch: "web_fetch", browser: "browser", message: "message_send", tts: "tts", sessions_spawn: "sessions_spawn" };
         const logicianTool = TOOL_MAP[toolName];
         if (logicianTool && agentId !== "main") {
-          const proves = logicianProves(`can_use_tool(/${agentId}, /${logicianTool})`);
-          if (!proves) {
-            log("BLOCK", "Logician: tool not in permission set", { agentId, tool: logicianTool, allowed: false });
-            return { block: true, blocked: true, blockReason: "Trust Level Gate: tool '" + logicianTool + "' not in permission set for agent '" + agentId + "'" };
-          }
-          // 9b-path: Restrict researcher file_write to research/ folder only
-          if (agentId === "researcher" && logicianTool === "file_write") {
-            const writePath = params?.file_path || params?.path || params?.filePath || "";
-            if (!writePath.includes("/research/")) {
-              log("BLOCK", "Researcher file_write restricted to research/ folder", { agentId, path: writePath });
-              return { block: true, blocked: true, blockReason: "Trust Level Gate: researcher can only write to research/ folder, got: " + writePath };
+          const agentKnown = logicianProves(`agent(/${agentId})`);
+          if (agentKnown === false) {
+            log("WARN", "Logician: unknown agent principal in rules", { agentId, tool: logicianTool });
+          } else {
+            const proves = logicianProves(`can_use_tool(/${agentId}, /${logicianTool})`);
+            if (proves === false) {
+              log("BLOCK", "Logician: tool not in permission set", { agentId, tool: logicianTool, allowed: false });
+              return { block: true, blocked: true, blockReason: "Trust Level Gate: tool '" + logicianTool + "' not in permission set for agent '" + agentId + "'" };
             }
-            if (toolName === "write") {
-              const content = String(params?.content || "");
-              const matchedPattern = RESEARCH_OUTPUT_PATTERNS.find((pattern) => pattern.test(content));
-              if (matchedPattern) {
-                log("BLOCK", "Researcher output validation gate", {
-                  agentId,
-                  path: writePath,
-                  pattern: matchedPattern.source
-                });
-                return {
-                  block: true,
-                  blocked: true,
-                  blockReason: "Research Output Validation Gate: research output contained suspicious content and needs manual review before saving." + ERROR_EXPLAIN_INSTRUCTION
-                };
-              }
+          }
+
+          // 9b-path: Optional research-output validation for research-like agents
+          if (/research/i.test(agentId) && logicianTool === "file_write" && toolName === "write") {
+            const writePath = params?.file_path || params?.path || params?.filePath || "";
+            const content = String(params?.content || "");
+            const matchedPattern = RESEARCH_OUTPUT_PATTERNS.find((pattern) => pattern.test(content));
+            if (matchedPattern) {
+              log("BLOCK", "Research output validation gate", {
+                agentId,
+                path: writePath,
+                pattern: matchedPattern.source
+              });
+              return {
+                block: true,
+                blocked: true,
+                blockReason: "Research Output Validation Gate: research output contained suspicious content and needs manual review before saving." + ERROR_EXPLAIN_INSTRUCTION
+              };
             }
           }
         }
@@ -1621,10 +1619,23 @@ module.exports = function shieldGateExtension(api) {
         if (toolName === "sessions_spawn") {
           const targetAgent = params?.agentId || params?.runtime || "unknown";
           if (targetAgent !== "unknown") {
-            const spawnAllowed = logicianProves(`spawn_allowed(/main, /${targetAgent})`);
-            if (spawnAllowed === false) {
-              log("BLOCK", "Logician: spawn not in allowed set", { from: "main", to: targetAgent });
-              return { block: true, blockReason: "Spawn Permission Gate: agent 'main' cannot spawn '" + targetAgent + "'" };
+            const parentAgent = ctx?.agentId || "main";
+            const parentKnown = logicianProves(`agent(/${parentAgent})`);
+            const targetKnown = logicianProves(`agent(/${targetAgent})`);
+
+            if (parentKnown === false || targetKnown === false) {
+              log("WARN", "Logician: stale principal in spawn rule check", {
+                from: parentAgent,
+                to: targetAgent,
+                parentKnown,
+                targetKnown,
+              });
+            } else {
+              const spawnAllowed = logicianProves(`spawn_allowed(/${parentAgent}, /${targetAgent})`);
+              if (spawnAllowed === false) {
+                log("BLOCK", "Logician: spawn not in allowed set", { from: parentAgent, to: targetAgent });
+                return { block: true, blockReason: "Spawn Permission Gate: agent '" + parentAgent + "' cannot spawn '" + targetAgent + "'" };
+              }
             }
           }
         }

@@ -722,21 +722,17 @@ const TRUST_COLORS = {
 
 const AGENT_CATEGORIES = {
     main: 'stateful',
-    deputy: 'stateful',
-    voice: 'stateful',
-    setup: 'stateful',
-    website: 'stateful',
-    dao: 'stateful',
-    acupuncturist: 'tool',
-    blindspot: 'tool',
-    researcher: 'task',
-    creative: 'task',
+    setup: 'support',
 };
 
 const CATEGORY_COLORS = {
     stateful: '#2d7d9a',
+    support: '#6b7280',
     tool: '#6b7280',
     task: '#b08d57',
+    other: '#475569',
+    stale: '#991b1b',
+    runtime_only: '#1d4ed8',
 };
 
 const TRUST_SIZES = {
@@ -761,6 +757,7 @@ const PROTOCOL_TYPE_META = {
 
 const graphState = {
     agents: new Map(),
+    policyAgents: new Set(),
     trust: new Map(),
     spawnEdges: [],
     dangerousTools: new Set(),
@@ -770,6 +767,17 @@ const graphState = {
     sensitiveTypes: [],
     injectionPatterns: [],
     protectedPaths: [],
+    staleSpawnEdges: 0,
+};
+
+const runtimeAgentSet = new Set();
+const runtimeAgentMeta = new Map();
+const ROLE_RESOLUTION_HINTS = {
+    coding: ['smith', 'coder', 'code'],
+    research: ['research', 'inspector', 'analysis'],
+    orchestration: ['foreman', 'main', 'orchestrator'],
+    setup: ['setup', 'bootstrap', 'onboarding'],
+    verification: ['inspector', 'tester', 'verify', 'qa'],
 };
 
 const protocolState = {
@@ -888,6 +896,80 @@ function displayToolName(toolKey) {
     return normalizeToolKey(toolKey);
 }
 
+function getAgentCategory(agentKey) {
+    const meta = runtimeAgentMeta.get(agentKey);
+    return (meta && meta.category) || AGENT_CATEGORIES[agentKey] || 'other';
+}
+
+function getAgentDescription(agentKey) {
+    const meta = runtimeAgentMeta.get(agentKey);
+    const role = meta && meta.role ? String(meta.role).trim() : '';
+    if (!role || role === 'Agent') return '';
+    return role;
+}
+
+async function loadRuntimeAgents() {
+    const response = await fetch('/api/agents');
+    const data = await response.json();
+    runtimeAgentSet.clear();
+    runtimeAgentMeta.clear();
+
+    if (!response.ok || !Array.isArray(data)) {
+        throw new Error((data && data.error) || 'Failed to fetch runtime agents');
+    }
+
+    data.forEach((agent) => {
+        const agentKey = normalizeAgentKey(agent && agent.agentId);
+        if (!agentKey) return;
+        runtimeAgentSet.add(agentKey);
+        runtimeAgentMeta.set(agentKey, {
+            role: agent.role || '',
+            category: String(agent.category || '').toLowerCase() || 'other',
+            status: agent.status || 'unknown',
+        });
+    });
+}
+
+function resolveRoleReference(roleRef) {
+    if (!roleRef || typeof roleRef !== 'string' || !roleRef.startsWith('role:')) return null;
+    const role = roleRef.split(':', 2)[1].trim().toLowerCase();
+    if (!role) return null;
+
+    const hints = ROLE_RESOLUTION_HINTS[role] || [role];
+    let winner = null;
+    let bestScore = 0;
+
+    runtimeAgentSet.forEach((agentId) => {
+        const meta = runtimeAgentMeta.get(agentId) || {};
+        const haystack = `${agentId} ${meta.role || ''} ${meta.category || ''}`.toLowerCase();
+        let score = 0;
+        hints.forEach((hint) => {
+            if (haystack.includes(hint)) score += 1;
+        });
+        if (score > bestScore) {
+            bestScore = score;
+            winner = agentId;
+        }
+    });
+
+    return bestScore > 0 ? winner : null;
+}
+
+function formatDelegationTarget(agentRef) {
+    const ref = String(agentRef || '').trim();
+    if (!ref) return { label: 'unknown', warning: '' };
+
+    if (ref.startsWith('role:')) {
+        const resolved = resolveRoleReference(ref);
+        if (resolved) return { label: `${resolved} (resolved from ${ref})`, warning: '' };
+        return { label: `${ref} (unresolved role mapping)`, warning: 'Add or rename a runtime agent so this role can resolve automatically.' };
+    }
+
+    const key = normalizeAgentKey(ref);
+    if (runtimeAgentSet.size === 0 || runtimeAgentSet.has(key)) return { label: key, warning: '' };
+    return { label: `${key} (stale agent ref)`, warning: 'This target is not present in the current runtime agent roster.' };
+}
+
 function addMapSet(mapObj, key, value) {
     if (!mapObj.has(key)) {
         mapObj.set(key, new Set());
@@ -916,7 +998,8 @@ function updateStats() {
         + graphState.injectionPatterns.length
         + graphState.protectedPaths.length;
 
-    document.getElementById('statAgents').textContent = String(graphState.agents.size);
+    const activeCount = runtimeAgentSet.size || graphState.agents.size;
+    document.getElementById('statAgents').textContent = String(activeCount);
     document.getElementById('statRules').textContent = String(totalRules);
     document.getElementById('statDangerous').textContent = String(graphState.dangerousTools.size);
 }
@@ -946,6 +1029,7 @@ async function refreshLogicianStatus() {
 
 function resetGraphState() {
     graphState.agents = new Map();
+    graphState.policyAgents = new Set();
     graphState.trust = new Map();
     graphState.spawnEdges = [];
     graphState.dangerousTools = new Set();
@@ -955,6 +1039,7 @@ function resetGraphState() {
     graphState.sensitiveTypes = [];
     graphState.injectionPatterns = [];
     graphState.protectedPaths = [];
+    graphState.staleSpawnEdges = 0;
 }
 
 function collectFacts(result) {
@@ -973,7 +1058,7 @@ function processResults(results) {
     const trust = collectFacts(results.trust_level);
     const spawn = collectFacts(results.can_spawn);
     const dangerous = collectFacts(results.dangerous_tool);
-    const canUse = collectFacts(results.can_use);
+    const canUse = collectFacts(results.can_use_tool);
     const sensitive = collectFacts(results.sensitive_type);
     const injection = collectFacts(results.injection_pattern);
     const protectedPaths = collectFacts(results.protected_path);
@@ -985,6 +1070,7 @@ function processResults(results) {
         const agentKey = normalizeAgentKey(fact.args[0]);
         if (agentKey) {
             graphState.agents.set(agentKey, { key: agentKey });
+            graphState.policyAgents.add(agentKey);
         }
     });
 
@@ -1001,6 +1087,7 @@ function processResults(results) {
         if (!graphState.agents.has(agentKey)) {
             graphState.agents.set(agentKey, { key: agentKey });
         }
+        graphState.policyAgents.add(agentKey);
     });
 
     spawn.forEach((fact) => {
@@ -1069,6 +1156,17 @@ function processResults(results) {
             graphState.protectedPaths.push(cleanArg(fact.args[0]));
         }
     });
+
+    runtimeAgentSet.forEach((agentKey) => {
+        if (!graphState.agents.has(agentKey)) {
+            graphState.agents.set(agentKey, { key: agentKey });
+        }
+    });
+
+    graphState.staleSpawnEdges = graphState.spawnEdges.filter((edge) => {
+        if (runtimeAgentSet.size === 0) return false;
+        return !runtimeAgentSet.has(edge.from) || !runtimeAgentSet.has(edge.to);
+    }).length;
 }
 
 function buildArchitectureGraphElements() {
@@ -1080,6 +1178,20 @@ function buildArchitectureGraphElements() {
         const trustSize = TRUST_SIZES[trust] || TRUST_SIZES[1];
         const textSize = Math.max(38, label.length * 7.5 + 20);
         const size = Math.max(trustSize, textSize);
+        const inRuntime = runtimeAgentSet.size === 0 ? true : runtimeAgentSet.has(agentKey);
+        const inPolicy = graphState.policyAgents.has(agentKey);
+        const category = getAgentCategory(agentKey);
+        let color = CATEGORY_COLORS[category] || TRUST_COLORS[trust] || TRUST_COLORS[1];
+        let status = 'active';
+
+        if (runtimeAgentSet.size > 0 && !inRuntime) {
+            color = CATEGORY_COLORS.stale;
+            status = 'policy_only';
+        } else if (runtimeAgentSet.size > 0 && !inPolicy) {
+            color = CATEGORY_COLORS.runtime_only;
+            status = 'runtime_only';
+        }
+
         elements.push({
             data: {
                 id: `agent:${agentKey}`,
@@ -1088,7 +1200,9 @@ function buildArchitectureGraphElements() {
                 label,
                 trust,
                 size,
-                color: CATEGORY_COLORS[AGENT_CATEGORIES[agentKey]] || TRUST_COLORS[trust] || TRUST_COLORS[1],
+                category,
+                status,
+                color,
             },
         });
     });
@@ -1105,13 +1219,14 @@ function buildArchitectureGraphElements() {
     });
 
     graphState.spawnEdges.forEach((edge, index) => {
+        const stale = runtimeAgentSet.size > 0 && (!runtimeAgentSet.has(edge.from) || !runtimeAgentSet.has(edge.to));
         elements.push({
             data: {
                 id: `spawn:${edge.from}:${edge.to}:${index}`,
-                type: 'can_spawn',
+                type: stale ? 'can_spawn_stale' : 'can_spawn',
                 source: `agent:${edge.from}`,
                 target: `agent:${edge.to}`,
-                label: 'can_spawn',
+                label: stale ? 'stale_spawn' : 'can_spawn',
             },
         });
     });
@@ -1127,10 +1242,10 @@ function buildArchitectureGraphElements() {
         elements.push({
             data: {
                 id: `canuse:${edge.agent}:${edge.tool}:${index}`,
-                type: 'can_use',
+                type: 'can_use_tool',
                 source: `agent:${edge.agent}`,
                 target: `tool:${edge.tool}`,
-                label: 'can_use',
+                label: 'can_use_tool',
             },
         });
     });
@@ -1155,6 +1270,7 @@ function showGlobalDetails(message) {
         <div class="detail-block">
             <div class="detail-row"><span class="detail-key">Agents</span><span class="detail-value">${graphState.agents.size}</span></div>
             <div class="detail-row"><span class="detail-key">Spawn rules</span><span class="detail-value">${graphState.spawnEdges.length}</span></div>
+            <div class="detail-row"><span class="detail-key">Stale spawn edges</span><span class="detail-value">${graphState.staleSpawnEdges}</span></div>
             <div class="detail-row"><span class="detail-key">Dangerous tools</span><span class="detail-value">${graphState.dangerousTools.size}</span></div>
         </div>
 
@@ -1177,16 +1293,8 @@ function showGlobalDetails(message) {
 
 
 const AGENT_DESCRIPTIONS = {
-    main: 'Primary orchestrator agent. Handles direct conversation with the human, strategic decisions, delegation, and system awareness. Trust level 5 (sovereign).',
-    strategist: 'Strategic planning and architecture decisions. Analyzes complex problems, evaluates tradeoffs, and produces high-level system designs.',
-    coder: 'Code implementation via Codex CLI. Receives precise task specifications and produces tested code changes. Never operates autonomously — always delegated.',
-    researcher: 'Deep research via Perplexity Pro. Investigates topics, analyzes markets, produces structured research reports with sources.',
-    tester: 'Quality assurance and verification. Runs test suites, validates fixes, ensures deterministic proof before marking issues resolved.',
-    designer: 'Creative and UX design. Produces visual assets, UI mockups, brand materials, and design system components.',
-    creative: 'Content creation — articles, narratives, video scripts. Applies Creative DNA voice and Augmentatism philosophy.',
-    content_voice: 'Content voice calibration. Ensures all published content matches the ResonantOS brand voice and narrative framework.',
-    website: 'Website management. Handles resonantos.com updates, deployment, and content publishing.',
-    dao: 'DAO governance agent. Manages proposal creation, voting mechanics, and token economy operations on Solana.',
+    main: 'Primary orchestrator agent for direct human coordination.',
+    setup: 'Bootstrap/setup assistant for onboarding and environment changes.',
 };
 
 function showNodeDetails(node) {
@@ -1203,12 +1311,14 @@ function showNodeDetails(node) {
             .map(displayToolName)
             .sort((a, b) => a.localeCompare(b));
 
-        const desc = AGENT_DESCRIPTIONS[data.key] || AGENT_DESCRIPTIONS[data.key.replace('/', '')] || '';
+        const desc = getAgentDescription(data.key) || AGENT_DESCRIPTIONS[data.key] || AGENT_DESCRIPTIONS[data.key.replace('/', '')] || '';
         details.innerHTML = `
             <div class="panel-title">Agent: ${esc(displayAgentName(data.key))}</div>
             ${desc ? `<div class="detail-block"><div style="color:var(--text-secondary);font-size:13px;line-height:1.5;">${esc(desc)}</div></div>` : ''}
             <div class="detail-block">
                 <div class="detail-row"><span class="detail-key">Trust</span><span class="detail-value">${esc(String(data.trust))}</span></div>
+                <div class="detail-row"><span class="detail-key">Status</span><span class="detail-value">${esc(String(data.status || 'active'))}</span></div>
+                <div class="detail-row"><span class="detail-key">Category</span><span class="detail-value">${esc(String(data.category || 'other'))}</span></div>
                 <div class="detail-row"><span class="detail-key">Agent ID</span><span class="detail-value">/${esc(data.key)}</span></div>
             </div>
 
@@ -1219,7 +1329,7 @@ function showNodeDetails(node) {
 
             <div class="detail-block">
                 <div class="panel-subtitle">Tools They Can Use (${tools.length})</div>
-                ${showList(tools, 'No can_use facts returned for this agent.')}
+                ${showList(tools, 'No can_use_tool facts returned for this agent.')}
             </div>
         `;
         return;
@@ -1239,7 +1349,7 @@ function showNodeDetails(node) {
 
             <div class="detail-block">
                 <div class="panel-subtitle">Agents That Can Use It (${users.length})</div>
-                ${showList(users, 'No can_use facts returned for this tool.')}
+                ${showList(users, 'No can_use_tool facts returned for this tool.')}
             </div>
         `;
         return;
@@ -1333,7 +1443,7 @@ function initArchitectureCytoscape() {
                 },
             },
             {
-                selector: 'edge[type="can_use"]',
+                selector: 'edge[type="can_use_tool"]',
                 style: {
                     width: 1.8,
                     'line-style': 'dashed',
@@ -1345,6 +1455,23 @@ function initArchitectureCytoscape() {
                     label: 'data(label)',
                     'font-size': 9,
                     color: '#c9a96e',
+                    'text-rotation': 'autorotate',
+                    'text-margin-y': -8,
+                },
+            },
+            {
+                selector: 'edge[type="can_spawn_stale"]',
+                style: {
+                    width: 2,
+                    'line-style': 'dashed',
+                    'line-dash-pattern': [6, 4],
+                    'line-color': '#b91c1c',
+                    'target-arrow-color': '#b91c1c',
+                    'target-arrow-shape': 'triangle',
+                    'curve-style': 'bezier',
+                    label: 'data(label)',
+                    'font-size': 9,
+                    color: '#fca5a5',
                     'text-rotation': 'autorotate',
                     'text-margin-y': -8,
                 },
@@ -1474,6 +1601,13 @@ async function refreshArchitectureGraphData() {
 
     try {
         const results = {};
+        try {
+            await loadRuntimeAgents();
+        } catch (_) {
+            runtimeAgentSet.clear();
+            runtimeAgentMeta.clear();
+        }
+
         const queries = {
             agent: 'agent(X)',
             trust_level: 'trust_level(X, Y)',
@@ -1482,7 +1616,7 @@ async function refreshArchitectureGraphData() {
             sensitive_type: 'sensitive_type(X)',
             injection_pattern: 'injection_pattern(X)',
             protected_path: 'protected_path(X)',
-            can_use: 'can_use(X, Y)',
+            can_use_tool: 'can_use_tool(X, Y)',
         };
 
         await Promise.all(Object.entries(queries).map(async ([key, query]) => {
@@ -1672,6 +1806,7 @@ function showProtocolNodeDetails(node) {
     const typeMeta = getStepTypeMeta(data.stepType);
     const isDelegation = data.stepType === 'delegation';
     const isGate = data.stepType === 'gate';
+    const target = formatDelegationTarget(data.agent);
 
     details.innerHTML = `
         <div class="panel-title">${esc(data.label)}</div>
@@ -1681,7 +1816,8 @@ function showProtocolNodeDetails(node) {
             <div class="detail-row"><span class="detail-key">Step ID</span><span class="detail-value">${esc(data.stepId)}</span></div>
             <div style="margin-top:8px;color:var(--text-muted);font-size:0.85em;">Description</div>
             <div style="margin-top:4px;color:var(--text-primary);line-height:1.5;white-space:pre-wrap;">${esc(data.description || 'No description')}</div>
-            ${isDelegation ? `<div class="detail-row"><span class="detail-key">Agent</span><span class="detail-value">${esc(data.agent || 'unknown')}</span></div>` : ''}
+            ${isDelegation ? `<div class="detail-row"><span class="detail-key">Target</span><span class="detail-value">${esc(target.label)}</span></div>` : ''}
+            ${isDelegation && target.warning ? `<div style="margin-top:8px;color:#fca5a5;font-size:12px;line-height:1.4;">${esc(target.warning)}</div>` : ''}
         </div>
     `;
 }
@@ -1692,6 +1828,7 @@ function showRuleNodeDetails(node) {
     const typeMeta = getStepTypeMeta(data.stepType);
     const isDelegation = data.stepType === 'delegation';
     const isGate = data.stepType === 'gate';
+    const target = formatDelegationTarget(data.agent);
 
     details.innerHTML = `
         <div class="panel-title">${esc(data.label)}</div>
@@ -1701,7 +1838,8 @@ function showRuleNodeDetails(node) {
             <div class="detail-row"><span class="detail-key">Step ID</span><span class="detail-value">${esc(data.stepId)}</span></div>
             <div style="margin-top:8px;color:var(--text-muted);font-size:0.85em;">Description</div>
             <div style="margin-top:4px;color:var(--text-primary);line-height:1.5;white-space:pre-wrap;">${esc(data.description || 'No description')}</div>
-            ${isDelegation ? `<div class="detail-row"><span class="detail-key">Agent</span><span class="detail-value">${esc(data.agent || 'unknown')}</span></div>` : ''}
+            ${isDelegation ? `<div class="detail-row"><span class="detail-key">Target</span><span class="detail-value">${esc(target.label)}</span></div>` : ''}
+            ${isDelegation && target.warning ? `<div style="margin-top:8px;color:#fca5a5;font-size:12px;line-height:1.4;">${esc(target.warning)}</div>` : ''}
         </div>
     `;
 }

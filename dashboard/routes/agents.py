@@ -183,16 +183,14 @@ def api_agents() -> Response:
 
     # Agent metadata for hierarchy
     AGENT_META = {
-        "main": {"tier": 0, "role": "Orchestrator & Strategist", "category": "core"},
-        "doer": {"tier": 1, "role": "Personal Assistant & Task Executor", "category": "direct"},
-        "dao": {"tier": 1, "role": "DAO Strategy & Governance", "category": "direct"},
-        "website": {"tier": 1, "role": "Marketing Website", "category": "direct"},
-        "voice": {"tier": 1, "role": "Content Voice & YouTube", "category": "direct"},
-        "coder": {"tier": 1, "role": "Coding Agent", "category": "background"},
-        "researcher": {"tier": 1, "role": "Deep Research (Perplexity)", "category": "background"},
+        "main": {"tier": 0, "role": "Primary Orchestrator", "category": "stateful"},
         "setup": {"tier": 1, "role": "Onboarding & Setup", "category": "support"},
-        "acupuncturist": {"tier": 1, "role": "Protocol Enforcement", "category": "support"},
-        "blindspot": {"tier": 1, "role": "Red Team & Vulnerability Hunter", "category": "support"},
+        "foreman": {"tier": 1, "role": "Execution Orchestrator", "category": "stateful"},
+        "architect": {"tier": 1, "role": "Planning & Architecture", "category": "task"},
+        "smith": {"tier": 1, "role": "Implementation", "category": "task"},
+        "bellows": {"tier": 1, "role": "Execution Support", "category": "task"},
+        "inspector": {"tier": 1, "role": "Verification & QA", "category": "task"},
+        "scribe": {"tier": 1, "role": "Documentation", "category": "support"},
     }
 
     # Inject R-Memory as a virtual "memory" agent with effective models

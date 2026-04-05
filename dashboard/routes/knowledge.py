@@ -177,7 +177,7 @@ def api_knowledge_base() -> Response:
             if isinstance(value, dict):
                 discovered.append(key)
 
-        preferred = ["main", "voice", "coder"]
+        preferred = ["main", "foreman", "setup"]
         ordered = [aid for aid in preferred if aid in discovered]
         ordered.extend([aid for aid in discovered if aid not in preferred])
         return _ordered_unique(ordered)
@@ -445,7 +445,7 @@ def api_knowledge_ssot() -> Response:
             if isinstance(value, dict):
                 discovered.append(key)
 
-        preferred = ["main", "voice", "coder"]
+        preferred = ["main", "foreman", "setup"]
         ordered = [aid for aid in preferred if aid in discovered]
         ordered.extend([aid for aid in discovered if aid not in preferred])
         return _ordered_unique(ordered)
@@ -457,7 +457,7 @@ def api_knowledge_ssot() -> Response:
 
     agent_ids = _list_agent_ids(config)
     if not agent_ids:
-        agent_ids = ["main", "voice", "coder"]
+        agent_ids = ["main", "foreman", "setup"]
 
     level_info = {}
     for level in levels:

@@ -1602,11 +1602,18 @@
                     {key:'research',name:'Research',desc:'Competitive analysis, market data'},
                     {key:'memory_logs',name:'Memory Logs',desc:'Collaboration history'}
                 ];
-                var AGENTS=['main','deputy','voice','dao','website','setup','acupuncturist','blindspot','researcher','creative'];
+                var AGENTS=[];
                 var cfg=null, dirty=false;
 
-                fetch('/api/memory-bridge/config').then(function(r){return r.json()}).then(function(d){
-                    cfg=d; renderSrc(); renderAg(); updateSt();
+                Promise.all([
+                    fetch('/api/memory-bridge/config').then(function(r){return r.json()}),
+                    fetch('/api/agents').then(function(r){return r.json()}).catch(function(){return []})
+                ]).then(function(res){
+                    cfg = res[0];
+                    var agentsData = Array.isArray(res[1]) ? res[1] : [];
+                    AGENTS = agentsData.map(function(a){ return a && a.agentId; }).filter(Boolean).sort();
+                    if (AGENTS.length === 0) AGENTS = ['main'];
+                    renderSrc(); renderAg(); updateSt();
                 }).catch(function(){document.getElementById('bridgeSourcesToggles').textContent='Error loading config'});
 
                 function renderSrc(){
@@ -2441,7 +2448,7 @@ function renderKnowledgeSsotAccess(data) {
     const rootPath = (data && data.ssotRoot) ? String(data.ssotRoot) : '';
     const agentOrder = (data && Array.isArray(data.agentOrder) && data.agentOrder.length > 0)
         ? data.agentOrder
-        : ['main', 'voice', 'coder'];
+        : ['main', 'foreman', 'setup'];
 
     if (agentOrder.length === 0) {
         return '<div class="knowledge-empty">No agents found in openclaw.json</div>';
@@ -2492,7 +2499,7 @@ function renderUnifiedKnowledgeGrid(baseData, ssotData) {
     const levelOrder = ['L0', 'L1', 'L2'];
     const agentOrder = (baseData && Array.isArray(baseData.agentOrder) && baseData.agentOrder.length > 0)
         ? baseData.agentOrder
-        : ['main', 'voice', 'coder'];
+        : ['main', 'foreman', 'setup'];
     const ssotAccess = (ssotData && ssotData.ssotAccess && typeof ssotData.ssotAccess === 'object')
         ? ssotData.ssotAccess
         : {};
@@ -3351,7 +3358,7 @@ async function toggleSkill(agentName, skillName) {
 }
 
 function sortSkillAgents(agents) {
-    const priority = { main: 0, deputy: 1 };
+    const priority = { main: 0, foreman: 1, setup: 2, deputy: 3 };
     return agents.slice().sort(function(a, b) {
         const aName = String((a && a.name) || '').trim();
         const bName = String((b && b.name) || '').trim();

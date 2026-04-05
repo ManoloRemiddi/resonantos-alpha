@@ -34,7 +34,7 @@
         "label": "Spawn Codex",
         "type": "delegation",
         "description": "Use coding-agent skill to delegate to Codex CLI",
-        "agent": "coder"
+        "agent": "role:coding"
       },
       {
         "id": "c6",
@@ -124,7 +124,7 @@
         "label": "Delegate to Codex",
         "type": "delegation",
         "description": "Spawn Codex with TASK.md in target workdir",
-        "agent": "coder"
+        "agent": "role:coding"
       },
       {
         "id": "d6",
@@ -194,7 +194,7 @@
         "label": "Spawn researcher agent",
         "type": "delegation",
         "description": "Delegate to researcher agent with Perplexity Pro",
-        "agent": "researcher"
+        "agent": "role:research"
       },
       {
         "id": "r4",
@@ -473,7 +473,7 @@
         "label": "Build (delegate to Codex)",
         "type": "delegation",
         "description": "Spawn Codex with implementation task",
-        "agent": "coder"
+        "agent": "role:coding"
       },
       {
         "id": "dev8",

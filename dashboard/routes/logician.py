@@ -17,39 +17,89 @@ logician_bp = Blueprint("logician", __name__)
 def api_logician_status() -> Response:
     """Report live status for the Logician mangle server.
 
-    Check both the expected Unix socket path and the presence of the
-    `mangle-server` process to determine current service health. Return a live
-    status payload with a UTC timestamp and a concise failure reason when down.
-
-    Dependencies:
-        os.path.exists: Verifies socket presence.
-        subprocess.run: Checks whether the server process is running.
-
-    Returns:
-        Response: JSON status data describing the current Logician state.
+    Check both the expected Unix socket path and the local HTTP proxy health
+    to determine whether policy queries are fully available, degraded, or down.
     """
     import datetime
     import subprocess
 
     mangle_sock = "/tmp/mangle.sock"
     sock_exists = os.path.exists(mangle_sock)
+
     try:
         result = subprocess.run(["pgrep", "-f", "mangle-server"], capture_output=True, text=True, timeout=5)
         process_running = result.returncode == 0
     except Exception:
         process_running = False
+
+    proxy_ok = False
+    proxy_error = ""
+    try:
+        import requests as http_req
+
+        probe = http_req.post("http://127.0.0.1:8081/query", json={"query": "agent(X)"}, timeout=2)
+        proxy_ok = probe.status_code < 500
+        if not proxy_ok:
+            proxy_error = f"proxy returned HTTP {probe.status_code}"
+    except Exception as e:
+        proxy_error = str(e)
+
     now = datetime.datetime.utcnow().isoformat() + "Z"
-    if sock_exists and process_running:
-        return jsonify({"status": "healthy", "lastCheck": now, "ok": True, "source": "live-check"})
-    else:
-        reasons = []
-        if not sock_exists:
-            reasons.append("mangle socket not found")
-        if not process_running:
-            reasons.append("mangle-server process not running")
+
+    if proxy_ok and process_running:
         return jsonify(
-            {"status": "down", "ok": False, "error": "; ".join(reasons), "lastCheck": now, "source": "live-check"}
+            {
+                "status": "healthy",
+                "lastCheck": now,
+                "ok": True,
+                "source": "live-check",
+                "transport": {
+                    "proxyHttp": True,
+                    "socket": sock_exists,
+                    "process": process_running,
+                },
+            }
         )
+
+    if sock_exists and process_running:
+        return jsonify(
+            {
+                "status": "degraded",
+                "ok": True,
+                "warning": "HTTP query proxy unavailable; using fallback parser",
+                "proxyError": proxy_error,
+                "lastCheck": now,
+                "source": "live-check",
+                "transport": {
+                    "proxyHttp": False,
+                    "socket": True,
+                    "process": True,
+                },
+            }
+        )
+
+    reasons = []
+    if not sock_exists:
+        reasons.append("mangle socket not found")
+    if not process_running:
+        reasons.append("mangle-server process not running")
+    if proxy_error:
+        reasons.append(f"proxy unavailable: {proxy_error}")
+
+    return jsonify(
+        {
+            "status": "down",
+            "ok": False,
+            "error": "; ".join(reasons) or "unknown",
+            "lastCheck": now,
+            "source": "live-check",
+            "transport": {
+                "proxyHttp": proxy_ok,
+                "socket": sock_exists,
+                "process": process_running,
+            },
+        }
+    )
 
 
 @logician_bp.route("/api/logician/rules")
@@ -334,28 +384,117 @@ def api_logician_rule_section(section_slug: str) -> Response:
 
 @logician_bp.route("/api/logician/query", methods=["POST"])
 def api_logician_query() -> Response:
-    """Proxy a dashboard query to the Logician service.
+    """Proxy a dashboard query to Logician with resilient fallback.
 
-    Forward the incoming JSON request body to the local Logician HTTP endpoint
-    and relay the service response unchanged when the call succeeds. Convert
-    transport or parsing failures into the dashboard's standard JSON error
-    response format.
-
-    Dependencies:
-        requests: Sends the outbound HTTP request to the Logician service.
-        request.get_json: Reads the incoming dashboard request payload.
-
-    Returns:
-        Response: JSON payload returned by Logician, or an error response.
+    Primary path: HTTP proxy at 127.0.0.1:8081/query.
+    Fallback path: parse fact lines directly from production_rules.mg when the
+    HTTP proxy is unavailable.
     """
     import requests as http_req
 
+    data: dict[str, Any] | None = request.get_json() or {}
+    query = str((data or {}).get("query", "")).strip()
+    if not query:
+        return jsonify({"error": "query required"}), 400
+
+    proxy_error = ""
     try:
-        data: dict[str, Any] | None = request.get_json()
         resp = http_req.post("http://127.0.0.1:8081/query", json=data, timeout=5)
-        return jsonify(resp.json())
+        payload = resp.json()
+        if resp.ok and not payload.get("error"):
+            return jsonify(payload)
+        proxy_error = payload.get("error") or f"proxy HTTP {resp.status_code}"
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        proxy_error = str(e)
+
+    rules_file = Path(__file__).parent.parent / ".." / "logician" / "poc" / "production_rules.mg"
+    rules_file = rules_file.resolve()
+
+    try:
+        source = rules_file.read_text()
+    except Exception as e:
+        return jsonify({"error": f"Proxy unavailable ({proxy_error}); fallback unavailable: {e}"}), 500
+
+    q_match = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\((.*)\)$", query)
+    if not q_match:
+        return jsonify({"answers": [], "source": "fallback", "warning": f"proxy unavailable: {proxy_error}"})
+
+    predicate = q_match.group(1)
+
+    def split_args(raw: str) -> list[str]:
+        out = []
+        cur = []
+        in_quote = False
+        quote = ""
+        depth = 0
+        for ch in raw:
+            if ch in {'"', "'"}:
+                if not in_quote:
+                    in_quote = True
+                    quote = ch
+                elif quote == ch:
+                    in_quote = False
+                cur.append(ch)
+                continue
+            if not in_quote:
+                if ch == '(':
+                    depth += 1
+                elif ch == ')' and depth > 0:
+                    depth -= 1
+                if ch == ',' and depth == 0:
+                    out.append(''.join(cur).strip())
+                    cur = []
+                    continue
+            cur.append(ch)
+        tail = ''.join(cur).strip()
+        if tail:
+            out.append(tail)
+        return out
+
+    q_args = split_args(q_match.group(2))
+
+    def is_var(token: str) -> bool:
+        token = token.strip()
+        return bool(token) and token[0].isupper()
+
+    answers: list[str] = []
+    fact_re = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\((.*)\)\.$")
+
+    for line in source.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or stripped.startswith("%") or stripped.startswith("//"):
+            continue
+        if ":-" in stripped:
+            continue
+        fm = fact_re.match(stripped)
+        if not fm:
+            continue
+        if fm.group(1) != predicate:
+            continue
+
+        f_args = split_args(fm.group(2))
+        if len(f_args) != len(q_args):
+            continue
+
+        ok = True
+        for want, got in zip(q_args, f_args):
+            if is_var(want):
+                continue
+            if want.strip() != got.strip():
+                ok = False
+                break
+
+        if ok:
+            answers.append(f"{predicate}({', '.join(a.strip() for a in f_args)})")
+
+    return jsonify(
+        {
+            "answers": answers,
+            "source": "production_rules.mg-fallback",
+            "degraded": True,
+            "warning": f"proxy unavailable: {proxy_error}",
+        }
+    )
 
 
 @logician_bp.route("/api/protocols")
