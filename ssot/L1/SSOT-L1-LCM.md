@@ -1,11 +1,11 @@
 # LCM — Lossless Context Management
 
-**Version:** 0.7.0
+**Version:** 0.8.0
 **Plugin:** `@martian-engineering/lossless-claw`
 **Status:** Active — primary context engine
 **DB:** `~/.openclaw/lcm.db` (SQLite)
 **Source:** [github.com/Martian-Engineering/lossless-claw](https://github.com/Martian-Engineering/lossless-claw)
-**Updated:** 2026-04-09
+**Updated:** 2026-04-10
 
 ---
 
@@ -228,3 +228,4 @@ LCM and RAG are orthogonal. LCM manages what the model sees in conversation. RAG
 | schema | 2026-03-28 | Added maxExpandTokens (type:number, default:4000) to configSchema.properties. Added to config parameters table. |
 | 0.5.3 | 2026-04-03 | **UPGRADED:** maxExpandTokens REMOVED from configSchema (present in 0.5.2, gone in 0.5.3). New schema properties: statelessSessionPatterns, skipStatelessSessions, largeFileThresholdTokens, summaryModel, summaryProvider, expansionModel, expansionProvider, delegationTimeoutMs, maxAssemblyTokenBudget, summaryMaxOverageFactor, customInstructions, leafChunkTokens, leafMinFanout, condensedMinFanout, condensedMinFanoutHard. Removed maxExpandTokens from schema — must delete from config if present. Config fixed: removed maxExpandTokens:4000 (was causing schema validation failure). |
 | 0.7.0 | 2026-04-09 | **UPGRADED:** Major release. maxExpandTokens RE-ADDED to configSchema (was removed in 0.5.3, restored in 0.7.0). Plugin deps updated: @mariozechner/pi-agent-core, @mariozechner/pi-ai, @sinclair/typebox 0.34.48. New features: cache-aware compaction (cacheAwareCompaction object), dynamic leaf chunk tokens (dynamicLeafChunkTokens object), circuit breaker (circuitBreakerThreshold, circuitBreakerCooldownMs), bootstrapMaxTokens, newSessionRetainDepth, largeFileSummaryModel, largeFileSummaryProvider, summaryTimeoutMs, fallbackProviders, timezone, pruneHeartbeatOk, largeFileTokenThreshold alias. Note: maxExpandTokens is now safe to set again. |
+| 0.8.0 | 2026-04-10 | **UPGRADED:** `/lossless doctor clean apply` — backup-first cleanup of high-confidence junk conversations, preserves archived-only handling for NULL-key subagent rows. `lcm_expand_query(allConversations: true)` — bounded cross-conversation synthesis with per-conversation diagnostics. FTS5 query guidance: use shorter queries, keep natural-language in prompt. CJK/emoji budget fix. Malformed legacy `summaries_fts` table recovery on startup (plugin no longer crashes). |

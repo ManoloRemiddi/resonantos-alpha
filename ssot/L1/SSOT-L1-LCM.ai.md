@@ -1,6 +1,6 @@
 # LCM — Lossless Context Management (Compressed)
 
-**v0.7.0** | Plugin: @martian-engineering/lossless-claw | Status: Active (primary context engine) | DB: ~/.openclaw/lcm.db (SQLite) | Updated: 2026-04-09
+**v0.8.0** | Plugin: @martian-engineering/lossless-claw | Status: Active (primary context engine) | DB: ~/.openclaw/lcm.db (SQLite) | Updated: 2026-04-10
 
 ## What It Does
 DAG-based conversation summarization. Replaces sliding-window truncation. Raw messages persist in SQLite; summaries form a hierarchy; nothing is lost. Agents navigate via lcm_grep / lcm_describe / lcm_expand_query.
@@ -19,13 +19,13 @@ DAG-based conversation summarization. Replaces sliding-window truncation. Raw me
 ## maxExpandTokens
 Was in 0.5.2 schema, removed in 0.5.3 (caused validation failures), **re-added in 0.7.0**. Currently safe to set.
 
-## New in 0.7.0
-cacheAwareCompaction, dynamicLeafChunkTokens, circuitBreakerThreshold/CooldownMs, bootstrapMaxTokens, newSessionRetainDepth, largeFileSummaryModel/Provider, summaryTimeoutMs, fallbackProviders, timezone, pruneHeartbeatOk. Deps updated: @mariozechner/pi-agent-core, @mariozechner/pi-ai, @sinclair/typebox 0.34.48.
+## New in 0.8.0
+`/lossless doctor clean apply` — backup-first cleanup of high-confidence junk, preserves NULL-key subagent rows. `lcm_expand_query(allConversations: true)` — bounded cross-conversation synthesis. FTS5 query guidance: shorter queries, natural-language in prompt. CJK/emoji budget fix. Malformed `summaries_fts` recovery on startup.
 
 ## Architecture
 Messages → Leaf summaries (depth 0, ~800-1200 tokens) → Condensed (depth 1+, ~1500-2000 tokens) → higher. Context assembly: summaries + protected fresh tail (last 20 messages).
 
 ## Update History (recent)
-- 0.7.0 (2026-04-09): Major release. maxExpandTokens restored. New: cache-aware compaction, circuit breaker, dynamic leaf chunks.
+- 0.8.0 (2026-04-10): `/lossless doctor clean apply`, cross-conversation expand, FTS5 guidance, CJK fix, summaries_fts recovery.
+- 0.7.0 (2026-04-09): maxExpandTokens restored. New: cache-aware compaction, circuit breaker, dynamic leaf chunks.
 - 0.5.3 (2026-04-03): maxExpandTokens removed from schema.
-- config (2026-03-27): incrementalMaxDepth -1 → 3 (bounded). freshTailCount 4 → 32.
